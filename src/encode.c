@@ -718,9 +718,21 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
 }
 #endif
 
+static double od_compute_dist(od_coeff *x, od_coeff *y, int n) {
+  int i;
+  double sum;
+  sum = 0;
+  for (i = 0; i < n*n; i++) {
+    double tmp;
+    tmp = x[i]-y[i];
+    sum += tmp*tmp;
+  }
+  return sum;
+}
+
 #if !defined(OD_DUMP_COEFFS)
 static void od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
- int pli, int bx, int by, int l, int xdec, int ydec) {
+ int pli, int bx, int by, int l, int xdec, int ydec, int rdo) {
   int od;
   int d;
   int frame_width;
@@ -747,9 +759,42 @@ static void od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   else {
     int f;
     int bo;
+    int n;
+    int tell;
+    od_rollback_buffer buf1;
+    od_rollback_buffer buf2;
+    od_coeff morig[1024];
+    od_coeff orig[1024];
+    od_coeff large[1024];
+    od_coeff small[1024];
+    int rate_large;
+    int rate_small;
     d = l - xdec;
-    f = OD_FILT_SIZE[d - 1];
     bo = (by << (OD_LOG_BSIZE0 + d))*w + (bx << (OD_LOG_BSIZE0 + d));
+    n = 4 << d;
+    if (rdo) {
+      int i;
+      int j;
+      tell = od_ec_enc_tell_frac(&enc->ec);
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) orig[n*i + j] = ctx->c[bo + i*w + j];
+      }
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) morig[n*i + j] = ctx->mc[bo + i*w + j];
+      }
+      od_encode_checkpoint(enc, &buf1);
+      od_block_encode(enc, ctx, d, pli, bx, by);
+      rate_large = od_ec_enc_tell_frac(&enc->ec)-tell;
+      od_encode_checkpoint(enc, &buf2);
+      od_encode_rollback(enc, &buf1);
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) large[n*i + j] = ctx->c[bo + i*w + j];
+      }
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) ctx->c[bo + i*w + j] = orig[n*i + j];
+      }
+    }
+    f = OD_FILT_SIZE[d - 1];
     od_apply_filter_hsplit(ctx->c + bo, w, 0, d, f);
     od_apply_filter_vsplit(ctx->c + bo, w, 0, d, f);
     if (!ctx->is_keyframe) {
@@ -759,12 +804,40 @@ static void od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     l--;
     bx <<= 1;
     by <<= 1;
-    od_encode_recursive(enc, ctx, pli, bx + 0, by + 0, l, xdec, ydec);
-    od_encode_recursive(enc, ctx, pli, bx + 1, by + 0, l, xdec, ydec);
-    od_encode_recursive(enc, ctx, pli, bx + 0, by + 1, l, xdec, ydec);
-    od_encode_recursive(enc, ctx, pli, bx + 1, by + 1, l, xdec, ydec);
+    od_encode_recursive(enc, ctx, pli, bx + 0, by + 0, l, xdec, ydec, rdo);
+    od_encode_recursive(enc, ctx, pli, bx + 1, by + 0, l, xdec, ydec, rdo);
+    od_encode_recursive(enc, ctx, pli, bx + 0, by + 1, l, xdec, ydec, rdo);
+    od_encode_recursive(enc, ctx, pli, bx + 1, by + 1, l, xdec, ydec, rdo);
     od_apply_filter_vsplit(ctx->c + bo, w, 1, d, f);
     od_apply_filter_hsplit(ctx->c + bo, w, 1, d, f);
+    if (rdo) {
+      int i;
+      int j;
+      double lambda;
+      double dist_small;
+      double dist_large;
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) small[n*i + j] = ctx->c[bo + i*w + j];
+      }
+      rate_small = 1+od_ec_enc_tell_frac(&enc->ec)-tell;
+      dist_small = od_compute_dist(orig, small, n);
+      dist_large = od_compute_dist(orig, large, n);
+      lambda = .125*OD_PVQ_LAMBDA*enc->quantizer[pli]*enc->quantizer[pli];
+      if (dist_large + lambda*rate_large < dist_small + lambda*rate_small) {
+        od_encode_rollback(enc, &buf2);
+        for (i = 0; i < n; i++) {
+          for (j = 0; j < n; j++) ctx->c[bo + i*w + j] = large[n*i + j];
+        }
+        for (i = 0; i < 1 << (d - 1); i++) {
+          for (j = 0; j < 1 << (d - 1); j++) {
+            enc->state.bsize[((by<<l>>1)+i)*enc->state.bstride + (bx<<l>>1) + j] = d;
+          }
+        }
+      }
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) ctx->mc[bo + i*w + j] = morig[n*i + j];
+      }
+    }
   }
 }
 #endif
@@ -1239,6 +1312,7 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
   int nvsb;
   od_state *state = &enc->state;
   nplanes = state->info.nplanes;
+  if (rdo_only) nplanes = 1;
   frame_width = state->frame_width;
   frame_height = state->frame_height;
   nhsb = state->nhsb;
@@ -1325,7 +1399,7 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
            0, sby > 0 && sbx < nhsb - 1);
         }
 #if !defined(OD_DUMP_COEFFS)
-        od_encode_recursive(enc, mbctx, pli, sbx, sby, 3, xdec, ydec);
+        od_encode_recursive(enc, mbctx, pli, sbx, sby, 3, xdec, ydec, rdo_only);
 #endif
       }
         OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_PLANE, OD_ACCT_PLANE_UNKNOWN);
@@ -1621,7 +1695,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration) {
     od_encode_mvs(enc);
 #if 1
     od_split_superblocks_rdo(enc, &mbctx);
-    od_split_superblocks(enc, 0);
+    /*od_split_superblocks(enc, 0);*/
 #endif
   }
   else {
