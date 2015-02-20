@@ -104,7 +104,7 @@ static double od_rsqrt_table(int i) {
  * @return                  cosine distance between x and y (between 0 and 1)
  */
 static double pvq_search_rdo_double(const double *xcoeff, int n, int k,
- od_coeff *ypulse, double g2) {
+ od_coeff *ypulse, double g2, int tilt) {
   int i, j;
   double xy;
   double yy;
@@ -145,6 +145,7 @@ static double pvq_search_rdo_double(const double *xcoeff, int n, int k,
   /* Rough assumption for now, the last position costs about 3 bits more than
      the first. */
   delta_rate = 3./n;
+  if (tilt) delta_rate *= 2;
   /* Search one pulse at a time */
   for (; i < k - rdo_pulses; i++) {
     int pos;
@@ -393,7 +394,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
            that's the factor by which cos_dist is multiplied to get the
            distortion metric. */
         cos_dist = pvq_search_rdo_double(x, n - 1, k, y_tmp,
-         qcg*cg*sin(theta)*sin(qtheta));
+         qcg*cg*sin(theta)*sin(qtheta), ln==0);
         /* See Jmspeex' Journal of Dubious Theoretical Results. */
         dist_theta = 2 - 2*cos(theta - qtheta)
          + sin(theta)*sin(qtheta)*(2 - 2*cos_dist);
@@ -427,7 +428,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
       double qcg;
       qcg = i;
       k = od_pvq_compute_k(qcg, -1, -1, 1, n, beta, robust || is_keyframe);
-      cos_dist = pvq_search_rdo_double(x1, n, k, y_tmp, qcg*cg);
+      cos_dist = pvq_search_rdo_double(x1, n, k, y_tmp, qcg*cg, ln==0);
       /* See Jmspeex' Journal of Dubious Theoretical Results. */
       dist = gain_weight*(qcg - cg)*(qcg - cg) + qcg*cg*(2 - 2*cos_dist);
       /* Do approximate RDO. */
