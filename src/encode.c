@@ -859,6 +859,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
         for (j = 0; j < n; j++) small[n*i + j] = ctx->c[bo + i*w + j];
       }
       rate_small = 16+od_ec_enc_tell_frac(&enc->ec)-tell;
+      if (n == 8) small_skip = 1;
       dist_small = od_compute_dist(enc, orig, small, n);
       dist_large = od_compute_dist(enc, orig, large, n);
       lambda = .125*OD_PVQ_LAMBDA*enc->quantizer[pli]*enc->quantizer[pli];
