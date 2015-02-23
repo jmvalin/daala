@@ -724,15 +724,45 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
 }
 #endif
 
-static double od_compute_dist(od_coeff *x, od_coeff *y, int n) {
+static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
+ int stride) {
+  od_coeff e[8][8];
+  od_coeff E[8][8];
+  double sum;
+  int i;
+  int j;
+  for (i = 0; i < 8; i++) {
+    for (j = 0; j < 8; j++) e[i][j] = x[i*stride + j] - y[i*stride + j];
+  }
+  (*enc->state.opt_vtbl.fdct_2d[OD_BLOCK_8X8])(&E[0][0], 8, &e[0][0], 8);
+  sum = 0;
+  for (i = 0; i < 8; i++) {
+    for (j = 0; j < 8; j++) {
+      sum += E[i][j]*(double)E[i][j]*(1 - .04*(i + j));
+    }
+  }
+  return sum;
+}
+
+static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
+ int n) {
   int i;
   double sum;
   sum = 0;
+#if 0
   for (i = 0; i < n*n; i++) {
     double tmp;
     tmp = x[i]-y[i];
     sum += tmp*tmp;
   }
+#else
+  for (i = 0; i < n; i += 8) {
+    int j;
+    for (j = 0; j < n; j += 8) {
+      sum += od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], n);
+    }
+  }
+#endif
   return sum;
 }
 
@@ -829,8 +859,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
         for (j = 0; j < n; j++) small[n*i + j] = ctx->c[bo + i*w + j];
       }
       rate_small = 16+od_ec_enc_tell_frac(&enc->ec)-tell;
-      dist_small = od_compute_dist(orig, small, n);
-      dist_large = od_compute_dist(orig, large, n);
+      dist_small = od_compute_dist(enc, orig, small, n);
+      dist_large = od_compute_dist(enc, orig, large, n);
       lambda = .125*OD_PVQ_LAMBDA*enc->quantizer[pli]*enc->quantizer[pli];
       if (small_skip || dist_large + lambda*rate_large < dist_small + lambda*rate_small) {
         od_encode_rollback(enc, &buf2);
