@@ -42,10 +42,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #if OD_DISABLE_QM
 
 static const unsigned char od_flat_qm_q4[OD_QM_SIZE] = {
-  16, 16,
-  16, 16, 16, 16,
-  15, 15, 15, 15, 15, 15,
-  13, 13, 13, 13, 13, 13, 13, 13
+  27, 16,
+  23, 16, 16, 16,
+  19, 15, 15, 15, 15, 15,
+  17, 13, 13, 13, 13, 13, 13, 13
 };
 
 const od_qm_entry OD_DEFAULT_QMS[][OD_NPLANES_MAX] = {
