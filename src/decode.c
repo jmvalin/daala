@@ -259,7 +259,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
   if (!ctx->is_keyframe) {
     (*dec->state.opt_vtbl.fdct_2d[ln])(md + (by << 2)*w + (bx << 2), w,
      mc + (by << 2)*w + (bx << 2), w);
-    if (0) {
+    if (1) {
       int i;
       int j;
       int bo;
@@ -268,6 +268,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
         for (j = 0; j < 4 << ln; j++) {
           double mag;
           mag = od_basis_mag[ln][i]*od_basis_mag[ln][j];
+          if (i==0&&j==0) mag = 1;
           md[bo + i*w + j] = (od_coeff)floor(.5 + md[bo + i*w + j]*mag);
         }
       }
@@ -311,7 +312,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
   }
   od_coding_order_to_raster(&d[((by << 2))*w + (bx << 2)], w, pred, n,
    lossless);
-  if (0) {
+  if (1) {
     int i;
     int j;
     int bo;
@@ -320,6 +321,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
       for (j = 0; j < 4 << ln; j++) {
         double mag;
         mag = od_basis_mag[ln][i]*od_basis_mag[ln][j];
+        if (i==0&&j==0) mag = 1;
         d[bo + i*w + j] = (od_coeff)floor(.5 + d[bo + i*w + j]/mag);
       }
     }
