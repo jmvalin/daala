@@ -117,7 +117,7 @@ const int OD_QM8[] = {
 /* These are the PVQ equivalent of quantization matrices, except that
    the values are per-band. */
 
-#if OD_DISABLE_QM
+#if OD_DISABLE_MASKING
 
 static const unsigned char od_flat_qm_q4[OD_QM_SIZE] = {
   27, 16,
@@ -137,31 +137,22 @@ const od_qm_entry OD_DEFAULT_QMS[][OD_NPLANES_MAX] = {
 
 #else
 
-static const unsigned char od_low_rate_qm_q4[OD_QM_SIZE] = {
-  16, 19,
-  16, 16, 24, 32,
-  16, 15, 17, 19, 23, 31,
-  16, 14, 14, 16, 16, 18, 21, 29
-};
-
-static const unsigned char od_high_rate_qm_q4[OD_QM_SIZE] = {
-  19, 26,
-  15, 17, 52, 83,
-  11, 11, 13, 16, 39, 65,
-  7, 7, 8, 9, 11, 16, 35, 54
+static const unsigned char od_flat_qm_q4[OD_QM_SIZE] = {
+  27, 16,
+  23, 18, 28, 32,
+  19, 14, 20, 20, 28, 32,
+  17, 11, 16, 14, 16, 16, 23, 28
 };
 
 const od_qm_entry OD_DEFAULT_QMS[][OD_NPLANES_MAX] = {
-  {{20, 256, od_high_rate_qm_q4},
-   {20, 448, od_high_rate_qm_q4},
-   {20, 320, od_high_rate_qm_q4}},
-  {{70, 256, od_low_rate_qm_q4},
-   {70, 256, od_low_rate_qm_q4},
-   {70, 256, od_low_rate_qm_q4}},
+  {{15, 256, od_flat_qm_q4},
+   {15, 448, od_flat_qm_q4},
+   {15, 320, od_flat_qm_q4}},
   {{0, 0, NULL},
    {0, 0, NULL},
    {0, 0, NULL}}
 };
+
 #endif
 
 #if OD_DISABLE_MASKING
