@@ -38,18 +38,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 /*These tables were generated using compute_basis.c, if OD_FILT_SIZE is
    changed, they have to be regenerated.*/
-const double mag4[] = {0.774125, 0.877780, 0.925934, 0.951682};
-const double mag8[] = {
+static const double mag4[] = {0.774125, 0.877780, 0.925934, 0.951682};
+static const double mag8[] = {
   0.836776, 0.844316, 0.917307, 0.924980,
   0.948172, 0.936507, 0.968913, 0.967917
 };
-const double mag16[] = {
+static const double mag16[] = {
   0.921737, 0.868401, 0.925373, 0.958481,
   0.959319, 0.954073, 0.962690, 0.975782,
   0.974046, 0.967441, 0.968526, 0.979529,
   0.985361, 0.982844, 0.983440, 0.993243
 };
-const double mag32[] = {
+static const double mag32[] = {
   0.961865, 0.926229, 0.935907, 0.950836,
   0.962498, 0.972889, 0.979745, 0.979867,
   0.980251, 0.978192, 0.976537, 0.978706,
@@ -59,7 +59,33 @@ const double mag32[] = {
   0.992394, 0.991791, 0.991204, 0.990484,
   0.992098, 0.994740, 0.995867, 1.000695
 };
-const double *od_basis_mag[] = {mag4, mag8, mag16, mag32};
+
+static const double mag4_420[] = {0.870774, 0.872037, 0.949493, 0.947936};
+static const double mag8_420[] = {
+  0.936496, 0.892830, 0.938452, 0.970087,
+  0.974272, 0.967954, 0.974035, 0.990480
+};
+static const double mag16_420[] = {
+  0.968807, 0.940969, 0.947977, 0.957741,
+  0.969762, 0.978644, 0.984885, 0.988009,
+  0.987424, 0.985569, 0.984215, 0.984462,
+  0.987205, 0.991415, 0.994985, 0.998237
+};
+static const double mag32_420[] = {
+  0.985068, 0.970006, 0.969893, 0.973192,
+  0.973444, 0.975881, 0.979601, 0.981070,
+  0.984989, 0.987520, 0.988830, 0.990983,
+  0.992376, 0.992884, 0.993447, 0.993381,
+  0.993712, 0.994060, 0.993294, 0.992392,
+  0.991338, 0.992410, 0.992051, 0.993874,
+  0.993488, 0.994162, 0.995318, 0.995925,
+  0.997475, 0.999027, 0.998303, 1.001413
+};
+
+const double *od_basis_mag[2][OD_NBSIZES] = {
+  {mag4, mag8, mag16, mag32},
+  {mag4_420, mag8_420, mag16_420, mag32_420}
+};
 
 #if OD_DISABLE_QM
 const int OD_QM8[] = {
@@ -129,11 +155,18 @@ const int OD_QM8[] = {
 #if OD_DISABLE_MASKING
 
 /* FIXME: Explain why the DC coefficients are not 16 (related to Haar DC).*/
-static const unsigned char od_flat_qm_q4[OD_QM_SIZE] = {
+static const unsigned char od_flat_luma_qm_q4[OD_QM_SIZE] = {
   27, 16,
   23, 16, 16, 16,
   19, 16, 16, 16, 16, 16,
   17, 16, 16, 16, 16, 16, 16, 16
+};
+
+static const unsigned char od_flat_chroma_qm_q4[OD_QM_SIZE] = {
+  21, 16,
+  18, 16, 16, 16,
+  17, 16, 16, 16, 16, 16,
+  16, 16, 16, 16, 16, 16, 16, 16
 };
 
 /*No interpolation, always use od_flat_qm_q4, but use a different scale for
@@ -141,8 +174,8 @@ static const unsigned char od_flat_qm_q4[OD_QM_SIZE] = {
  FIXME: The scale used for each plane is not properly tuned, see also OD_DC_RES.*/
 const od_qm_entry OD_DEFAULT_QMS[][OD_NPLANES_MAX] = {
   {{15, 256, od_flat_qm_q4},
-   {15, 448, od_flat_qm_q4},
-   {15, 320, od_flat_qm_q4}},
+   {15, 448, od_flat_chroma_qm_q4},
+   {15, 320, od_flat_chroma_qm_q4}},
   {{0, 0, NULL},
    {0, 0, NULL},
    {0, 0, NULL}}
@@ -157,13 +190,20 @@ static const unsigned char od_flat_qm_q4[OD_QM_SIZE] = {
   17, 11, 16, 14, 16, 16, 23, 28
 };
 
+static const unsigned char od_flat_chroma_qm_q4[OD_QM_SIZE] = {
+  21, 16,
+  18, 16, 16, 16,
+  17, 16, 16, 16, 16, 16,
+  16, 16, 16, 16, 16, 16, 16, 16
+};
+
 /*No interpolation, always use od_flat_qm_q4, but use a different scale for
  each plane.
  FIXME: The scale used for each plane is not properly tuned, see also OD_DC_RES.*/
 const od_qm_entry OD_DEFAULT_QMS[][OD_NPLANES_MAX] = {
   {{15, 256, od_flat_qm_q4},
-   {15, 448, od_flat_qm_q4},
-   {15, 320, od_flat_qm_q4}},
+   {15, 448, od_flat_chroma_qm_q4},
+   {15, 320, od_flat_chroma_qm_q4}},
   {{0, 0, NULL},
    {0, 0, NULL},
    {0, 0, NULL}}
@@ -210,13 +250,13 @@ const double *const OD_PVQ_BETA[OD_NPLANES_MAX][OD_NBSIZES] = {
   needed because of lapping.
   FIXME: Explain why we need magnitude compensation better.*/
 void od_apply_qm(od_coeff *out, int out_stride, od_coeff *in, int in_stride,
- int ln, int inverse) {
+ int ln, int dec, int inverse) {
   int i;
   int j;
   for (i = 0; i < 4 << ln; i++) {
     for (j = 0; j < 4 << ln; j++) {
       double mag;
-      mag = od_basis_mag[ln][i]*od_basis_mag[ln][j];
+      mag = od_basis_mag[dec][ln][i]*od_basis_mag[dec][ln][j];
       if (i == 0 && j == 0) {
         mag = 1;
       }

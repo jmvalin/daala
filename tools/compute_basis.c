@@ -7,7 +7,8 @@
 #define MAXN 32
 
 void usage(char *str) {
-  fprintf(stderr, "usage: %s <log size - 2> <coeff | mag>\n", str);
+  fprintf(stderr,
+   "usage: %s <log size - 2> <coeff | coeff420 | mag | mag420>\n", str);
 }
 
 #define SIZE (3*MAXN)
@@ -22,6 +23,7 @@ int main(int argc, char **argv) {
   int left;
   int right;
   int magnitude;
+  int dec;
   od_coeff x0[SIZE];
   od_coeff y0[SIZE];
   od_coeff *x;
@@ -31,18 +33,28 @@ int main(int argc, char **argv) {
     return 1;
   }
   ln = atoi(argv[1]);
+  dec = 0;
   if (strcmp("mag", argv[2]) == 0) {
     magnitude = 1;
   }
   else if (strcmp("coeff", argv[2]) == 0) {
     magnitude = 0;
-  } else {
+  }
+  else if (strcmp("mag420", argv[2]) == 0) {
+    magnitude = 1;
+    dec = 1;
+  }
+  else if (strcmp("coeff420", argv[2]) == 0) {
+    magnitude = 0;
+    dec = 1;
+  }
+  else {
     usage(argv[0]);
     return 1;
   }
   n = 4 << ln;
-  left = OD_FILT_SIZE[OD_MINI(OD_NBSIZES - 1, ln + 1)];
-  right = OD_FILT_SIZE[ln];
+  left = OD_MAXI(0, OD_FILT_SIZE[OD_MINI(OD_NBSIZES - 1, ln + 1)] - dec);
+  right = OD_MAXI(0, OD_FILT_SIZE[ln] - dec);
   if (1) {
   for (i = 0; i < n; i++) {
     OD_CLEAR(x0, SIZE);

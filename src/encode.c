@@ -465,11 +465,11 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   /* Apply forward transform. */
   if (dc || !ctx->is_keyframe) {
     (*enc->state.opt_vtbl.fdct_2d[ln])(d + bo, w, c + bo, w);
-    od_apply_qm(d + bo, w, d + bo, w, ln, 0);
+    od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 0);
   }
   if (!ctx->is_keyframe) {
     (*enc->state.opt_vtbl.fdct_2d[ln])(md + bo, w, mc + bo, w);
-    od_apply_qm(md + bo, w, md + bo, w, ln, 0);
+    od_apply_qm(md + bo, w, md + bo, w, ln, xdec, 0);
   }
   od_encode_compute_pred(enc, ctx, pred, ln, pli, bx, by);
   if (ctx->is_keyframe && pli == 0) {
@@ -532,7 +532,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
   /*Apply the inverse transform.*/
 #if !defined(OD_OUTPUT_PRED)
-  od_apply_qm(d + bo, w, d + bo, w, ln, 1);
+  od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
   (*enc->state.opt_vtbl.idct_2d[ln])(c + bo, w, d + bo, w);
 #else
 # if 0
@@ -570,7 +570,7 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
     d -= xdec;
     bo = (by << (OD_LOG_BSIZE0 + d))*w + (bx << (OD_LOG_BSIZE0 + d));
     (*enc->state.opt_vtbl.fdct_2d[d])(c + bo, w, ctx->c + bo, w);
-    od_apply_qm(c + bo, w, c + bo, w, d, 0);
+    od_apply_qm(c + bo, w, c + bo, w, d, xdec, 0);
 #if defined(OD_DUMP_COEFFS)
     {
       int i;
@@ -687,8 +687,8 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     int ac_quant[2];
     if (enc->quantizer[pli] == 0) ac_quant[0] = ac_quant[1] = 1;
     else {
-      ac_quant[0] = dc_quant*OD_DC_QM[l - xdec - 1][0] >> 4;
-      ac_quant[1] = dc_quant*OD_DC_QM[l - xdec - 1][1] >> 4;
+      ac_quant[0] = dc_quant*OD_DC_QM[xdec][l - xdec - 1][0] >> 4;
+      ac_quant[1] = dc_quant*OD_DC_QM[xdec][l - xdec - 1][1] >> 4;
     }
     l--;
     bx <<= 1;
