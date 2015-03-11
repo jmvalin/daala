@@ -750,6 +750,15 @@ static void od_decode_residual(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
     od_apply_filter_sb_cols(state->ctmp[pli], w, nhsb, nvsb, xdec, ydec, 1, 3);
     od_apply_filter_sb_rows(state->ctmp[pli], w, nhsb, nvsb, xdec, ydec, 1, 3);
 #endif
+    for (sby = 0; sby < nvsb; sby++) {
+      for (sbx = 0; sbx < nhsb; sbx++) {
+        if (OD_BLOCK_SIZE4x4(dec->state.bsize,
+          dec->state.bstride, sbx << 3, sby << 3) == 3) {
+          od_smooth_block(&state->ctmp[pli][(sby << 5 >> xdec)*w + (sbx << 5 >> xdec)],
+           32 >> xdec, w, dec->quantizer[pli], pli);
+        }
+      }
+    }
     {
       unsigned char *data;
       od_coeff *ctmp;

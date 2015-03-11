@@ -1615,6 +1615,17 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     od_apply_filter_sb_rows(state->ctmp[pli], w, nhsb, nvsb, xdec, ydec, 1, 3);
 #endif
     if (!rdo_only) {
+      for (sby = 0; sby < nvsb; sby++) {
+        for (sbx = 0; sbx < nhsb; sbx++) {
+          if (OD_BLOCK_SIZE4x4(enc->state.bsize,
+            enc->state.bstride, sbx << 3, sby << 3) == 3) {
+            od_smooth_block(&state->ctmp[pli][(sby << 5 >> xdec)*w + (sbx << 5 >> xdec)],
+             32 >> xdec, w, enc->quantizer[pli], pli);
+          }
+        }
+      }
+    }
+    if (!rdo_only) {
       unsigned char *data;
       int ystride;
       int coeff_shift;

@@ -1404,6 +1404,55 @@ void od_apply_filter_cols(od_coeff *c, int w, int bx, int by, int l,
   }
 }
 
+void od_smooth_block(od_coeff *x, int n, int stride, int q, int pli) {
+  od_coeff x00;
+  od_coeff x01;
+  od_coeff x10;
+  od_coeff x11;
+  od_coeff a00;
+  od_coeff a01;
+  od_coeff a10;
+  od_coeff a11;
+  od_coeff y[32][32];
+  od_coeff dist;
+  const double strength[3] = {0.01, 0.04, 0.04};
+  double w0;
+  int i;
+  int j;
+  x00 = x[0];
+  x01 = x[n - 1];
+  x10 = x[(n - 1)*stride];
+  x11 = x[(n - 1)*stride + (n - 1)];
+  a00 = x00;
+  a01 = x01 - x00;
+  a10 = x10 - x00;
+  a11 = x11 + x00 - x10 - x01;
+  dist = 0;
+  for (i = 0; i < n; i++) {
+    double py;
+    py = (double)i/(n - 1);
+    for (j = 0; j < n; j++) {
+      double px;
+      px = (double)j/(n - 1);
+      y[i][j] = a00 + px*a01 + py*a10 + px*py*a11;
+      dist += (y[i][j] - x[i*stride + j])*(y[i][j] - x[i*stride + j]);
+    }
+  }
+  dist /= n*n;
+  w0 = OD_MINF(1, strength[pli]*q*q/(1e-15+12.*dist));
+  w0 *= w0;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      od_coeff d;
+      double w;
+      d = y[i][j] - x[i*stride + j];
+      w = OD_MINF(1, strength[pli]*q*q/(1e-15+12.*d*d));
+      w *= w0;
+      x[i*stride + j] -= w*(x[i*stride + j]-y[i][j]);
+    }
+  }
+}
+
 void od_apply_filter_hsplit(od_coeff *c0, int stride, int inv, int ln, int f) {
   int j;
   od_coeff *c;
