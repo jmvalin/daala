@@ -676,7 +676,7 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     sb_dc_curr = quant*dc_quant + sb_dc_pred;
     c[(by << l2)*w + (bx << l2)] = sb_dc_curr;
     sb_dc_mem[by*nhsb + bx] = sb_dc_curr;
-    if (dc) {*(*dc)++ = sb_dc_curr;}
+    if (dc) *(*dc)++ = sb_dc_curr;
     if (by > 0) vgrad = sb_dc_mem[(by - 1)*nhsb + bx] - sb_dc_curr;
     if (bx > 0) hgrad = sb_dc_mem[by*nhsb + bx - 1]- sb_dc_curr;
   }
@@ -709,7 +709,7 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       if (quant) od_ec_enc_bits(&enc->ec, quant < 0, 1);
       x[i] = quant*ac_quant[i == 3];
     }
-    if (dc_rate) {*(*dc_rate)++ = od_ec_enc_tell_frac(&enc->ec) - tell;}
+    if (dc_rate) *(*dc_rate)++ = od_ec_enc_tell_frac(&enc->ec) - tell;
     /* Gives best results for subset1, more conservative than the
        theoretical /4 of a pure gradient. */
     x[1] += hgrad/5;
@@ -721,16 +721,16 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     c[(by << l2)*w + ((bx + 1) << l2)] = x[1];
     c[((by + 1) << l2)*w + (bx << l2)] = x[2];
     c[((by + 1) << l2)*w + ((bx + 1) << l2)] = x[3];
-    if (dc) {*(*dc)++ = x[0];}
+    if (dc) *(*dc)++ = x[0];
     od_quantize_haar_dc(enc, ctx, pli, bx + 0, by + 0, l, xdec, ydec, hgrad,
      vgrad, 0, dc, dc_rate);
-    if (dc) {*(*dc)++ = x[1];}
+    if (dc) *(*dc)++ = x[1];
     od_quantize_haar_dc(enc, ctx, pli, bx + 1, by + 0, l, xdec, ydec, hgrad,
      vgrad, 0, dc, dc_rate);
-    if (dc) {*(*dc)++ = x[2];}
+    if (dc) *(*dc)++ = x[2];
     od_quantize_haar_dc(enc, ctx, pli, bx + 0, by + 1, l, xdec, ydec, hgrad,
      vgrad, 0, dc, dc_rate);
-    if (dc) {*(*dc)++ = x[3];}
+    if (dc) *(*dc)++ = x[3];
     od_quantize_haar_dc(enc, ctx, pli, bx + 1, by + 1, l, xdec, ydec, hgrad,
      vgrad, 0, dc, dc_rate);
   }
@@ -888,6 +888,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       if (dc_rate) {
         int bits;
         bits = *(*dc_rate)++;
+        /* Encode "dummy bits" so that we can account for the rate. */
         bits = (bits + 4)/8;
         od_ec_enc_bits(&enc->ec, 0, OD_MINI(20, bits));
       }
