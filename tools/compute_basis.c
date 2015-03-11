@@ -13,6 +13,7 @@ void usage(char *str) {
 #define SIZE (3*MAXN)
 #define SIZE2 (SIZE*SIZE)
 
+/* Computes the synthesis basis functions and their magnitudes. */
 int main(int argc, char **argv) {
   int i;
   int j;

@@ -233,6 +233,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
   int n;
   int xdec;
   int w;
+  int bo;
   int frame_width;
   od_coeff *c;
   od_coeff *d;
@@ -251,29 +252,15 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
   xdec = dec->state.io_imgs[OD_FRAME_INPUT].planes[pli].xdec;
   frame_width = dec->state.frame_width;
   w = frame_width >> xdec;
+  bo = (by << 2)*w + (bx << 2);
   c = ctx->c;
   d = ctx->d[pli];
   md = ctx->md;
   mc = ctx->mc;
   /*Apply forward transform to MC predictor.*/
   if (!ctx->is_keyframe) {
-    (*dec->state.opt_vtbl.fdct_2d[ln])(md + (by << 2)*w + (bx << 2), w,
-     mc + (by << 2)*w + (bx << 2), w);
-    if (1) {
-      int i;
-      int j;
-      int bo;
-      bo = (by << 2)*w + (bx << 2);
-      for (i = 0; i < 4 << ln; i++) {
-        for (j = 0; j < 4 << ln; j++) {
-          double mag;
-          mag = od_basis_mag[ln][i]*od_basis_mag[ln][j];
-          if (i==0&&j==0) mag = 1;
-          else mag /= 0.0625*OD_QM8[(i << 1 >> ln)*8 + (j << 1 >> ln)];
-          md[bo + i*w + j] = (od_coeff)floor(.5 + md[bo + i*w + j]*mag);
-        }
-      }
-    }
+    (*dec->state.opt_vtbl.fdct_2d[ln])(md + bo, w, mc + bo, w);
+    od_apply_qm(md + bo, w, md + bo, w, ln, 0);
   }
   od_decode_compute_pred(dec, ctx, pred, ln, pli, bx, by);
   if (ctx->is_keyframe && pli == 0) {
@@ -309,28 +296,12 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
     pred[0] = pred[0]*dc_quant + predt[0];
   }
   else {
-    pred[0] = d[((by << 2))*w + ((bx << 2))];
+    pred[0] = d[bo];
   }
-  od_coding_order_to_raster(&d[((by << 2))*w + (bx << 2)], w, pred, n,
-   lossless);
-  if (1) {
-    int i;
-    int j;
-    int bo;
-    bo = (by << 2)*w + (bx << 2);
-    for (i = 0; i < 4 << ln; i++) {
-      for (j = 0; j < 4 << ln; j++) {
-        double mag;
-        mag = od_basis_mag[ln][i]*od_basis_mag[ln][j];
-        if (i==0&&j==0) mag = 1;
-        else mag /= 0.0625*OD_QM8[(i << 1 >> ln)*8 + (j << 1 >> ln)];
-        d[bo + i*w + j] = (od_coeff)floor(.5 + d[bo + i*w + j]/mag);
-      }
-    }
-  }
+  od_coding_order_to_raster(&d[bo], w, pred, n, lossless);
+  od_apply_qm(d + bo, w, d + bo, w, ln, 1);
   /*Apply the inverse transform.*/
-  (*dec->state.opt_vtbl.idct_2d[ln])(c + (by << 2)*w + (bx << 2), w,
-   d + (by << 2)*w + (bx << 2), w);
+  (*dec->state.opt_vtbl.idct_2d[ln])(c + bo, w, d + bo, w);
 }
 
 #if !OD_DISABLE_HAAR_DC

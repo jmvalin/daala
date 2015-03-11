@@ -36,6 +36,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #define EPSILON 1e-30
 
+/*These tables were generated using compute_basis.c, if OD_FILT_SIZE is
+   changed, they have to be regenerated.*/
 const double mag4[] = {0.774125, 0.877780, 0.925934, 0.951682};
 const double mag8[] = {
   0.836776, 0.844316, 0.917307, 0.924980,
@@ -59,14 +61,20 @@ const double mag32[] = {
 };
 const double *od_basis_mag[] = {mag4, mag8, mag16, mag32};
 
-const int OD_QM4[] = {
-  16, 19, 21, 23,
-  19, 21, 23, 26,
-  21, 23, 26, 28,
-  23, 26, 28, 31
+#if OD_DISABLE_QM
+const int OD_QM8[] = {
+  16, 16, 16, 16, 16, 16, 16, 16,
+  16, 16, 16, 16, 16, 16, 16, 16,
+  16, 16, 16, 16, 16, 16, 16, 16,
+  16, 16, 16, 16, 16, 16, 16, 16,
+  16, 16, 16, 16, 16, 16, 16, 16,
+  16, 16, 16, 16, 16, 16, 16, 16,
+  16, 16, 16, 16, 16, 16, 16, 16,
+  16, 16, 16, 16, 16, 16, 16, 16
 };
-
-#if 0
+#else
+/*FIXME: Explain how these matrices were chosen.*/
+# if 0
 const int OD_QM8[] = {
   16, 17, 18, 19, 20, 21, 22, 23,
   17, 18, 19, 20, 21, 22, 23, 24,
@@ -76,8 +84,8 @@ const int OD_QM8[] = {
   21, 22, 23, 24, 26, 27, 28, 30,
   22, 23, 24, 26, 27, 28, 30, 31,
   23, 24, 25, 27, 28, 30, 31, 33};
-#endif
-#if 0
+# endif
+# if 0
 const int OD_QM8[] = {
   16, 16, 19, 22, 22, 26, 26, 27,
   16, 16, 22, 22, 26, 27, 27, 29,
@@ -88,8 +96,8 @@ const int OD_QM8[] = {
   29, 34, 34, 37, 40, 48, 56, 69,
   34, 37, 38, 40, 48, 58, 69, 83
 };
-#endif
-#if 0
+# endif
+# if 0
 const int OD_QM8[] = {
   16, 16, 17, 20, 24, 29, 36, 42,
   16, 17, 17, 19, 22, 26, 31, 37,
@@ -100,8 +108,8 @@ const int OD_QM8[] = {
   36, 31, 34, 39, 46, 52, 59, 66,
   42, 37, 40, 45, 51, 58, 66, 73
 };
-#endif
-#if 1
+# endif
+# if 1
 const int OD_QM8[] = {
   16, 16, 18, 21, 24, 28, 32, 36,
   16, 17, 20, 21, 24, 27, 31, 35,
@@ -112,6 +120,7 @@ const int OD_QM8[] = {
   32, 31, 33, 37, 43, 50, 58, 68,
   36, 35, 38, 42, 49, 58, 68, 78
 };
+# endif
 #endif
 
 /* These are the PVQ equivalent of quantization matrices, except that
@@ -119,6 +128,7 @@ const int OD_QM8[] = {
 
 #if OD_DISABLE_MASKING
 
+/* FIXME: Explain why the DC coefficients are not 16 (related to Haar DC).*/
 static const unsigned char od_flat_qm_q4[OD_QM_SIZE] = {
   27, 16,
   23, 16, 16, 16,
@@ -126,6 +136,9 @@ static const unsigned char od_flat_qm_q4[OD_QM_SIZE] = {
   17, 16, 16, 16, 16, 16, 16, 16
 };
 
+/*No interpolation, always use od_flat_qm_q4, but use a different scale for
+ each plane.
+ FIXME: The scale used for each plane is not properly tuned, see also OD_DC_RES.*/
 const od_qm_entry OD_DEFAULT_QMS[][OD_NPLANES_MAX] = {
   {{15, 256, od_flat_qm_q4},
    {15, 448, od_flat_qm_q4},
@@ -144,6 +157,9 @@ static const unsigned char od_flat_qm_q4[OD_QM_SIZE] = {
   17, 11, 16, 14, 16, 16, 23, 28
 };
 
+/*No interpolation, always use od_flat_qm_q4, but use a different scale for
+ each plane.
+ FIXME: The scale used for each plane is not properly tuned, see also OD_DC_RES.*/
 const od_qm_entry OD_DEFAULT_QMS[][OD_NPLANES_MAX] = {
   {{15, 256, od_flat_qm_q4},
    {15, 448, od_flat_qm_q4},
@@ -189,6 +205,33 @@ const double *const OD_PVQ_BETA[OD_NPLANES_MAX][OD_NBSIZES] = {
   {OD_PVQ_BETA4_CHROMA, OD_PVQ_BETA8_CHROMA,
    OD_PVQ_BETA16_CHROMA, OD_PVQ_BETA32_CHROMA}
 };
+
+/*Apply the quantization matrix OD_QM8 and the magnitude compensation which is
+  needed because of lapping.
+  FIXME: Explain why we need magnitude compensation better.*/
+void od_apply_qm(od_coeff *out, int out_stride, od_coeff *in, int in_stride,
+ int ln, int inverse) {
+  int i;
+  int j;
+  for (i = 0; i < 4 << ln; i++) {
+    for (j = 0; j < 4 << ln; j++) {
+      double mag;
+      mag = od_basis_mag[ln][i]*od_basis_mag[ln][j];
+      if (i == 0 && j == 0) {
+        mag = 1;
+      }
+      else {
+        mag /= 0.0625*OD_QM8[(i << 1 >> ln)*8 + (j << 1 >> ln)];
+      }
+      if (inverse) {
+        out[i*out_stride + j] = (od_coeff)floor(.5 + in[i*in_stride + j]/mag);
+      }
+      else {
+        out[i*out_stride + j] = (od_coeff)floor(.5 + in[i*in_stride + j]*mag);
+      }
+    }
+  }
+}
 
 /* Indexing for the packed quantization matrices. */
 int od_qm_get_index(int ln, int band) {
