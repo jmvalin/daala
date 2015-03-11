@@ -27,7 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "internal.h"
 # include "filter.h"
 
-extern const double *od_basis_mag[];
+extern const double *od_basis_mag[2][OD_NBSIZES];
 extern const int OD_QM8[];
 
 # define PVQ_MAX_PARTITIONS (1 + 3*(OD_NBSIZES-1))
@@ -67,7 +67,7 @@ extern const od_qm_entry OD_DEFAULT_QMS[][OD_NPLANES_MAX];
 extern const double *const OD_PVQ_BETA[OD_NPLANES_MAX][OD_NBSIZES];
 
 void od_apply_qm(od_coeff *out, int out_stride, od_coeff *in, int in_stride,
- int ln, int inverse);
+ int ln, int dec, int inverse);
 int od_compute_householder(double *r, int n, double gr, int *sign);
 void od_apply_householder(double *x, const double *r, int n);
 void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
