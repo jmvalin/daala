@@ -122,6 +122,16 @@ const od_filter_func OD_POST_FILTER[OD_NBSIZES] = {
   od_post_filter32
 };
 
+static void upshift(od_coeff *x, int n, int bits) {
+  int i;
+  for (i = 0; i < n; i++) x[i] <<= bits;
+}
+
+static void downshift(od_coeff *x, int n, int bits) {
+  int i;
+  for (i = 0; i < n; i++) x[i] = (x[i] + (1 << bits >> 1)) >> bits;
+}
+
 /*The length in pixel of the lapping of an NXN block is
    4 << OD_FILT_SIZE[OD_BLOCK_NXN].
   If this array is changed, the values in od_basis_mag have to be
@@ -154,6 +164,7 @@ void od_pre_filter4(od_coeff _y[4], const od_coeff _x[4]) {
   }
 #else
   int t[4];
+  upshift(_x, 4, 8);
   /*+1/-1 butterflies (required for FIR, PR, LP).*/
   t[3] = _x[0]-_x[3];
   t[2] = _x[1]-_x[2];
@@ -192,6 +203,7 @@ void od_pre_filter4(od_coeff _y[4], const od_coeff _x[4]) {
   _y[2] = (od_coeff)(t[1]-t[2]);
   _y[3] = (od_coeff)(t[0]-t[3]);
 #endif
+  downshift(_y, 4, 8);
 }
 
 void od_post_filter4(od_coeff _x[4], const od_coeff _y[4]) {
@@ -202,6 +214,7 @@ void od_post_filter4(od_coeff _x[4], const od_coeff _y[4]) {
   }
 #else
   int t[4];
+  upshift(_y, 4, 8);
   t[3] = _y[0]-_y[3];
   t[2] = _y[1]-_y[2];
   t[1] = _y[1]-(t[2]>>1);
@@ -221,6 +234,7 @@ void od_post_filter4(od_coeff _x[4], const od_coeff _y[4]) {
   _x[2] = (od_coeff)(t[1]-t[2]);
   _x[3] = (od_coeff)(t[0]-t[3]);
 #endif
+  downshift(_x, 4, 8);
 }
 
 /*R=f
@@ -286,6 +300,7 @@ void od_pre_filter8(od_coeff _y[8], const od_coeff _x[8]) {
   }
 #else
   int t[8];
+  upshift(_x, 8, 8);
   /*+1/-1 butterflies (required for FIR, PR, LP).*/
   t[7] = _x[0]-_x[7];
   t[6] = _x[1]-_x[6];
@@ -363,6 +378,7 @@ void od_pre_filter8(od_coeff _y[8], const od_coeff _x[8]) {
   _y[6] = (od_coeff)(t[1]-t[6]);
   _y[7] = (od_coeff)(t[0]-t[7]);
 #endif
+  downshift(_y, 8, 8);
 }
 
 void od_post_filter8(od_coeff _x[8], const od_coeff _y[8]) {
@@ -373,6 +389,7 @@ void od_post_filter8(od_coeff _x[8], const od_coeff _y[8]) {
   }
 #else
   int t[8];
+  upshift(_y, 8, 8);
   t[7] = _y[0]-_y[7];
   t[6] = _y[1]-_y[6];
   t[5] = _y[2]-_y[5];
@@ -421,6 +438,7 @@ void od_post_filter8(od_coeff _x[8], const od_coeff _y[8]) {
   _x[6] = (od_coeff)(t[1]-t[6]);
   _x[7] = (od_coeff)(t[0]-t[7]);
 #endif
+  downshift(_x, 8, 8);
 }
 
 /*R=f Type-3
