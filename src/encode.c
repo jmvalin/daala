@@ -1594,7 +1594,7 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
       for (y = 0; y < h; y++) {
         for (x = 0; x < w; x++) {
           data[ystride*y + x] = OD_CLAMP255(((state->ctmp[pli][y*w + x]
-           + (1 << coeff_shift >> 1)) >> coeff_shift) + 128);
+           + 5) >> coeff_shift) + 128);
         }
       }
     }
@@ -1624,7 +1624,7 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
       for (y = 0; y < h; y++) {
         for (x = 0; x < w; x++) {
           data[ystride*y + x] = OD_CLAMP255(((state->ctmp[pli][y*w + x]
-           + (1 << coeff_shift >> 1)) >> coeff_shift) + 128);
+           + 5) >> coeff_shift) + 128);
         }
       }
     }

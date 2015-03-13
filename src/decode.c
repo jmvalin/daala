@@ -762,7 +762,7 @@ static void od_decode_residual(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
       for (y = 0; y < h; y++) {
         for (x = 0; x < w; x++) {
           data[ystride*y + x] = OD_CLAMP255(((ctmp[y*w + x]
-           + (1 << coeff_shift >> 1)) >> coeff_shift) + 128);
+           + 5) >> coeff_shift) + 128);
         }
       }
     }
