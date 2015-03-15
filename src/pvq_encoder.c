@@ -318,7 +318,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
   double gain_weight;
   lambda = OD_PVQ_LAMBDA;
   /* Give more weight to gain error when calculating the total distortion. */
-  gain_weight = 1.4;
+  gain_weight = 1.2;
   OD_ASSERT(n > 1);
   corr = 0;
   for (i = 0; i < n; i++) {
