@@ -1415,7 +1415,7 @@ void od_smooth_block(od_coeff *x, int n, int stride, int q, int pli) {
   od_coeff a11;
   od_coeff y[32][32];
   od_coeff dist;
-  const double strength[3] = {0.01, 0.04, 0.04};
+  const double strength[3] = {0.005, 0.02, 0.02};
   double w0;
   int i;
   int j;
@@ -1443,12 +1443,7 @@ void od_smooth_block(od_coeff *x, int n, int stride, int q, int pli) {
   w0 *= w0;
   for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) {
-      od_coeff d;
-      double w;
-      d = y[i][j] - x[i*stride + j];
-      w = OD_MINF(1, strength[pli]*q*q/(1e-15+12.*d*d));
-      w *= w0;
-      x[i*stride + j] -= w*(x[i*stride + j]-y[i][j]);
+      x[i*stride + j] -= w0*(x[i*stride + j]-y[i][j]);
     }
   }
 }
