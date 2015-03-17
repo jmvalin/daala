@@ -129,7 +129,7 @@ const od_filter_func OD_POST_FILTER[OD_NBSIZES] = {
 const int OD_FILT_SIZE[OD_NBSIZES] = {0, 1, 1, 1};
 
 /** Strength of the bilinear smoothing for each plane. */
-static const int OD_BILINEAR_STREANGTH[OD_NPLANES_MAX] = {5, 20, 20, 5};
+static const int OD_BILINEAR_STRENGTH[OD_NPLANES_MAX] = {5, 20, 20, 5};
 
 /*Filter parameters for the pre/post filters.
   When changing these the intra-predictors in
@@ -1456,7 +1456,7 @@ void od_bilinear_smooth(od_coeff *x, int ln, int stride, int q, int pli) {
   }
   dist >>= 2*ln;
   /* Compute 1 - Wiener filter gain = strength * (q^2/12) / dist. */
-  w = OD_MINI(1024, OD_BILINEAR_STREANGTH[pli]*q*q/(1 + 12*dist));
+  w = OD_MINI(1024, OD_BILINEAR_STRENGTH[pli]*q*q/(1 + 12*dist));
   /* Square the theoretical gain to attenuate the effect when we're unsure
      whether it's useful. */
   w = w*w >> 12;
