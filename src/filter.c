@@ -1427,13 +1427,18 @@ void od_smooth_block(od_coeff *x, int n, int stride, int q, int pli) {
   a01 = x01 - x00;
   a10 = x10 - x00;
   a11 = x11 + x00 - x10 - x01;
+  /* Multiply by 1+1/n (approximation of n/(n-1)) here so that we can divide
+     by n in the loop instead of dividing by n-1. */
+  a01 += (a01+n/2)/n;
+  a10 += (a10+n/2)/n;
+  a11 += (2*a10+n/2)/n;
   dist = 0;
   for (i = 0; i < n; i++) {
     double py;
-    py = (double)i/(n - 1);
+    py = (double)i/n;
     for (j = 0; j < n; j++) {
       double px;
-      px = (double)j/(n - 1);
+      px = (double)j/n;
       y[i][j] = a00 + px*a01 + py*a10 + px*py*a11;
       dist += (y[i][j] - x[i*stride + j])*(y[i][j] - x[i*stride + j]);
     }
