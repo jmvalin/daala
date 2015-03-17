@@ -754,8 +754,10 @@ static void od_decode_residual(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
       for (sbx = 0; sbx < nhsb; sbx++) {
         if (mbctx->is_keyframe && OD_BLOCK_SIZE4x4(dec->state.bsize,
           dec->state.bstride, sbx << 3, sby << 3) == 3) {
-          od_smooth_block(&state->ctmp[pli][(sby << 5 >> xdec)*w + (sbx << 5 >> xdec)],
-           5 - xdec, w, dec->quantizer[pli], pli);
+          int ln;
+          ln = OD_BLOCK_32X32 + 2 - xdec;
+          od_bilinear_smooth(&state->ctmp[pli][(sby << ln)*w + (sbx << ln)],
+           ln, w, dec->quantizer[pli], pli);
         }
       }
     }
