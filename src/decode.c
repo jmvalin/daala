@@ -752,7 +752,7 @@ static void od_decode_residual(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
 #endif
     for (sby = 0; sby < nvsb; sby++) {
       for (sbx = 0; sbx < nhsb; sbx++) {
-        if (OD_BLOCK_SIZE4x4(dec->state.bsize,
+        if (mbctx->is_keyframe && OD_BLOCK_SIZE4x4(dec->state.bsize,
           dec->state.bstride, sbx << 3, sby << 3) == 3) {
           od_smooth_block(&state->ctmp[pli][(sby << 5 >> xdec)*w + (sbx << 5 >> xdec)],
            5 - xdec, w, dec->quantizer[pli], pli);
