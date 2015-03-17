@@ -1404,6 +1404,8 @@ void od_apply_filter_cols(od_coeff *c, int w, int bx, int by, int l,
   }
 }
 
+static const int OD_BILINEAR_STREANGTH[OD_NPLANES_MAX] = {5, 20, 20, 5};
+
 void od_smooth_block(od_coeff *x, int ln, int stride, int q, int pli) {
   od_coeff x00;
   od_coeff x01;
@@ -1415,8 +1417,6 @@ void od_smooth_block(od_coeff *x, int ln, int stride, int q, int pli) {
   od_coeff a11;
   od_coeff y[32][32];
   od_coeff dist;
-  const double strength[3] = {0.005, 0.02, 0.02};
-  double w0;
   int w;
   int i;
   int j;
@@ -1436,6 +1436,7 @@ void od_smooth_block(od_coeff *x, int ln, int stride, int q, int pli) {
   a10 += (a10 + n/2) >> ln;
   a11 += (2*a10 + n/2) >> ln;
   dist = 0;
+  /* Bilinear interpolation with non-linear x*y term. */
   for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) {
       y[i][j] = a00 + ((j*a01 + i*a10 + (j*i*a11 >> ln) + n/2) >> ln);
@@ -1443,11 +1444,14 @@ void od_smooth_block(od_coeff *x, int ln, int stride, int q, int pli) {
     }
   }
   dist >>= 2*ln;
-  w0 = OD_MINF(1, strength[pli]*q*q/(1e-15+12.*dist));
-  w0 *= w0;
+  /* Compute 1 - Weiner filter gain = strength * (q^2/12) / dist. */
+  w = OD_MINI(1024, OD_BILINEAR_STREANGTH[pli]*q*q/(1 + 12*dist));
+  /* Square the theoretical gain to attenuate the effect when we're unsure
+     whetehr it's useful. */
+  w = w*w >> 12;
   for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) {
-      x[i*stride + j] -= w0*(x[i*stride + j]-y[i][j]);
+      x[i*stride + j] -= (w*(x[i*stride + j]-y[i][j]) + 128) >> 8;
     }
   }
 }
