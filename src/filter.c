@@ -1404,7 +1404,7 @@ void od_apply_filter_cols(od_coeff *c, int w, int bx, int by, int l,
   }
 }
 
-void od_smooth_block(od_coeff *x, int n, int stride, int q, int pli) {
+void od_smooth_block(od_coeff *x, int ln, int stride, int q, int pli) {
   od_coeff x00;
   od_coeff x01;
   od_coeff x10;
@@ -1417,8 +1417,11 @@ void od_smooth_block(od_coeff *x, int n, int stride, int q, int pli) {
   od_coeff dist;
   const double strength[3] = {0.005, 0.02, 0.02};
   double w0;
+  int w;
   int i;
   int j;
+  int n;
+  n = 1 << ln;
   x00 = x[0];
   x01 = x[n - 1];
   x10 = x[(n - 1)*stride];
@@ -1429,21 +1432,17 @@ void od_smooth_block(od_coeff *x, int n, int stride, int q, int pli) {
   a11 = x11 + x00 - x10 - x01;
   /* Multiply by 1+1/n (approximation of n/(n-1)) here so that we can divide
      by n in the loop instead of dividing by n-1. */
-  a01 += (a01+n/2)/n;
-  a10 += (a10+n/2)/n;
-  a11 += (2*a10+n/2)/n;
+  a01 += (a01 + n/2) >> ln;
+  a10 += (a10 + n/2) >> ln;
+  a11 += (2*a10 + n/2) >> ln;
   dist = 0;
   for (i = 0; i < n; i++) {
-    double py;
-    py = (double)i/n;
     for (j = 0; j < n; j++) {
-      double px;
-      px = (double)j/n;
-      y[i][j] = a00 + px*a01 + py*a10 + px*py*a11;
+      y[i][j] = a00 + ((j*a01 + i*a10 + (j*i*a11 >> ln) + n/2) >> ln);
       dist += (y[i][j] - x[i*stride + j])*(y[i][j] - x[i*stride + j]);
     }
   }
-  dist /= n*n;
+  dist >>= 2*ln;
   w0 = OD_MINF(1, strength[pli]*q*q/(1e-15+12.*dist));
   w0 *= w0;
   for (i = 0; i < n; i++) {

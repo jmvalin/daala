@@ -1620,7 +1620,7 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           if (OD_BLOCK_SIZE4x4(enc->state.bsize,
             enc->state.bstride, sbx << 3, sby << 3) == 3) {
             od_smooth_block(&state->ctmp[pli][(sby << 5 >> xdec)*w + (sbx << 5 >> xdec)],
-             32 >> xdec, w, enc->quantizer[pli], pli);
+             5 - xdec, w, enc->quantizer[pli], pli);
           }
         }
       }
