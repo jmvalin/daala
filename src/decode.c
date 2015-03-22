@@ -267,7 +267,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
   /*Apply forward transform to MC predictor.*/
   if (!ctx->is_keyframe) {
     (*dec->state.opt_vtbl.fdct_2d[ln])(md + bo, w, mc + bo, w);
-    od_apply_qm(md + bo, w, md + bo, w, ln, xdec, 0);
+    if (!lossless) od_apply_qm(md + bo, w, md + bo, w, ln, xdec, 0);
   }
   od_decode_compute_pred(dec, ctx, pred, ln, pli, bx, by);
   if (ctx->is_keyframe && pli == 0) {
@@ -306,7 +306,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
     pred[0] = d[bo];
   }
   od_coding_order_to_raster(&d[bo], w, pred, n, lossless);
-  od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
+  if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
   /*Apply the inverse transform.*/
   (*dec->state.opt_vtbl.idct_2d[ln])(c + bo, w, d + bo, w);
 }
