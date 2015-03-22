@@ -456,21 +456,21 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   d = ctx->d[pli];
   md = ctx->md;
   mc = ctx->mc;
+  lossless = (enc->quantizer[pli] == 0);
   /* Apply forward transform. */
   if (OD_DISABLE_HAAR_DC || dc || !ctx->is_keyframe) {
     (*enc->state.opt_vtbl.fdct_2d[ln])(d + bo, w, c + bo, w);
-    od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 0);
+    if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 0);
   }
   if (!ctx->is_keyframe) {
     (*enc->state.opt_vtbl.fdct_2d[ln])(md + bo, w, mc + bo, w);
-    od_apply_qm(md + bo, w, md + bo, w, ln, xdec, 0);
+    if (!lossless) od_apply_qm(md + bo, w, md + bo, w, ln, xdec, 0);
   }
   od_encode_compute_pred(enc, ctx, pred, ln, pli, bx, by);
   if (ctx->is_keyframe && pli == 0) {
     od_hv_intra_pred(pred, d, w, bx, by, enc->state.bsize,
      enc->state.bstride, ln);
   }
-  lossless = (enc->quantizer[pli] == 0);
 #if defined(OD_OUTPUT_PRED)
   for (zzi = 0; zzi < (n*n); zzi++) preds[zzi] = pred[zzi];
 #endif
@@ -527,7 +527,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
   /*Apply the inverse transform.*/
 #if !defined(OD_OUTPUT_PRED)
-  od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
+  if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
   (*enc->state.opt_vtbl.idct_2d[ln])(c + bo, w, d + bo, w);
 #else
 # if 0
@@ -552,7 +552,9 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
   int d;
   int w;
   int bo;
+  int lossless;
   od_coeff *c;
+  lossless = (enc->quantizer[pli] == 0);
   c = ctx->d[pli];
   w = enc->state.frame_width >> xdec;
   /*This code assumes 4:4:4 or 4:2:0 input.*/
@@ -565,7 +567,7 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
     d -= xdec;
     bo = (by << (OD_LOG_BSIZE0 + d))*w + (bx << (OD_LOG_BSIZE0 + d));
     (*enc->state.opt_vtbl.fdct_2d[d])(c + bo, w, ctx->c + bo, w);
-    od_apply_qm(c + bo, w, c + bo, w, d, xdec, 0);
+    if (!lossless) od_apply_qm(c + bo, w, c + bo, w, d, xdec, 0);
 #if defined(OD_DUMP_COEFFS)
     {
       int i;
