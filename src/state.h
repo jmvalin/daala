@@ -215,6 +215,10 @@ struct od_state{
   od_coeff *lbuf[OD_NPLANES_MAX];
   unsigned char pvq_qm_q4[OD_NPLANES_MAX][OD_QM_SIZE];
   /* Holds a TF'd copy of the transform coefficients in 4x4 blocks. */
+  od_coeff mc_orig[OD_NBSIZES-1][OD_BSIZE_MAX*OD_BSIZE_MAX];
+  od_coeff c_orig[OD_NBSIZES-1][OD_BSIZE_MAX*OD_BSIZE_MAX];
+  od_coeff nosplit[OD_NBSIZES-1][OD_BSIZE_MAX*OD_BSIZE_MAX];
+  od_coeff split[OD_NBSIZES-1][OD_BSIZE_MAX*OD_BSIZE_MAX];
 };
 
 int od_state_init(od_state *_state, const daala_info *_info);
