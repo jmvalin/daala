@@ -726,8 +726,8 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     int ac_quant[2];
     if (enc->quantizer[pli] == 0) ac_quant[0] = ac_quant[1] = 1;
     else {
-      ac_quant[0] = dc_quant*OD_DC_QM[xdec][l - xdec - 1][0] >> 4;
-      ac_quant[1] = dc_quant*OD_DC_QM[xdec][l - xdec - 1][1] >> 4;
+      ac_quant[0] = (dc_quant*OD_DC_QM[xdec][l - xdec - 1][0] + 8) >> 4;
+      ac_quant[1] = (dc_quant*OD_DC_QM[xdec][l - xdec - 1][1] + 8) >> 4;
     }
     l--;
     bx <<= 1;
