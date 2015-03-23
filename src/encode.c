@@ -941,10 +941,13 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) split[n*i + j] = ctx->c[bo + i*w + j];
       }
-      rate_split = 16+od_ec_enc_tell_frac(&enc->ec) - tell;
+      /* Adds a 2-bit cost to splitting (that doesn't propagate) that biases
+         towards larger blocks. We do not yet understand why it helps. */
+      rate_split = 16 + od_ec_enc_tell_frac(&enc->ec) - tell;
       dist_split = od_compute_dist(enc, c_orig, split, n);
       dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n);
-      lambda = .125*OD_PVQ_LAMBDA*enc->quantizer[pli]*enc->quantizer[pli];
+      lambda = (1./(1 << OD_BITRES))*OD_PVQ_LAMBDA*enc->quantizer[pli]*
+       enc->quantizer[pli];
       if (skip_split || dist_nosplit + lambda*rate_nosplit < dist_split
        + lambda*rate_split) {
         /* This rollback call leaves the entropy coder in an inconsistent state
@@ -1426,6 +1429,8 @@ static void od_encode_mvs(daala_enc_ctx *enc) {
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_UNKNOWN);
 }
 
+#define OD_ENCODE_REAL (0)
+#define OD_ENCODE_RDO (1)
 static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
  int rdo_only) {
   int xdec;
@@ -1588,7 +1593,8 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         }
       }
     }
-    od_state_dump_img(&enc->state, enc->state.io_imgs + OD_FRAME_REC, "lapped");
+    od_state_dump_img(&enc->state, enc->state.io_imgs + OD_FRAME_REC,
+     "lapped");
   }
 #endif
   for (pli = 0; pli < nplanes; pli++) {
@@ -1726,7 +1732,7 @@ static void od_split_superblocks_rdo(daala_enc_ctx *enc,
       state->bsize[i*state->bstride + j] = OD_LIMIT_BSIZE_MIN;
     }
   }
-  od_encode_residual(enc, mbctx, 1);
+  od_encode_residual(enc, mbctx, OD_ENCODE_RDO);
   od_encode_rollback(enc, &rbuf);
 }
 
@@ -1863,7 +1869,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration) {
 #endif
   }
   od_encode_block_sizes(enc);
-  od_encode_residual(enc, &mbctx, 0);
+  od_encode_residual(enc, &mbctx, OD_ENCODE_REAL);
 #if defined(OD_DUMP_IMAGES) || defined(OD_DUMP_RECONS)
   /*Dump YUV*/
   od_state_dump_yuv(&enc->state, enc->state.io_imgs + OD_FRAME_REC, "out");
