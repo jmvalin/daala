@@ -68,6 +68,11 @@ struct od_params_ctx {
   int mv_level_max;
 };
 
+/* All DCs for each level: 1 + 4 + 16 + 64 */
+#define OD_NB_SAVED_DCS (((1 << 2*OD_NBSIZES) - 1)/3)
+/* There's one rate for 4 DCs, and no toplevel rate. */
+#define OD_NB_SAVED_DC_RATES ((OD_NB_SAVED_DCS-1)/4)
+
 struct daala_enc_ctx{
   od_state state;
   od_enc_opt_vtbl opt_vtbl;
@@ -86,6 +91,19 @@ struct daala_enc_ctx{
   od_acct acct;
 #endif
   od_block_size_comp *bs;
+  /** The quantized DC (dc) is saved in this buffer in recursive raster order,
+      with higher levels sub-blocks stored just before the smaller subblocks
+      they contain. We save all the DCs for each of the levels we consider.
+      The ordering is important because it has to be matched between
+      od_quantize_haar_dc that writes the values and od_encode_recursive()
+      that consumes the values.*/
+  od_coeff dc[OD_NB_SAVED_DCS];
+  int dc_idx;
+  /** We save the rates for DC quantization. The ordering is the same as for
+      DC above, except that we don't save the top-level rate and we only save
+      one rate for all 3 Haar coefficients we code at each level. */
+  int dc_rate[OD_NB_SAVED_DC_RATES];
+  int dc_rate_idx;
 };
 
 /** Holds important encoder information so we can roll back decisions */
