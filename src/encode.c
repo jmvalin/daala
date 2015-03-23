@@ -808,7 +808,7 @@ static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
   for (i = 0; i < 8; i++) {
     for (j = 0; j < 8; j++) {
       double mag;
-      mag = 16./OD_QM8[i*8 + j];
+      mag = 16./OD_QM8_Q4[i*8 + j];
       mag *= mag;
       sum += E[i][j]*(double)E[i][j]*mag;
     }

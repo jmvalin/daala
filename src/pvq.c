@@ -93,7 +93,7 @@ const double *od_basis_mag[2][OD_NBSIZES] = {
    resampling. */
 #if OD_DISABLE_QM
 /* Flat quantization, i.e. optimize for PSNR. */
-const int OD_QM8[] = {
+const int OD_QM8_Q4[] = {
   16, 16, 16, 16, 16, 16, 16, 16,
   16, 16, 16, 16, 16, 16, 16, 16,
   16, 16, 16, 16, 16, 16, 16, 16,
@@ -106,7 +106,7 @@ const int OD_QM8[] = {
 #else
 # if 0
 /* M1: MPEG2 matrix for inter (which has a dead zone). */
-const int OD_QM8[] = {
+const int OD_QM8_Q4[] = {
   16, 17, 18, 19, 20, 21, 22, 23,
   17, 18, 19, 20, 21, 22, 23, 24,
   18, 19, 20, 21, 22, 23, 24, 25,
@@ -118,7 +118,7 @@ const int OD_QM8[] = {
 # endif
 # if 0
 /* M2: MPEG2 matrix for intra (no dead zone). */
-const int OD_QM8[] = {
+const int OD_QM8_Q4[] = {
   16, 16, 19, 22, 22, 26, 26, 27,
   16, 16, 22, 22, 26, 27, 27, 29,
   19, 22, 26, 26, 27, 29, 29, 35,
@@ -131,7 +131,7 @@ const int OD_QM8[] = {
 # endif
 # if 0
 /* M3: Taken from dump_psnrhvs. */
-const int OD_QM8[] = {
+const int OD_QM8_Q4[] = {
   16, 16, 17, 20, 24, 29, 36, 42,
   16, 17, 17, 19, 22, 26, 31, 37,
   17, 17, 21, 23, 26, 30, 34, 40,
@@ -144,7 +144,7 @@ const int OD_QM8[] = {
 # endif
 # if 1
 /* M4: a compromise equal to .5*(M3 + .5*(M2+transpose(M2))) */
-const int OD_QM8[] = {
+const int OD_QM8_Q4[] = {
   16, 16, 18, 21, 24, 28, 32, 36,
   16, 17, 20, 21, 24, 27, 31, 35,
   18, 20, 24, 25, 27, 31, 33, 38,
@@ -279,7 +279,7 @@ void od_apply_qm(od_coeff *out, int out_stride, od_coeff *in, int in_stride,
         mag = 1;
       }
       else {
-        mag /= 0.0625*OD_QM8[(i << 1 >> ln)*8 + (j << 1 >> ln)];
+        mag /= 0.0625*OD_QM8_Q4[(i << 1 >> ln)*8 + (j << 1 >> ln)];
       }
       if (inverse) {
         out[i*out_stride + j] = (od_coeff)floor(.5 + in[i*in_stride + j]/mag);
