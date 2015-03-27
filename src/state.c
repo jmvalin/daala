@@ -41,7 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
    attempting to keep a good visual balance between the relative resolution
    of luma, and chroma.
    FIXME: Tune this properly, see also OD_DEFAULT_QMS.*/
-const od_coeff OD_DC_RES[3] = {17, 24, 17};
+const od_coeff OD_DC_RES[3] = {17, 17, 17};
 
 /* Scaling compensation for the Haar equivalent basis function. Left is
    for horizontal/vertical. Right is for diagonal. */

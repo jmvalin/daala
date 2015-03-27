@@ -185,8 +185,8 @@ static const unsigned char od_flat_chroma_qm_q4[OD_QM_SIZE] = {
    FIXME: Add interpolation and properly tune chroma. */
 const od_qm_entry OD_DEFAULT_QMS[][OD_NPLANES_MAX] = {
   {{15, 256, od_flat_luma_qm_q4},
-   {15, 448, od_flat_chroma_qm_q4},
-   {15, 320, od_flat_chroma_qm_q4}},
+   {15, 256, od_flat_chroma_qm_q4},
+   {15, 256, od_flat_chroma_qm_q4}},
   {{0, 0, NULL},
    {0, 0, NULL},
    {0, 0, NULL}}
@@ -218,8 +218,8 @@ static const unsigned char od_flat_chroma_qm_q4[OD_QM_SIZE] = {
    FIXME: Add interpolation and properly tune chroma. */
 const od_qm_entry OD_DEFAULT_QMS[][OD_NPLANES_MAX] = {
   {{15, 256, od_flat_qm_q4},
-   {15, 448, od_flat_chroma_qm_q4},
-   {15, 320, od_flat_chroma_qm_q4}},
+   {15, 256, od_flat_chroma_qm_q4},
+   {15, 256, od_flat_chroma_qm_q4}},
   {{0, 0, NULL},
    {0, 0, NULL},
    {0, 0, NULL}}
