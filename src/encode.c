@@ -1455,6 +1455,35 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           }
         }
       }
+      /* Overshooting on black and on white to reduce ringing. The method is
+         similar to that described in: https://pornel.net/deringing/ except
+         for the "de-clipping" of the second part, which did not seem to
+         improve results on Daala. */
+      if (pli == 0 && !rdo_only && enc->quantizer[0] != 0) {
+        int overshoot;
+        int margin;
+        int white;
+        int black;
+        /* Since the ringing is proportional to the quantizer, we make the
+           overshoot also proportional to the quantizer. We don't want to
+           overshoot by more than 16 to avoid potential problems. */
+        overshoot = OD_MINI(16 << OD_COEFF_SHIFT, 40*enc->quantizer[pli] >> 8);
+        /* We consider a +/-2 difference on the levels to be included in the
+           foreground/background to guard against stupidly dithered input. */
+        margin = 2 << OD_COEFF_SHIFT;
+        white = (235 - 128) << OD_COEFF_SHIFT;
+        black = (16 - 128) << OD_COEFF_SHIFT;
+        for (y = 0; y < h; y++) {
+          for (x = 0; x < w; x++) {
+            int val;
+            int offset;
+            val = state->ctmp[pli][y*w + x];
+            offset = overshoot*((abs(val - white) <= margin)
+             - (abs(val - black) <= margin));
+            state->ctmp[pli][y*w + x] += offset;
+          }
+        }
+      }
     }
 #if OD_DISABLE_FIXED_LAPPING
     /*Apply the prefilter across the entire image.*/
