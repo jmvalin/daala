@@ -13,6 +13,7 @@
 #endif
 #include <ogg/os_types.h>
 #include "getopt.h"
+#include "../src/odintrin.h"
 
 
 
@@ -81,7 +82,7 @@ struct ssim_moments{
 #define SSIM_C2 (255*255*0.03*0.03)
 
 static double calc_ssim(const unsigned char *_src,int _systride,
- const unsigned char *_dst,int _dystride,double _par,int _w,int _h){
+ const unsigned char *_dst,int _dystride,double _par,int _w,int _h, int pli) {
   ssim_moments  *line_buf;
   ssim_moments **lines;
   double         ssim;
@@ -125,8 +126,8 @@ static double calc_ssim(const unsigned char *_src,int _systride,
           unsigned s;
           unsigned d;
           unsigned w;
-          s=_src[x-hkernel_offs+k];
-          d=_dst[x-hkernel_offs+k];
+          s = OD_CLAMP_YUV(_src[x-hkernel_offs+k], pli);
+          d = OD_CLAMP_YUV(_dst[x-hkernel_offs+k], pli);
           w=hkernel[k];
           m.mux+=w*s;
           m.muy+=w*d;
@@ -321,7 +322,7 @@ int main(int _argc,char *_argv[]){
        f2[pli].data+(info2.pic_y>>ydec)*f2[pli].stride+(info2.pic_x>>xdec),
        f2[pli].stride,
        par,((info1.pic_x+info1.pic_w+xdec)>>xdec)-(info1.pic_x>>xdec),
-       ((info1.pic_y+info1.pic_h+ydec)>>ydec)-(info1.pic_y>>ydec));
+       ((info1.pic_y+info1.pic_h+ydec)>>ydec)-(info1.pic_y>>ydec), pli);
       gssim[pli]+=ssim[pli];
     }
     if(!summary_only){

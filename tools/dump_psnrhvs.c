@@ -17,6 +17,7 @@
 #endif
 #include "getopt.h"
 #include "../src/dct.h"
+#include "../src/odintrin.h"
 
 
 const char *optstring = "frsy";
@@ -61,7 +62,8 @@ float csf_cr420[8][8]={{2.03871978502, 2.62502345193, 1.26180942886, 1.110197898
                        {0.593906509971, 0.802254508198, 0.706020324706, 0.587716619023, 0.478717061273, 0.393021669543, 0.330555063063, 0.285345396658}};
 
 static double calc_psnrhvs(const unsigned char *_src,int _systride,
- const unsigned char *_dst,int _dystride,double _par,int _w,int _h, int _step, float _csf[8][8]){
+ const unsigned char *_dst,int _dystride,double _par,int _w,int _h, int _step,
+ float _csf[8][8], int pli){
   float    ret;
   od_coeff dct_s[8*8];
   od_coeff dct_d[8*8];
@@ -106,8 +108,8 @@ static double calc_psnrhvs(const unsigned char *_src,int _systride,
       for(i=0;i<8;i++){
         for(j=0;j<8;j++){
           int sub=((i&12)>>2)+((j&12)>>1);
-          dct_s[i*8+j]=_src[(y+i)*_systride+(j+x)];
-          dct_d[i*8+j]=_dst[(y+i)*_dystride+(j+x)];
+          dct_s[i*8+j]=OD_CLAMP_YUV(_src[(y+i)*_systride+(j+x)], pli);
+          dct_d[i*8+j]=OD_CLAMP_YUV(_dst[(y+i)*_dystride+(j+x)], pli);
           s_gmean+=dct_s[i*8+j];
           d_gmean+=dct_d[i*8+j];
           s_means[sub]+=dct_s[i*8+j];
@@ -282,7 +284,8 @@ int main(int _argc,char *_argv[]){
        f2[pli].data+(info2.pic_y>>ydec)*f2[pli].stride+(info2.pic_x>>xdec),
        f2[pli].stride,
        par,((info1.pic_x+info1.pic_w+xdec)>>xdec)-(info1.pic_x>>xdec),
-       ((info1.pic_y+info1.pic_h+ydec)>>ydec)-(info1.pic_y>>ydec),7,pli==0?csf_y:pli==1?csf_cb420:csf_cr420);
+       ((info1.pic_y+info1.pic_h+ydec)>>ydec)-(info1.pic_y>>ydec),7,pli==0?csf_y:pli==1?csf_cb420:csf_cr420,
+       pli);
       gssim[pli]+=ssim[pli];
     }
     if(!summary_only){

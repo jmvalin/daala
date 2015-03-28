@@ -13,6 +13,7 @@
 #endif
 #include <ogg/os_types.h>
 #include "getopt.h"
+#include "../src/odintrin.h"
 
 const char *optstring = "cfrs";
 const struct option options[]={
@@ -141,7 +142,8 @@ static void fs_downsample_level(fs_ctx *_ctx,int _l){
 }
 
 static void fs_downsample_level0(fs_ctx *_ctx,const unsigned char *_src1,
- int _s1ystride,const unsigned char *_src2,int _s2ystride,int _w,int _h){
+ int _s1ystride,const unsigned char *_src2,int _s2ystride,int _w,int _h,
+ int pli) {
   ogg_uint16_t *dst1;
   ogg_uint16_t *dst2;
   int           w;
@@ -162,10 +164,14 @@ static void fs_downsample_level0(fs_ctx *_ctx,const unsigned char *_src1,
       int i1;
       i0=2*i;
       i1=FS_MINI(i0+1,_w);
-      dst1[j*w+i]=_src1[j0*_s1ystride+i0]+_src1[j0*_s1ystride+i1]
-       +_src1[j1*_s1ystride+i0]+_src1[j1*_s1ystride+i1];
-      dst2[j*w+i]=_src2[j0*_s2ystride+i0]+_src2[j0*_s2ystride+i1]
-       +_src2[j1*_s2ystride+i0]+_src2[j1*_s2ystride+i1];
+      dst1[j*w+i]=OD_CLAMP_YUV(_src1[j0*_s1ystride+i0], pli)
+       + OD_CLAMP_YUV(_src1[j0*_s1ystride+i1], pli)
+       + OD_CLAMP_YUV(_src1[j1*_s1ystride+i0], pli)
+       + OD_CLAMP_YUV(_src1[j1*_s1ystride+i1], pli);
+      dst2[j*w+i] = OD_CLAMP_YUV(_src2[j0*_s2ystride+i0], pli)
+       + OD_CLAMP_YUV(_src2[j0*_s2ystride+i1], pli)
+       + OD_CLAMP_YUV(_src2[j1*_s2ystride+i0], pli)
+       + OD_CLAMP_YUV(_src2[j1*_s2ystride+i1], pli);
     }
   }
 }
@@ -414,13 +420,13 @@ static double fs_average(fs_ctx *_ctx,int _l){
 }
 
 double calc_ssim(const unsigned char *_src,int _systride,
- const unsigned char *_dst,int _dystride,int _w,int _h){
+ const unsigned char *_dst,int _dystride,int _w,int _h, int pli) {
   fs_ctx ctx;
   double ret;
   int    l;
   ret=1;
   fs_ctx_init(&ctx,_w,_h,FS_NLEVELS);
-  fs_downsample_level0(&ctx,_src,_systride,_dst,_dystride,_w,_h);
+  fs_downsample_level0(&ctx,_src,_systride,_dst,_dystride,_w,_h,pli);
   for(l=0;l<FS_NLEVELS-1;l++){
     fs_calc_structure(&ctx,l);
     ret*=fs_average(&ctx,l);
@@ -568,7 +574,7 @@ int main(int _argc,char *_argv[]){
        f2[pli].data+(info2.pic_y>>ydec)*f2[pli].stride+(info2.pic_x>>xdec),
        f2[pli].stride,
        (info1.pic_x+info1.pic_w+xdec>>xdec)-(info1.pic_x>>xdec),
-       (info1.pic_y+info1.pic_h+ydec>>ydec)-(info1.pic_y>>ydec));
+       (info1.pic_y+info1.pic_h+ydec>>ydec)-(info1.pic_y>>ydec), pli);
       gssim[pli]+=ssim[pli];
     }
     if(!summary_only){

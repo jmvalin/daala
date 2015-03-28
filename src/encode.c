@@ -1627,8 +1627,8 @@ static void od_dump_frame_metrics(od_state *state) {
       for (x = 0; x < w; x++) {
         int inp_val;
         int diff;
-        inp_val = inp_row[x];
-        diff = inp_val - rec_row[x];
+        inp_val = OD_CLAMP_YUV(inp_row[x], pli);
+        diff = inp_val - OD_CLAMP_YUV(rec_row[x], pli);
         enc_sqerr += diff*diff;
       }
     }

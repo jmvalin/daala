@@ -49,6 +49,7 @@
 #include <signal.h>
 #include "vidinput.h"
 #include <ogg/os_types.h>
+#include "../src/odintrin.h"
 
 const char *optstring = "fsy";
 struct option options [] = {
@@ -187,8 +188,8 @@ int main(int _argc,char *_argv[]){
         for(x1=info1.pic_x>>xdec,x2=info2.pic_x>>xdec;
          x1<info1.pic_x+info1.pic_w+xdec>>xdec;x1++,x2++){
           int d;
-          d=*(f1[pli].data+y1*f1[pli].stride+x1)-
-           *(f2[pli].data+y2*f2[pli].stride+x2);
+          d = OD_CLAMP_YUV(f1[pli].data[y1*f1[pli].stride + x1], pli)
+           - OD_CLAMP_YUV(f2[pli].data[y2*f2[pli].stride + x2], pli);
           plsqerr[pli]+=d*d;
           plnpixels[pli]++;
         }
