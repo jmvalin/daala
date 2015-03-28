@@ -1394,6 +1394,163 @@ static void od_encode_mvs(daala_enc_ctx *enc) {
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_UNKNOWN);
 }
 
+/* Table for sqrt(sqrt(x)) in Q4. */
+static const unsigned char root_table_q4[41] = {
+  0, 16, 19, 21, 23, 24, 25, 26,
+  27, 28, 28, 29, 30, 30, 31, 31,
+  32, 32, 33, 33, 34, 34, 35, 35,
+  35, 36, 36, 36, 37, 37, 37, 38,
+  38, 38, 39, 39, 39, 39, 40, 40,
+  40
+};
+
+/*Computes the unsigned Euclidean distance transform of a binary image in two
+   dimensions.
+  Inside the shape, the distance is zero, and outside the shape it is the
+   distance to the closest pixel inside the shape.
+  Note that this is _not_ equivalent to half of the signed version, which
+   use the smallest distance to the boundary of the shape.
+  _d:    Returns the unsigned squared distance in units of pixels squared.
+         If there are no foreground pixels, i.e., _bimg[i,j] is zero
+          everywhere, then the returned distance is UINT_MAX everywhere.
+  _bimg: The binary image to compute the distance transform over.
+         A pixel is "inside" the shape if _bimg[i,j] is non-zero, and
+          "outside" otherwise.
+  _h:    The number of rows in _bimg.
+  _w:    The number of columns in _bimg.*/
+void od_uedt2d(unsigned *_d, const unsigned char *bimg, int h, int w,
+ unsigned char background) {
+  unsigned *dd;
+  unsigned *f;
+  int      *v;
+  int      *z;
+  int       i;
+  int       j;
+  int       k;
+  int       n;
+  /*We use the O(n) algorithm from \cite{FH04}.
+  @TECHREPORT{
+    author="Pedro F. Felzenszwalb and Daniel P. Huttenlocher",
+    title="Distance Transforms of Sampled Functions",
+    number="TR2004-1963",
+    institution="Cornell Computing and Information Science",
+    year=2004
+  }*/
+  /*We do not strictly need this temporary image, but using it allows us to
+     read out of it untransposed in the second pass, which is much nicer to the
+     cache.
+    We still have to write a transposed image in each pass, but writing
+     introduces fewer stalls than reading.*/
+  dd = (unsigned *)malloc(h*w*sizeof(*dd));
+  n = h > w ? h : w;
+  v = (int *)malloc(n*sizeof(*v));
+  z = (int *)malloc((n + 1)*sizeof(*z));
+  f = (unsigned *)malloc(h*sizeof(*f));
+  /*First compute the unsigned distance transform along the X axis.*/
+  for (i = 0; i < h; i++){
+    k=-1;
+    /*At this stage, every non-zero pixel contributes a parabola to the final
+       envelope, and the intersection point _must_ lie between the vertices, so
+       there's no need to worry about deletion or bounds checking.*/
+    for (j = 0; j < w; j++) {
+      if(abs((int)bimg[i*w + j] - (int)background) > 2) {
+        int s;
+        s = k < 0 ? 0 : ((v[k] + j) >> 1) + 1;
+        v[++k] = j;
+        z[k] = s;
+      }
+    }
+    /*Now, go back and compute the distances to each parabola.
+      If there were _no_ parabolas, then fill the row with infinity.*/
+    if(k < 0) for (j = 0; j < w; j++) dd[j*h + i] = UINT_MAX;
+    else{
+      int zk;
+      z[k + 1] = w;
+      j = k = 0;
+      do {
+        int d1;
+        int d2;
+        d1 = j - v[k];
+        d2 = d1 * d1;
+        d1 = d1 << 1 | 1;
+        zk = z[++k];
+        for (;;) {
+          dd[j*h + i] = (unsigned)d2;
+          if (++j >= zk) break;
+          d2 += d1;
+          d1 += 2;
+        }
+      }
+      while(zk < w);
+    }
+  }
+  /*Now extend the unsigned distance transform along the Y axis.*/
+  for (j = 0; j < w; j++) {
+    /*v2 is not used uninitialzed, despite what your compiler may think.*/
+    int v2;
+    int q2;
+    k = -1;
+    for (i = q2 = 0; i < h; i++) {
+      unsigned d;
+      d = dd[j*h + i];
+      if(d < UINT_MAX) {
+        int s;
+        if (k < 0) s = 0;
+        else for(;;) {
+          s = q2 - v2 + d - f[k];
+          if(s > 0) {
+            s = s / (i - v[k] << 1) + 1;
+            if (s > z[k]) break;
+          }
+          else s = 0;
+          if (--k < 0) break;
+          v2 = v[k]*v[k];
+        }
+        if (s < h) {
+          v[++k] = i;
+          f[k] = d;
+          z[k] = s;
+          v2 = q2;
+        }
+      }
+      q2 += i << 1 | 1;
+    }
+    /*Now, go back and compute the distances to each parabola.*/
+    if (k < 0) {
+      /*If there were _no_ parabolas, then the shape is empty, and we've already
+         filled it with infinity in the X pass, so there's no need to examine
+         the rest of the columns.
+        Just copy the whole thing to the output image.*/
+      memcpy(_d, dd, w*h*sizeof(*_d));
+      break;
+    }
+    else {
+      int zk;
+      z[k+1] = h;
+      i = k = 0;
+      do {
+        int d2;
+        int d1;
+        d1 = i - v[k];
+        d2 = d1*d1 + f[k];
+        d1 = d1 << 1 | 1;
+        zk = z[++k];
+        for(;;){
+          _d[i*w + j]=(unsigned)d2;
+          if(++i >= zk) break;
+          d2 += d1;
+          d1 += 2;
+        }
+      }
+      while(zk < h);
+    }
+  }
+  free(f);
+  free(z);
+  free(v);
+  free(dd);
+}
+
 #define OD_ENCODE_REAL (0)
 #define OD_ENCODE_RDO (1)
 static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
@@ -1430,6 +1587,7 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_UNKNOWN);
     OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_PLANE, OD_ACCT_PLANE_UNKNOWN);
   }
+  static unsigned dist[10000000];
   for (pli = 0; pli < nplanes; pli++) {
     xdec = state->io_imgs[OD_FRAME_INPUT].planes[pli].xdec;
     ydec = state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec;
@@ -1452,6 +1610,30 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           if (!mbctx->is_keyframe) {
             state->mctmp[pli][y*w + x] = (mdata[ystride*y + x] - 128)
              << coeff_shift;
+          }
+        }
+      }
+      if (pli == 0 && !rdo_only && enc->quantizer[0] != 0) {
+        int overshoot;
+        int max_overshoot;
+        max_overshoot = 16 << OD_COEFF_SHIFT;
+        /* Since the ringing is proportional to the quantizer, we also make the
+           overshoot proportional to the quantizer. */
+        overshoot = 23*enc->quantizer[pli] >> (4 + OD_COEFF_SHIFT);
+        od_uedt2d(dist, state->io_imgs[OD_FRAME_INPUT].planes[pli].data, h,
+         state->io_imgs[OD_FRAME_INPUT].planes[pli].ystride, 235);
+        for (y = 0; y < h; y++) {
+          for (x = 0; x < w; x++) {
+            state->ctmp[pli][y*w + x] += OD_MINI(max_overshoot, overshoot*
+             (int)root_table_q4[OD_MINI(40, dist[ystride*y + x])] >> 4);
+          }
+        }
+        od_uedt2d(dist, state->io_imgs[OD_FRAME_INPUT].planes[pli].data, h,
+         state->io_imgs[OD_FRAME_INPUT].planes[pli].ystride, 16);
+        for (y = 0; y < h; y++) {
+          for (x = 0; x < w; x++) {
+            state->ctmp[pli][y*w + x] -= OD_MINI(max_overshoot, overshoot*
+              (int)root_table_q4[OD_MINI(40, dist[ystride*y + x])] >> 4);
           }
         }
       }
