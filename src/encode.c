@@ -746,7 +746,31 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     tell = od_ec_enc_tell_frac(&enc->ec);
     for (i = 1; i < 4; i++) {
       int quant;
+#if 0
+      int q = ac_quant[i == 3];
+      if (abs(x[i]) < .6*q) quant = 0;
+      else quant = OD_DIV_R0(x[i], q);
+#endif
+#if 0
       quant = OD_DIV_R0(x[i], ac_quant[i == 3]);
+#endif
+#if 1
+      int sign;
+      double cost;
+      double xq;
+      sign = x[i] < 0;
+      x[i] = abs(x[i]);
+      xq = (double)x[i]/ac_quant[i == 3];
+      quant = (int)floor(xq);
+      cost = generic_encode_cost(&enc->state.adapt.model_dc[pli], quant + 1,
+       -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
+      cost -= generic_encode_cost(&enc->state.adapt.model_dc[pli], quant,
+       -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
+      if (quant == 0) cost += 1;
+      /*cost = OD_MINF(3., cost);*/
+      if (1 - 2*(xq - quant) + .7*OD_PVQ_LAMBDA*cost < 0) quant++;
+      if (sign) quant = -quant;
+#endif
       generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli], abs(quant), -1,
        &enc->state.adapt.ex_dc[pli][l][i-1], 2);
       if (quant) od_ec_enc_bits(&enc->ec, quant < 0, 1);
