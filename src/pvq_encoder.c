@@ -607,6 +607,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   int skip_dir;
   int skip_theta_value;
   const unsigned char *qm;
+  int flag;
   qm = &enc->state.pvq_qm_q4[pli][0];
   exg = &enc->state.adapt.pvq_exg[pli][ln][0];
   ext = enc->state.adapt.pvq_ext + ln*PVQ_MAX_PARTITIONS;
@@ -667,13 +668,15 @@ int od_pvq_encode(daala_enc_ctx *enc,
     }
   }
   if (!is_keyframe && theta[0] == 0 && qg[0] == 0 && skip_rest) nb_bands = 0;
+  flag = 0;
   for (i = 0; i < nb_bands; i++) {
     if (i == 0 || (!skip_rest && !(skip_dir & (1 << ((i - 1)%3))))) {
       pvq_encode_partition(&enc->ec, qg[i], theta[i], max_theta[i], y + off[i],
        size[i], k[i], model, &enc->state.adapt, exg + i, ext + i,
-       robust || is_keyframe, (pli != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS
-       + ln*PVQ_MAX_PARTITIONS + i, is_keyframe, i == 0 && (i < nb_bands - 1),
+       robust || is_keyframe, ((pli != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS
+       + ln*PVQ_MAX_PARTITIONS + i)*2 + flag, is_keyframe, i == 0 && (i < nb_bands - 1),
        skip_rest, ln);
+      flag = theta[0]==-1;
     }
     if (i == 0 && !skip_rest && ln > 0) {
       od_encode_cdf_adapt(&enc->ec, skip_dir,
