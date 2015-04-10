@@ -1039,15 +1039,15 @@ static void od_encode_mv(daala_enc_ctx *enc, od_mv_grid_pt *mvg, int vx,
   oy = (mvg->mv[1] >> mv_res) - pred[1];
   /*Interleave positive and negative values.*/
   model = &enc->state.adapt.mv_model;
-  id = OD_MINI(abs(oy), 3)*4 + OD_MINI(abs(ox), 3);
+  id = OD_MINI(abs(oy), 2)*3 + OD_MINI(abs(ox), 2);
   od_encode_cdf_adapt(&enc->ec, id, enc->state.adapt.mv_small_cdf[equal_mvs],
-   16, enc->state.adapt.mv_small_increment);
-  if (abs(ox) >= 3) {
-    generic_encode(&enc->ec, model, abs(ox) - 3, width << (3 - mv_res),
+   9, enc->state.adapt.mv_small_increment);
+  if (abs(ox) >= 2) {
+    generic_encode(&enc->ec, model, abs(ox) - 2, width << (3 - mv_res),
      &enc->state.adapt.mv_ex[level], 6);
   }
-  if (abs(oy) >= 3) {
-    generic_encode(&enc->ec, model, abs(oy) - 3, height << (3 - mv_res),
+  if (abs(oy) >= 2) {
+    generic_encode(&enc->ec, model, abs(oy) - 2, height << (3 - mv_res),
      &enc->state.adapt.mv_ey[level], 6);
   }
   if (abs(ox)) od_ec_enc_bits(&enc->ec, ox < 0, 1);
