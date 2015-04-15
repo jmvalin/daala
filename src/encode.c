@@ -457,6 +457,37 @@ static int od_single_band_lossless_encode(daala_enc_ctx *enc, int ln,
   return vk == 0;
 }
 
+
+static void od_wavelet_encode(daala_enc_ctx *enc, od_coeff *tree, int ln) {
+  int nb;
+  int i;
+  nb = ((1 << 2*(ln + 2)) - 1)/3;
+  for (i = 0; i < nb; i++) {
+    printf("%d ", tree[i]);
+    od_ec_enc_bits(&enc->ec, abs(tree[i]), 16);
+    od_ec_enc_bits(&enc->ec, tree[i]<0, 1);
+  }
+  printf("\n");
+}
+
+static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
+ od_coeff *scalar_out, const od_coeff *cblock, const od_coeff *predt,
+ int quant, int pli) {
+  int n2;
+  int i;
+  n2 = 1 << 2*(ln + 2);
+  for (i = 1; i < n2; i++) {
+    scalar_out[i] = floor(.5 + cblock[i]/(double)quant);
+  }
+  od_wavelet_encode(enc, scalar_out + 1, ln);
+  od_wavelet_encode(enc, scalar_out + 1 + (n2-1)/3, ln);
+  od_wavelet_encode(enc, scalar_out + 1 + 2*(n2-1)/3, ln);
+  for (i = 1; i < n2; i++) {
+    scalar_out[i] *= quant;
+  }
+  return 0;
+}
+
 /* Returns 1 if the block is skipped, zero otherwise. */
 static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
  int pli, int bx, int by, int rdo_only) {
@@ -511,9 +542,13 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
 #if defined(OD_OUTPUT_PRED)
   for (zzi = 0; zzi < (n*n); zzi++) preds[zzi] = pred[zzi];
 #endif
+  if (ln != 3) {
   /* Change ordering for encoding. */
   od_raster_to_coding_order(cblock,  n, &d[bo], w, lossless);
   od_raster_to_coding_order(predt,  n, &pred[0], n, lossless);
+  } else {
+  od_raster_to_wavelet_tree(cblock, ln + 2, &d[bo], w);
+  }
   /* Lossless encoding uses an actual quantizer of 1, but is signalled
      with a 'quantizer' of 0. */
   quant = OD_MAXI(1, enc->quantizer[pli]);
@@ -532,6 +567,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     }
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_AC_COEFFS);
+  if (ln != 3) {
   if (lossless) {
     skip = od_single_band_lossless_encode(enc, ln, scalar_out, cblock, predt,
      pli);
@@ -539,6 +575,9 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   else {
     skip = od_pvq_encode(enc, predt, cblock, scalar_out, quant, pli, ln,
      OD_PVQ_BETA[pli][ln], OD_ROBUST_STREAM, ctx->is_keyframe);
+  }
+  } else {
+    skip = od_wavelet_quantize(enc, ln, scalar_out, cblock, predt, quant, pli);
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_UNKNOWN);
   if (OD_DISABLE_HAAR_DC || !ctx->is_keyframe) {
@@ -562,7 +601,11 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     OD_ASSERT(ctx->dc_idx < OD_NB_SAVED_DCS);
     if (rdo_only && ctx->is_keyframe) scalar_out[0] = ctx->dc[ctx->dc_idx++];
   }
+  if (ln != 3) {
   od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
+  } else {
+  od_wavelet_tree_to_raster(&d[bo], w, scalar_out, ln + 2);
+  }
   /*Apply the inverse transform.*/
 #if !defined(OD_OUTPUT_PRED)
   if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);

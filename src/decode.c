@@ -235,6 +235,31 @@ static void od_block_lossless_decode(daala_dec_ctx *dec, int ln,
   }
 }
 
+static void od_wavelet_decode(daala_dec_ctx *dec, od_coeff *tree, int ln) {
+  int nb;
+  int i;
+  nb = ((1 << 2*(ln + 2)) - 1)/3;
+  for (i = 0; i < nb; i++) {
+    tree[i] = od_ec_dec_bits(&dec->ec, 16);
+    if (od_ec_dec_bits(&dec->ec, 1)) tree[i] = -tree[i];
+    printf("%d ", tree[i]);
+  }
+  printf("\n");
+}
+
+static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
+ const od_coeff *predt, int quant, int pli) {
+  int n2;
+  int i;
+  n2 = 1 << 2*(ln + 2);
+  od_wavelet_decode(dec, pred + 1, ln);
+  od_wavelet_decode(dec, pred + 1 + (n2-1)/3, ln);
+  od_wavelet_decode(dec, pred + 1 + 2*(n2-1)/3, ln);
+  for (i = 1; i < n2; i++) {
+    pred[i] = pred[i]*quant;
+  }
+}
+
 static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
  int pli, int bx, int by) {
   int n;
@@ -281,6 +306,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
     dc_quant = OD_MAXI(1, quant*
      dec->state.pvq_qm_q4[pli][od_qm_get_index(ln, 0)] >> 4);
   }
+  if (ln != 3) {
   if (lossless) {
     od_block_lossless_decode(dec, ln, pred, predt, pli);
   }
@@ -291,6 +317,9 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
     if (pli == 0 && dec->user_flags != NULL) {
       dec->user_flags[by*dec->user_fstride + bx] = flags;
     }
+  }
+  } else {
+  od_wavelet_unquantize(dec, ln, pred, predt, quant, pli);
   }
   if (OD_DISABLE_HAAR_DC || !ctx->is_keyframe) {
     int has_dc_skip;
@@ -305,7 +334,12 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
   else {
     pred[0] = d[bo];
   }
+  if (ln != 3) {
   od_coding_order_to_raster(&d[bo], w, pred, n, lossless);
+  } else {
+  od_wavelet_tree_to_raster(&d[bo], w, pred, ln + 2);
+  }
+
   if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
   /*Apply the inverse transform.*/
   (*dec->state.opt_vtbl.idct_2d[ln])(c + bo, w, d + bo, w);
