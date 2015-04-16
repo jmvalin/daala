@@ -240,11 +240,13 @@ static void od_wavelet_decode(daala_dec_ctx *dec, od_coeff *tree, int ln) {
   int i;
   nb = ((1 << 2*ln) - 1)/3;
   for (i = 0; i < nb; i++) {
+    int tmp;
+    tmp = tree[i];
     tree[i] = od_ec_dec_bits(&dec->ec, 16);
     if (od_ec_dec_bits(&dec->ec, 1)) tree[i] = -tree[i];
-    printf("%d ", tree[i]);
+    /*printf("%d ", OD_ILOG(abs(tree[i]))-tmp);*/
   }
-  printf("\n");
+  /*printf("\n");*/
 }
 
 static void od_decode_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
@@ -254,6 +256,7 @@ static void od_decode_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
   int n;
   int coeff_mag;
   n = 1 << ln;
+  if (tree_mag[y][x] == 0) return;
   coeff_mag = tree_mag[y][x] - od_ec_dec_bits(&dec->ec, 16);
   c[y*n + x] = coeff_mag;
   /* Max of all children */
@@ -263,7 +266,6 @@ static void od_decode_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
   else {
     children_mag[y][x] = tree_mag[y][x];
   }
-  tree_mag[y][x] = children_mag[y][x];
   /* Encode max of each four children. */
   tree_mag[2*y][2*x] = children_mag[y][x] - od_ec_dec_bits(&dec->ec, 16);
   tree_mag[2*y][2*x + 1] = children_mag[y][x] -  od_ec_dec_bits(&dec->ec, 16);
@@ -287,9 +289,11 @@ static void od_decode_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
 static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
  const od_coeff *predt, int quant, int pli) {
   int n2;
+  int n;
   int i;
   od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2];
-  od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX];
+  od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX] = {{0}};
+  n = 1 << ln;
   n2 = 1 << 2*ln;
   tree_mag[0][1] = od_ec_dec_bits(&dec->ec, 16);
   tree_mag[1][0] = od_ec_dec_bits(&dec->ec, 16);
@@ -297,6 +301,12 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
   od_decode_tree(dec, pred, ln, tree_mag, children_mag, 1, 0, pli);
   od_decode_tree(dec, pred, ln, tree_mag, children_mag, 0, 1, pli);
   od_decode_tree(dec, pred, ln, tree_mag, children_mag, 1, 1, pli);
+  for (i = 0; i < n; i++) {
+    int j;
+    for (j = 0; j < n; j++) if (i+j) printf("%d ", tree_mag[i][j]);
+    printf("\n");
+  }
+  printf("\n");
   od_wavelet_decode(dec, pred + 1, ln);
   od_wavelet_decode(dec, pred + 1 + (n2-1)/3, ln);
   od_wavelet_decode(dec, pred + 1 + 2*(n2-1)/3, ln);

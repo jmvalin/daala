@@ -499,6 +499,7 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   int n;
   int coeff_mag;
   n = 1 << ln;
+  if (tree_mag[y][x] == 0) return;
   coeff_mag = OD_ILOG(abs(c[y*n + x]));
   od_ec_enc_bits(&enc->ec, tree_mag[y][x] - coeff_mag, 16);
   /* Max of all children */
@@ -542,6 +543,12 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 0, pli);
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 0, 1, pli);
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 1, pli);
+  for (i = 0; i < n; i++) {
+    int j;
+    for (j = 0; j < n; j++) if (i+j) printf("%d ", tree_mag[i][j]);
+    printf("\n");
+  }
+  printf("\n");
   od_wavelet_encode(enc, out + 1, ln);
   od_wavelet_encode(enc, out + 1 + (n2-1)/3, ln);
   od_wavelet_encode(enc, out + 1 + 2*(n2-1)/3, ln);
