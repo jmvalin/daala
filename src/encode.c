@@ -461,7 +461,7 @@ static int od_single_band_lossless_encode(daala_enc_ctx *enc, int ln,
 static void od_wavelet_encode(daala_enc_ctx *enc, od_coeff *tree, int ln) {
   int nb;
   int i;
-  nb = ((1 << 2*(ln + 2)) - 1)/3;
+  nb = ((1 << 2*ln) - 1)/3;
   for (i = 0; i < nb; i++) {
     printf("%d ", tree[i]);
     od_ec_enc_bits(&enc->ec, abs(tree[i]), 16);
@@ -470,18 +470,50 @@ static void od_wavelet_encode(daala_enc_ctx *enc, od_coeff *tree, int ln) {
   printf("\n");
 }
 
+static int od_compute_max_tree(
+ od_coeff max_tree[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y,
+ od_coeff *c, int ln) {
+  int n;
+  int maxval;
+  n = 1 << ln;
+  maxval = 0;
+  if (4*x < n && 4*y < n) {
+    int tmp;
+    tmp = od_compute_max_tree(max_tree, 2*x, 2*y, c, ln);
+    maxval = OD_MAXI(maxval, tmp);
+    tmp = od_compute_max_tree(max_tree, 2*x + 1, 2*y, c, ln);
+    maxval = OD_MAXI(maxval, tmp);
+    tmp = od_compute_max_tree(max_tree, 2*x, 2*y + 1, c, ln);
+    maxval = OD_MAXI(maxval, tmp);
+    tmp = od_compute_max_tree(max_tree, 2*x + 1, 2*y + 1, c, ln);
+    maxval = OD_MAXI(maxval, tmp);
+  }
+  maxval = OD_MAXI(maxval, OD_MAXI(OD_MAXI(abs(c[2*y*n + 2*x]),
+   abs(c[2*y*n + 2*x + 1])),
+   OD_MAXI(abs(c[(2*y + 1)*n + 2*x]), abs(c[(2*y + 1)*n + 2*x + 1]))));
+  max_tree[x][y] = maxval;
+  return maxval;
+}
+
 static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
  od_coeff *scalar_out, const od_coeff *cblock, const od_coeff *predt,
  int quant, int pli) {
   int n2;
   int i;
-  n2 = 1 << 2*(ln + 2);
+  int max[3];
+  od_coeff max_tree[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2];
+  n2 = 1 << 2*ln;
   for (i = 1; i < n2; i++) {
     scalar_out[i] = floor(.5 + cblock[i]/(double)quant);
   }
+  max[0] = od_compute_max_tree(max_tree, 1, 0, scalar_out, ln);
+  max[1] = od_compute_max_tree(max_tree, 0, 1, scalar_out, ln);
+  max[2] = od_compute_max_tree(max_tree, 1, 1, scalar_out, ln);
+  printf("XXX %d %d %d\n", max[0], max[1], max[2]);
   od_wavelet_encode(enc, scalar_out + 1, ln);
   od_wavelet_encode(enc, scalar_out + 1 + (n2-1)/3, ln);
   od_wavelet_encode(enc, scalar_out + 1 + 2*(n2-1)/3, ln);
+  printf("done\n");
   for (i = 1; i < n2; i++) {
     scalar_out[i] *= quant;
   }
@@ -577,7 +609,8 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
      OD_PVQ_BETA[pli][ln], OD_ROBUST_STREAM, ctx->is_keyframe);
   }
   } else {
-    skip = od_wavelet_quantize(enc, ln, scalar_out, cblock, predt, quant, pli);
+    skip = od_wavelet_quantize(enc, ln + 2, scalar_out, cblock, predt, quant,
+     pli);
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_UNKNOWN);
   if (OD_DISABLE_HAAR_DC || !ctx->is_keyframe) {
