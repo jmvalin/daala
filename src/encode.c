@@ -492,6 +492,11 @@ static int od_compute_max_tree(od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX],
   return maxval;
 }
 
+static void od_ec_enc_unary(od_ec_enc *ec, int x) {
+  if (x) od_ec_enc_bits(ec, 0, x);
+  od_ec_enc_bits(ec, 1, 1);
+}
+
 static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX],
   od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y,
@@ -501,16 +506,16 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   n = 1 << ln;
   if (tree_mag[y][x] == 0) return;
   coeff_mag = OD_ILOG(abs(c[y*n + x]));
-  od_ec_enc_bits(&enc->ec, tree_mag[y][x] - coeff_mag, 16);
+  od_ec_enc_unary(&enc->ec, tree_mag[y][x] - coeff_mag);
   /* Max of all children */
   if (tree_mag[y][x] == coeff_mag) {
-    od_ec_enc_bits(&enc->ec, tree_mag[y][x] - children_mag[y][x], 16);
+    od_ec_enc_unary(&enc->ec, tree_mag[y][x] - children_mag[y][x]);
   }
   /* Encode max of each four children. */
-  od_ec_enc_bits(&enc->ec, children_mag[y][x] - tree_mag[2*y][2*x], 16);
-  od_ec_enc_bits(&enc->ec, children_mag[y][x] - tree_mag[2*y][2*x + 1], 16);
-  od_ec_enc_bits(&enc->ec, children_mag[y][x] - tree_mag[2*y + 1][2*x], 16);
-  od_ec_enc_bits(&enc->ec, children_mag[y][x] - tree_mag[2*y + 1][2*x + 1], 16);
+  od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y][2*x]);
+  od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y][2*x + 1]);
+  od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y + 1][2*x]);
+  od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y + 1][2*x + 1]);
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
     od_encode_tree(enc, c, ln, tree_mag, children_mag, 2*x, 2*y, pli);

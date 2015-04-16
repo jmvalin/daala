@@ -249,6 +249,12 @@ static void od_wavelet_decode(daala_dec_ctx *dec, od_coeff *tree, int ln) {
   /*printf("\n");*/
 }
 
+static int od_ec_dec_unary(od_ec_dec *ec) {
+  int ret;
+  while (od_ec_dec_bits(ec, 1) == 0) ret++;
+  return ret;
+}
+
 static void od_decode_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
  od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX],
  od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2],
@@ -257,20 +263,20 @@ static void od_decode_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
   int coeff_mag;
   n = 1 << ln;
   if (tree_mag[y][x] == 0) return;
-  coeff_mag = tree_mag[y][x] - od_ec_dec_bits(&dec->ec, 16);
+  coeff_mag = tree_mag[y][x] - od_ec_dec_unary(&dec->ec);
   c[y*n + x] = coeff_mag;
   /* Max of all children */
   if (tree_mag[y][x] == coeff_mag) {
-    children_mag[y][x] = tree_mag[y][x] - od_ec_dec_bits(&dec->ec, 16);
+    children_mag[y][x] = tree_mag[y][x] - od_ec_dec_unary(&dec->ec);
   }
   else {
     children_mag[y][x] = tree_mag[y][x];
   }
   /* Encode max of each four children. */
-  tree_mag[2*y][2*x] = children_mag[y][x] - od_ec_dec_bits(&dec->ec, 16);
-  tree_mag[2*y][2*x + 1] = children_mag[y][x] -  od_ec_dec_bits(&dec->ec, 16);
-  tree_mag[2*y + 1][2*x] = children_mag[y][x] - od_ec_dec_bits(&dec->ec, 16);
-  tree_mag[2*y + 1][2*x + 1] = children_mag[y][x] - od_ec_dec_bits(&dec->ec, 16);
+  tree_mag[2*y][2*x] = children_mag[y][x] - od_ec_dec_unary(&dec->ec);
+  tree_mag[2*y][2*x + 1] = children_mag[y][x] -  od_ec_dec_unary(&dec->ec);
+  tree_mag[2*y + 1][2*x] = children_mag[y][x] - od_ec_dec_unary(&dec->ec);
+  tree_mag[2*y + 1][2*x + 1] = children_mag[y][x] - od_ec_dec_unary(&dec->ec);
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
     od_decode_tree(dec, c, ln, tree_mag, children_mag, 2*x, 2*y, pli);
