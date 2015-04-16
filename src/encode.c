@@ -543,12 +543,12 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 0, pli);
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 0, 1, pli);
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 1, pli);
-  for (i = 0; i < n; i++) {
+  /*for (i = 0; i < n; i++) {
     int j;
-    for (j = 0; j < n; j++) if (i+j) printf("%d ", tree_mag[i][j]);
+    for (j = 0; j < n; j++) if (i+j) printf("%d ", OD_ILOG(abs(out[i*n+j])));
     printf("\n");
   }
-  printf("\n");
+  printf("\n");*/
   od_wavelet_encode(enc, out + 1, ln);
   od_wavelet_encode(enc, out + 1 + (n2-1)/3, ln);
   od_wavelet_encode(enc, out + 1 + 2*(n2-1)/3, ln);
