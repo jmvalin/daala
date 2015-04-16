@@ -468,74 +468,85 @@ static void od_wavelet_encode(daala_enc_ctx *enc, od_coeff *tree, int ln) {
   }
 }
 
-static int od_compute_max_tree(
- od_coeff max_tree[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y,
+static int od_compute_max_tree(od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX],
+ od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y,
  const od_coeff *c, int ln) {
   int n;
   int maxval;
   n = 1 << ln;
   maxval = 0;
-  if (4*x < n && 4*y < n) {
+  if (2*x < n && 2*y < n) {
     int tmp;
-    tmp = od_compute_max_tree(max_tree, 2*x, 2*y, c, ln);
+    tmp = od_compute_max_tree(tree_mag, children_mag, 2*x, 2*y, c, ln);
     maxval = OD_MAXI(maxval, tmp);
-    tmp = od_compute_max_tree(max_tree, 2*x + 1, 2*y, c, ln);
+    tmp = od_compute_max_tree(tree_mag, children_mag, 2*x + 1, 2*y, c, ln);
     maxval = OD_MAXI(maxval, tmp);
-    tmp = od_compute_max_tree(max_tree, 2*x, 2*y + 1, c, ln);
+    tmp = od_compute_max_tree(tree_mag, children_mag, 2*x, 2*y + 1, c, ln);
     maxval = OD_MAXI(maxval, tmp);
-    tmp = od_compute_max_tree(max_tree, 2*x + 1, 2*y + 1, c, ln);
+    tmp = od_compute_max_tree(tree_mag, children_mag, 2*x + 1, 2*y + 1, c, ln);
     maxval = OD_MAXI(maxval, tmp);
+    children_mag[y][x] = maxval;
   }
-  maxval = OD_MAXI(maxval, OD_MAXI(OD_MAXI(OD_ILOG(abs(c[2*y*n + 2*x])),
-   OD_ILOG(abs(c[2*y*n + 2*x + 1]))),
-   OD_MAXI(OD_ILOG(abs(c[(2*y + 1)*n + 2*x])),
-   OD_ILOG(abs(c[(2*y + 1)*n + 2*x + 1])))));
-  max_tree[x][y] = maxval;
+  maxval = OD_MAXI(maxval, OD_ILOG(abs(c[y*n + x])));
+  tree_mag[y][x] = maxval;
   return maxval;
 }
 
 static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
- od_coeff max_tree[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y,
+  od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX],
+  od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y,
  int pli) {
   int n;
+  int coeff_mag;
   n = 1 << ln;
-  /* d = max_tree - max_coeff */
-  /* Encode d. */
-  /* if (d != 0) encode the children max */
+  coeff_mag = OD_ILOG(abs(c[y*n + x]));
+  od_ec_enc_bits(&enc->ec, tree_mag[y][x] - coeff_mag, 16);
+  /* Max of all children */
+  if (tree_mag[y][x] == coeff_mag) {
+    od_ec_enc_bits(&enc->ec, tree_mag[y][x] - children_mag[y][x], 16);
+  }
   /* Encode max of each four children. */
-  od_ec_enc_bits(&enc->ec, 0, 1);
+  od_ec_enc_bits(&enc->ec, children_mag[y][x] - tree_mag[2*y][2*x], 16);
+  od_ec_enc_bits(&enc->ec, children_mag[y][x] - tree_mag[2*y][2*x + 1], 16);
+  od_ec_enc_bits(&enc->ec, children_mag[y][x] - tree_mag[2*y + 1][2*x], 16);
+  od_ec_enc_bits(&enc->ec, children_mag[y][x] - tree_mag[2*y + 1][2*x + 1], 16);
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
-    od_encode_tree(enc, c, ln, max_tree, 2*x, 2*y, pli);
-    od_encode_tree(enc, c, ln, max_tree, 2*x + 1, 2*y, pli);
-    od_encode_tree(enc, c, ln, max_tree, 2*x, 2*y + 1, pli);
-    od_encode_tree(enc, c, ln, max_tree, 2*x + 1, 2*y + 1, pli);
+    od_encode_tree(enc, c, ln, tree_mag, children_mag, 2*x, 2*y, pli);
+    od_encode_tree(enc, c, ln, tree_mag, children_mag, 2*x + 1, 2*y, pli);
+    od_encode_tree(enc, c, ln, tree_mag, children_mag, 2*x, 2*y + 1, pli);
+    od_encode_tree(enc, c, ln, tree_mag, children_mag, 2*x + 1, 2*y + 1, pli);
   }
 }
 
 static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
- od_coeff *scalar_out, const od_coeff *cblock, const od_coeff *predt,
+ od_coeff *out, const od_coeff *cblock, const od_coeff *predt,
  int quant, int pli) {
   int n2;
+  int n;
   int i;
-  od_coeff max_tree[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2];
+  od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2];
+  od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX];
+  n = 1 << ln;
   n2 = 1 << 2*ln;
   for (i = 1; i < n2; i++) {
-    scalar_out[i] = floor(.5 + cblock[i]/(double)quant);
+    out[i] = floor(.5 + cblock[i]/(double)quant);
   }
-  od_compute_max_tree(max_tree, 1, 0, scalar_out, ln);
-  od_compute_max_tree(max_tree, 0, 1, scalar_out, ln);
-  od_compute_max_tree(max_tree, 1, 1, scalar_out, ln);
-  max_tree[0][0] = OD_MAXI(OD_MAXI(max_tree[0][1], max_tree[1][0]), max_tree[1][1]);
-  od_ec_enc_bits(&enc->ec, max_tree[0][0], 16);
-  od_encode_tree(enc, scalar_out, ln, max_tree, 1, 0, pli);
-  od_encode_tree(enc, scalar_out, ln, max_tree, 0, 1, pli);
-  od_encode_tree(enc, scalar_out, ln, max_tree, 1, 1, pli);
-  od_wavelet_encode(enc, scalar_out + 1, ln);
-  od_wavelet_encode(enc, scalar_out + 1 + (n2-1)/3, ln);
-  od_wavelet_encode(enc, scalar_out + 1 + 2*(n2-1)/3, ln);
+  od_compute_max_tree(tree_mag, children_mag, 1, 0, out, ln);
+  od_compute_max_tree(tree_mag, children_mag, 0, 1, out, ln);
+  od_compute_max_tree(tree_mag, children_mag, 1, 1, out, ln);
+  tree_mag[0][0] = OD_MAXI(OD_MAXI(tree_mag[0][1], tree_mag[1][0]), tree_mag[1][1]);
+  od_ec_enc_bits(&enc->ec, tree_mag[0][1], 16);
+  od_ec_enc_bits(&enc->ec, tree_mag[1][0], 16);
+  od_ec_enc_bits(&enc->ec, tree_mag[1][1], 16);
+  od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 0, pli);
+  od_encode_tree(enc, out, ln, tree_mag, children_mag, 0, 1, pli);
+  od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 1, pli);
+  od_wavelet_encode(enc, out + 1, ln);
+  od_wavelet_encode(enc, out + 1 + (n2-1)/3, ln);
+  od_wavelet_encode(enc, out + 1 + 2*(n2-1)/3, ln);
   for (i = 1; i < n2; i++) {
-    scalar_out[i] *= quant;
+    out[i] *= quant;
   }
   return 0;
 }
