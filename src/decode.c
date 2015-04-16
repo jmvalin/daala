@@ -238,7 +238,7 @@ static void od_block_lossless_decode(daala_dec_ctx *dec, int ln,
 static void od_wavelet_decode(daala_dec_ctx *dec, od_coeff *tree, int ln) {
   int nb;
   int i;
-  nb = ((1 << 2*(ln + 2)) - 1)/3;
+  nb = ((1 << 2*ln) - 1)/3;
   for (i = 0; i < nb; i++) {
     tree[i] = od_ec_dec_bits(&dec->ec, 16);
     if (od_ec_dec_bits(&dec->ec, 1)) tree[i] = -tree[i];
@@ -247,11 +247,35 @@ static void od_wavelet_decode(daala_dec_ctx *dec, od_coeff *tree, int ln) {
   printf("\n");
 }
 
+static void od_decode_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
+ od_coeff max_tree[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y,
+ int pli) {
+  int n;
+  n = 1 << ln;
+  /* d = max_tree - max_coeff */
+  /* Encode d. */
+  /* if (d != 0) encode the children max */
+  /* Encode max of each four children. */
+  od_ec_dec_bits(&dec->ec, 1);
+  if (4*x < n && 4*y < n) {
+    /* Recursive calls. */
+    od_decode_tree(dec, c, ln, max_tree, 2*x, 2*y, pli);
+    od_decode_tree(dec, c, ln, max_tree, 2*x + 1, 2*y, pli);
+    od_decode_tree(dec, c, ln, max_tree, 2*x, 2*y + 1, pli);
+    od_decode_tree(dec, c, ln, max_tree, 2*x + 1, 2*y + 1, pli);
+  }
+}
+
 static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
  const od_coeff *predt, int quant, int pli) {
   int n2;
   int i;
-  n2 = 1 << 2*(ln + 2);
+  od_coeff max_tree[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2];
+  n2 = 1 << 2*ln;
+  max_tree[0][0] = od_ec_dec_bits(&dec->ec, 16);
+  od_decode_tree(dec, pred, ln, max_tree, 1, 0, pli);
+  od_decode_tree(dec, pred, ln, max_tree, 0, 1, pli);
+  od_decode_tree(dec, pred, ln, max_tree, 1, 1, pli);
   od_wavelet_decode(dec, pred + 1, ln);
   od_wavelet_decode(dec, pred + 1 + (n2-1)/3, ln);
   od_wavelet_decode(dec, pred + 1 + 2*(n2-1)/3, ln);
@@ -319,7 +343,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
     }
   }
   } else {
-  od_wavelet_unquantize(dec, ln, pred, predt, quant, pli);
+  od_wavelet_unquantize(dec, ln + 2, pred, predt, quant, pli);
   }
   if (OD_DISABLE_HAAR_DC || !ctx->is_keyframe) {
     int has_dc_skip;
