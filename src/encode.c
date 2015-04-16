@@ -549,9 +549,28 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     printf("\n");
   }
   printf("\n");*/
+#if 0
   od_wavelet_encode(enc, out + 1, ln);
   od_wavelet_encode(enc, out + 1 + (n2-1)/3, ln);
   od_wavelet_encode(enc, out + 1 + 2*(n2-1)/3, ln);
+#else
+  for (i = 0; i < n; i++) {
+    int j;
+    for (j = 0; j < n; j++) if (i + j) {
+      od_coeff in;
+      in = out[i*n + j];
+      if (in) {
+        od_ec_enc_bits(&enc->ec, in < 0, 1);
+        if (abs(in) > 1) {
+          int bits;
+          bits = OD_ILOG(abs(in)) - 1;
+          od_ec_enc_bits(&enc->ec, in & ((1 << bits) - 1), bits);
+        }
+      }
+
+    }
+  }
+#endif
   for (i = 1; i < n2; i++) {
     out[i] *= quant;
   }

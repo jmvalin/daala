@@ -311,9 +311,31 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
     printf("\n");
   }
   printf("\n");*/
+#if 0
   od_wavelet_decode(dec, pred + 1, ln);
   od_wavelet_decode(dec, pred + 1 + (n2-1)/3, ln);
   od_wavelet_decode(dec, pred + 1 + 2*(n2-1)/3, ln);
+#else
+  for (i = 0; i < n; i++) {
+    int j;
+    for (j = 0; j < n; j++) if (i + j) {
+      int mag;
+      int sign;
+      od_coeff in;
+      mag = pred[i*n + j];
+      if (mag) {
+        sign = od_ec_dec_bits(&dec->ec, 1);
+        if (mag > 1) {
+          in = (1 << (mag - 1)) | od_ec_dec_bits(&dec->ec, mag - 1);
+        }
+        else in = 1;
+        if (sign) in = -in;
+      }
+      else in = 0;
+      pred[i*n + j] = in;
+    }
+  }
+#endif
   for (i = 1; i < n2; i++) {
     pred[i] = pred[i]*quant;
   }
