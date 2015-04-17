@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #include "block_size.h"
 #include "dct.h"
+#include "tf.h"
 
 /*Making function pointer tables at least one entry
    longer than needed makes it highly likely that an
@@ -1952,20 +1953,98 @@ void od_bin_idct32(od_coeff *x, int xstride, const od_coeff y[32]) {
   x[31*xstride] = (od_coeff)tv;
 }
 
+void od_haar32x32(od_coeff *y, int ystride,
+  const od_coeff *x, int xstride) {
+  int i;
+  int j;
+  int level;
+  int tstride;
+  od_coeff tmp[1024];
+  tstride = 32;
+  for (i = 0; i < 32; i++) {
+    for (j = 0; j < 32; j++) {
+      tmp[i*tstride + j] = x[i*xstride + j];
+    }
+  }
+  for (level = 0; level < 5; level++) {
+    for (i = 0; i < 16 >> level; i++) {
+      for (j = 0; j < 16 >> level; j++) {
+        od_coeff a;
+        od_coeff b;
+        od_coeff c;
+        od_coeff d;
+        a = tmp[2*i*tstride + 2*j];
+        b = tmp[(2*i + 1)*tstride + 2*j];
+        c = tmp[2*i*tstride + 2*j + 1];
+        d = tmp[(2*i + 1)*tstride + 2*j + 1];
+        OD_HAAR_KERNEL(a, b, c, d);
+        tmp[i*tstride + j] = a;
+        y[i*ystride + j + (16 >> level)] = b;
+        y[(i + (16 >> level))*ystride + j] = c;
+        y[(i + (16 >> level))*ystride + j + (16 >> level)] = d;
+      }
+    }
+  }
+  y[0] = tmp[0];
+  /*for (i = 0; i < 32; i++) {
+    for (j=0;j<32;j++) printf("%d ", abs(y[i*xstride + j]));
+  }
+  printf("\n");*/
+}
+
+void od_haar32x32_inv(od_coeff *x, int xstride,
+ const od_coeff *y, int ystride) {
+  int i;
+  int j;
+  int level;
+  for (i = 0; i < 32; i++) {
+    for (j = 0; j < 32; j++) {
+      x[i*xstride + j] = y[i*ystride + j];
+    }
+  }
+  for (level = 4; level >= 0; level--) {
+    for (i = (16 >> level) - 1; i >= 0; i--) {
+      for (j = (16 >> level) - 1; j >= 0; j--) {
+        od_coeff a;
+        od_coeff b;
+        od_coeff c;
+        od_coeff d;
+        a = x[i*xstride + j];
+        b = y[i*ystride + j + (16 >> level)];
+        c = y[(i + (16 >> level))*ystride + j];
+        d = y[(i + (16 >> level))*ystride + j + (16 >> level)];
+        OD_HAAR_KERNEL(a, b, c, d);
+        x[2*i*xstride + 2*j] = a;
+        x[(2*i + 1)*xstride + 2*j] = b;
+        x[2*i*xstride + 2*j + 1] = c;
+        x[(2*i + 1)*xstride + 2*j + 1] = d;
+      }
+    }
+  }
+}
+
 void od_bin_fdct32x32(od_coeff *y, int ystride,
  const od_coeff *x, int xstride) {
+#if 0
   od_coeff z[32*32];
   int i;
   for (i = 0; i < 32; i++) od_bin_fdct32(z + 32*i, x + i, xstride);
   for (i = 0; i < 32; i++) od_bin_fdct32(y + ystride*i, z + i, 32);
+#else
+  od_haar32x32(y, ystride, x, xstride);
+#endif
 }
 
 void od_bin_idct32x32(od_coeff *x, int xstride,
  const od_coeff *y, int ystride) {
+#if 0
   od_coeff z[32*32];
   int i;
   for (i = 0; i < 32; i++) od_bin_idct32(z + i, 32, y + ystride*i);
   for (i = 0; i < 32; i++) od_bin_idct32(x + i, xstride, z + 32*i);
+#else
+  od_haar32x32_inv(x, xstride, y, ystride);
+#endif
 }
 
 #if defined(OD_CHECKASM)

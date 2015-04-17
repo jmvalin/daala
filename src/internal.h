@@ -70,15 +70,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 /*The total number of subdivision levels.*/
 # define OD_MC_NLEVELS (OD_MC_LEVEL_MAX + 1)
 
-# define OD_LIMIT_BSIZE_MIN (OD_BLOCK_4X4)
+# define OD_LIMIT_BSIZE_MIN (OD_BLOCK_32X32)
 # define OD_LIMIT_BSIZE_MAX (OD_BLOCK_32X32)
 # if OD_LIMIT_BSIZE_MIN > OD_BLOCK_32X32 || OD_LIMIT_BSIZE_MAX > OD_BLOCK_32X32
 #  error "block sizes above 32x32 not supported"
 # endif
-# define OD_DISABLE_FILTER (0)
+# define OD_DISABLE_FILTER (1)
 # define OD_DISABLE_HAAR_DC (0)
 # define OD_DISABLE_CFL (0)
-# define OD_DISABLE_QM (0)
+# define OD_DISABLE_QM (1)
 # define OD_DISABLE_FIXED_LAPPING (0)
 
 # define OD_ROBUST_STREAM (0)
