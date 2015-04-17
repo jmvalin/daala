@@ -236,3 +236,79 @@ void od_coding_order_to_raster(od_coeff *dst,  int stride, od_coeff *src,
   }
   dst[0] = src[0];
 }
+
+void od_raster_to_wavelet_tree(od_coeff *tree, int ln,
+ const od_coeff *raster, int stride) {
+#if 0
+  int scale;
+  int dir;
+  int pos;
+  tree[0] = raster[0];
+  pos = 1;
+  for (dir = 0; dir < 3; dir++) {
+    int dirx;
+    int diry;
+    dirx = (dir + 1) & 1;
+    diry = (dir + 1)/2;
+    for (scale = 0; scale < ln; scale++) {
+      int base;
+      int i;
+      int j;
+      base = (diry << scale)*stride + (dirx << scale);
+      for (i = 0; i < 1 << scale; i++) {
+        for (j = 0; j < 1 << scale; j++) {
+          tree[pos++] = raster[base + i*stride + j];
+        }
+      }
+    }
+  }
+#else
+  int n;
+  int i;
+  int j;
+  n = 1 << ln;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      tree[i*n + j] = raster[i*stride + j];
+    }
+  }
+#endif
+}
+
+void od_wavelet_tree_to_raster(od_coeff *raster, int stride,
+ const od_coeff *tree, int ln) {
+#if 0
+  int scale;
+  int dir;
+  int pos;
+  raster[0] = tree[0];
+  pos = 1;
+  for (dir = 0; dir < 3; dir++) {
+    int dirx;
+    int diry;
+    dirx = (dir + 1) & 1;
+    diry = (dir + 1)/2;
+    for (scale = 0; scale < ln; scale++) {
+      int base;
+      int i;
+      int j;
+      base = (diry << scale)*stride + (dirx << scale);
+      for (i = 0; i < 1 << scale; i++) {
+        for (j = 0; j < 1 << scale; j++) {
+          raster[base + i*stride + j] = tree[pos++];
+        }
+      }
+    }
+  }
+#else
+  int n;
+  int i;
+  int j;
+  n = 1 << ln;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      raster[i*stride + j] = tree[i*n + j];
+    }
+  }
+#endif
+}
