@@ -506,6 +506,7 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   if (children_mag[y][x]) {
     int ref;
     ref = children_mag[y][x];
+    /*printf("%d %d %d %d %d\n", ref, tree_mag[2*y][2*x], tree_mag[2*y][2*x + 1], tree_mag[2*y + 1][2*x], tree_mag[2*y+1][2*x+1]);*/
     od_encode_cdf_adapt(&enc->ec, ref - tree_mag[2*y][2*x],
      enc->state.adapt.haar_children_cdf[ref], ref+1,
      enc->state.adapt.haar_children_increment);
@@ -539,12 +540,16 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   n = 1 << ln;
   n2 = 1 << 2*ln;
   for (i = 1; i < n2; i++) {
-    out[i] = floor(.5 + cblock[i]/(double)quant);
+    out[i] = OD_DIV_R0(cblock[i], quant);
   }
   od_compute_max_tree(tree_mag, children_mag, 1, 0, out, ln);
   od_compute_max_tree(tree_mag, children_mag, 0, 1, out, ln);
   od_compute_max_tree(tree_mag, children_mag, 1, 1, out, ln);
   tree_mag[0][0] = OD_MAXI(OD_MAXI(tree_mag[0][1], tree_mag[1][0]), tree_mag[1][1]);
+  /*for (i = 0; i < n; i++) {
+    int j;
+    for (j=0;j<n;j++) printf("%d ", abs(cblock[i*n + j]));
+  }printf("\n");*/
   od_ec_enc_unary(&enc->ec, tree_mag[0][1]);
   od_ec_enc_unary(&enc->ec, tree_mag[1][0]);
   od_ec_enc_unary(&enc->ec, tree_mag[1][1]);

@@ -1958,9 +1958,12 @@ void od_haar32x32(od_coeff *y, int ystride,
   int i;
   int j;
   int level;
+  int tstride;
+  od_coeff tmp[1024];
+  tstride = 32;
   for (i = 0; i < 32; i++) {
     for (j = 0; j < 32; j++) {
-      y[i*ystride + j] = x[i*xstride + j];
+      tmp[i*tstride + j] = x[i*xstride + j];
     }
   }
   for (level = 0; level < 5; level++) {
@@ -1970,39 +1973,23 @@ void od_haar32x32(od_coeff *y, int ystride,
         od_coeff b;
         od_coeff c;
         od_coeff d;
-        a = y[(2*i << level)*ystride + (2*j << level)];
-        b = y[((2*i + 1) << level)*ystride + (2*j << level)];
-        c = y[(2*i << level)*ystride + ((2*j + 1) << level)];
-        d = y[((2*i + 1) << level)*ystride + ((2*j + 1) << level)];
+        a = tmp[2*i*tstride + 2*j];
+        b = tmp[(2*i + 1)*tstride + 2*j];
+        c = tmp[2*i*tstride + 2*j + 1];
+        d = tmp[(2*i + 1)*tstride + 2*j + 1];
         OD_HAAR_KERNEL(a, b, c, d);
-        y[(2*i << level)*ystride + (2*j << level)] = a;
-        y[((2*i + 1) << level)*ystride + (2*j << level)] = b;
-        y[(2*i << level)*ystride + ((2*j + 1) << level)] = c;
-        y[((2*i + 1) << level)*ystride + ((2*j + 1) << level)] = d;
+        tmp[i*tstride + j] = a;
+        y[i*ystride + j + (16 >> level)] = b;
+        y[(i + (16 >> level))*ystride + j] = c;
+        y[(i + (16 >> level))*ystride + j + (16 >> level)] = d;
       }
-    }
-    if (level == 1) {
-      od_coeff *y1;
-      y1 = y + ystride + 1;
-    for (i = 0; i < 16 >> level; i++) {
-      for (j = 0; j < 16 >> level; j++) {
-        od_coeff a;
-        od_coeff b;
-        od_coeff c;
-        od_coeff d;
-        a = y1[(2*i << level)*ystride + (2*j << level)];
-        b = y1[((2*i + 1) << level)*ystride + (2*j << level)];
-        c = y1[(2*i << level)*ystride + ((2*j + 1) << level)];
-        d = y1[((2*i + 1) << level)*ystride + ((2*j + 1) << level)];
-        OD_HAAR_KERNEL(a, b, c, d);
-        y1[(2*i << level)*ystride + (2*j << level)] = a;
-        y1[((2*i + 1) << level)*ystride + (2*j << level)] = b;
-        y1[(2*i << level)*ystride + ((2*j + 1) << level)] = c;
-        y1[((2*i + 1) << level)*ystride + ((2*j + 1) << level)] = d;
-      }
-    }
     }
   }
+  y[0] = tmp[0];
+  /*for (i = 0; i < 32; i++) {
+    for (j=0;j<32;j++) printf("%d ", abs(y[i*xstride + j]));
+  }
+  printf("\n");*/
 }
 
 void od_haar32x32_inv(od_coeff *x, int xstride,
@@ -2016,44 +2003,22 @@ void od_haar32x32_inv(od_coeff *x, int xstride,
     }
   }
   for (level = 4; level >= 0; level--) {
-    for (i = 0; i < 16 >> level; i++) {
-      for (j = 0; j < 16 >> level; j++) {
+    for (i = (16 >> level) - 1; i >= 0; i--) {
+      for (j = (16 >> level) - 1; j >= 0; j--) {
         od_coeff a;
         od_coeff b;
         od_coeff c;
         od_coeff d;
-        a = x[(2*i << level)*xstride + (2*j << level)];
-        b = x[((2*i + 1) << level)*xstride + (2*j << level)];
-        c = x[(2*i << level)*xstride + ((2*j + 1) << level)];
-        d = x[((2*i + 1) << level)*xstride + ((2*j + 1) << level)];
+        a = x[i*xstride + j];
+        b = y[i*ystride + j + (16 >> level)];
+        c = y[(i + (16 >> level))*ystride + j];
+        d = y[(i + (16 >> level))*ystride + j + (16 >> level)];
         OD_HAAR_KERNEL(a, b, c, d);
-        x[(2*i << level)*xstride + (2*j << level)] = a;
-        x[((2*i + 1) << level)*xstride + (2*j << level)] = b;
-        x[(2*i << level)*xstride + ((2*j + 1) << level)] = c;
-        x[((2*i + 1) << level)*xstride + ((2*j + 1) << level)] = d;
+        x[2*i*xstride + 2*j] = a;
+        x[(2*i + 1)*xstride + 2*j] = b;
+        x[2*i*xstride + 2*j + 1] = c;
+        x[(2*i + 1)*xstride + 2*j + 1] = d;
       }
-    }
-    if (level == 1) {
-      od_coeff *x1;
-      x1 = x + xstride + 1;
-      for (i = 0; i < 16 >> level; i++) {
-        for (j = 0; j < 16 >> level; j++) {
-          od_coeff a;
-          od_coeff b;
-          od_coeff c;
-          od_coeff d;
-          a = x1[(2*i << level)*xstride + (2*j << level)];
-          b = x1[((2*i + 1) << level)*xstride + (2*j << level)];
-          c = x1[(2*i << level)*xstride + ((2*j + 1) << level)];
-          d = x1[((2*i + 1) << level)*xstride + ((2*j + 1) << level)];
-          OD_HAAR_KERNEL(a, b, c, d);
-          x1[(2*i << level)*xstride + (2*j << level)] = a;
-          x1[((2*i + 1) << level)*xstride + (2*j << level)] = b;
-          x1[(2*i << level)*xstride + ((2*j + 1) << level)] = c;
-          x1[((2*i + 1) << level)*xstride + ((2*j + 1) << level)] = d;
-        }
-      }
-
     }
   }
 }
