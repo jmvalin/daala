@@ -495,17 +495,29 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   n = 1 << ln;
   if (tree_mag[y][x] == 0) return;
   coeff_mag = OD_ILOG(abs(c[y*n + x]));
-  od_ec_enc_unary(&enc->ec, tree_mag[y][x] - coeff_mag);
+  od_encode_cdf_adapt(&enc->ec, tree_mag[y][x] - coeff_mag,
+   enc->state.adapt.haar_coeff_cdf[tree_mag[y][x]], tree_mag[y][x] + 1,
+   enc->state.adapt.haar_coeff_increment);
   /* Max of all children */
   if (tree_mag[y][x] == coeff_mag) {
     od_ec_enc_unary(&enc->ec, tree_mag[y][x] - children_mag[y][x]);
   }
   /* Encode max of each four children. */
   if (children_mag[y][x]) {
-    od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y][2*x]);
-    od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y][2*x + 1]);
-    od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y + 1][2*x]);
-    od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y + 1][2*x + 1]);
+    int ref;
+    ref = children_mag[y][x];
+    od_encode_cdf_adapt(&enc->ec, ref - tree_mag[2*y][2*x],
+     enc->state.adapt.haar_children_cdf[ref], ref+1,
+     enc->state.adapt.haar_children_increment);
+    od_encode_cdf_adapt(&enc->ec, ref - tree_mag[2*y][2*x + 1],
+     enc->state.adapt.haar_children_cdf[ref], ref+1,
+     enc->state.adapt.haar_children_increment);
+    od_encode_cdf_adapt(&enc->ec, ref - tree_mag[2*y + 1][2*x],
+     enc->state.adapt.haar_children_cdf[ref], ref+1,
+     enc->state.adapt.haar_children_increment);
+    od_encode_cdf_adapt(&enc->ec, ref - tree_mag[2*y + 1][2*x + 1],
+     enc->state.adapt.haar_children_cdf[ref], ref+1,
+     enc->state.adapt.haar_children_increment);
   }
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
