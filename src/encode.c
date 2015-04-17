@@ -500,7 +500,8 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
    enc->state.adapt.haar_coeff_increment);
   /* Max of all children */
   if (tree_mag[y][x] == coeff_mag) {
-    od_ec_enc_unary(&enc->ec, tree_mag[y][x] - children_mag[y][x]);
+    od_encode_cdf_adapt(&enc->ec, tree_mag[y][x] - children_mag[y][x], enc->state.adapt.haar_offset_cdf[OD_ILOG(OD_MAXI(x, y)) - 1],
+     15, enc->state.adapt.haar_offset_increment);
   }
   /* Encode max of each four children. */
   if (children_mag[y][x]) {
@@ -515,7 +516,7 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
         mask |= (ref != tree_mag[2*y + yi][2*x + xi]) << (2*yi + xi);
       }
     }
-    od_encode_cdf_adapt(&enc->ec, mask, enc->state.adapt.haar_mask_cdf[0],
+    od_encode_cdf_adapt(&enc->ec, mask, enc->state.adapt.haar_mask_cdf[OD_ILOG(OD_MAXI(x, y)) - 1],
      15, enc->state.adapt.haar_mask_increment);
     for (yi = 0; yi < 2; yi++) {
       for (xi = 0; xi < 2; xi++) {
