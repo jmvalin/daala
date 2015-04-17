@@ -512,10 +512,12 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
     od_ec_enc_unary(&enc->ec, tree_mag[y][x] - children_mag[y][x]);
   }
   /* Encode max of each four children. */
-  od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y][2*x]);
-  od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y][2*x + 1]);
-  od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y + 1][2*x]);
-  od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y + 1][2*x + 1]);
+  if (children_mag[y][x]) {
+    od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y][2*x]);
+    od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y][2*x + 1]);
+    od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y + 1][2*x]);
+    od_ec_enc_unary(&enc->ec, children_mag[y][x] - tree_mag[2*y + 1][2*x + 1]);
+  }
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
     od_encode_tree(enc, c, ln, tree_mag, children_mag, 2*x, 2*y, pli);
