@@ -46,4 +46,10 @@ void od_raster_to_coding_order(od_coeff *dst, int n, od_coeff *src, int stride,
 void od_coding_order_to_raster(od_coeff *dst, int stride, od_coeff *src,
  int n, int interleave);
 
+void od_raster_to_wavelet_tree(od_coeff *tree, int ln,
+ const od_coeff *raster, int stride);
+
+void od_wavelet_tree_to_raster(od_coeff *raster, int stride,
+ const od_coeff *tree, int ln);
+
 #endif
