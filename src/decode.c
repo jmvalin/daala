@@ -251,6 +251,7 @@ static void od_wavelet_decode(daala_dec_ctx *dec, od_coeff *tree, int ln) {
 
 static int od_ec_dec_unary(od_ec_dec *ec) {
   int ret;
+  ret = 0;
   while (od_ec_dec_bits(ec, 1) == 0) ret++;
   return ret;
 }
@@ -301,9 +302,9 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
   od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX] = {{0}};
   n = 1 << ln;
   n2 = 1 << 2*ln;
-  tree_mag[0][1] = od_ec_dec_bits(&dec->ec, 16);
-  tree_mag[1][0] = od_ec_dec_bits(&dec->ec, 16);
-  tree_mag[1][1] = od_ec_dec_bits(&dec->ec, 16);
+  tree_mag[0][1] = od_ec_dec_unary(&dec->ec);
+  tree_mag[1][0] = od_ec_dec_unary(&dec->ec);
+  tree_mag[1][1] = od_ec_dec_unary(&dec->ec);
   for (i = 0; i < n; i++) {
     int j;
     for (j = 0; j < n; j++) if (i+j) pred[i*n + j] = 0;

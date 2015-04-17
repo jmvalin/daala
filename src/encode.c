@@ -542,9 +542,9 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   od_compute_max_tree(tree_mag, children_mag, 0, 1, out, ln);
   od_compute_max_tree(tree_mag, children_mag, 1, 1, out, ln);
   tree_mag[0][0] = OD_MAXI(OD_MAXI(tree_mag[0][1], tree_mag[1][0]), tree_mag[1][1]);
-  od_ec_enc_bits(&enc->ec, tree_mag[0][1], 16);
-  od_ec_enc_bits(&enc->ec, tree_mag[1][0], 16);
-  od_ec_enc_bits(&enc->ec, tree_mag[1][1], 16);
+  od_ec_enc_unary(&enc->ec, tree_mag[0][1]);
+  od_ec_enc_unary(&enc->ec, tree_mag[1][0]);
+  od_ec_enc_unary(&enc->ec, tree_mag[1][1]);
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 0, pli);
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 0, 1, pli);
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 1, pli);
