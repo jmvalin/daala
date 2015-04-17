@@ -41,14 +41,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
    attempting to keep a good visual balance between the relative resolution
    of luma, and chroma.
    FIXME: Tune this properly, see also OD_DEFAULT_QMS.*/
-const od_coeff OD_DC_RES[3] = {17, 24, 17};
+const od_coeff OD_DC_RES[3] = {17, 17, 17};
 
+#if 0
 /* Scaling compensation for the Haar equivalent basis function. Left is
    for horizontal/vertical. Right is for diagonal. */
 const od_coeff OD_DC_QM[2][OD_NBSIZES - 1][2] = {
   {{25, 30}, {21, 27}, {17, 19}},
   {{21, 25}, {18, 20}, {17, 18}}
 };
+#else
+/* Scaling compensation for the Haar equivalent basis function. Left is
+   for horizontal/vertical. Right is for diagonal. */
+const od_coeff OD_DC_QM[2][OD_NBSIZES - 1][2] = {
+  {{16, 16}, {16, 16}, {16, 16}},
+  {{16, 16}, {16, 16}, {16, 16}}
+};
+#endif
 
 static void *od_aligned_malloc(size_t _sz,size_t _align) {
   unsigned char *p;
@@ -400,6 +409,14 @@ void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   OD_CDFS_INIT(state->pvq_gaintheta_cdf, state->pvq_gaintheta_increment >> 2);
   state->pvq_skip_dir_increment = 128;
   OD_CDFS_INIT(state->pvq_skip_dir_cdf, state->pvq_skip_dir_increment >> 2);
+  state->haar_children_increment = 128;
+  OD_CDFS_INIT(state->haar_children_cdf, state->haar_children_increment >> 2);
+  state->haar_coeff_increment = 128;
+  OD_CDFS_INIT(state->haar_coeff_cdf, state->haar_coeff_increment >> 2);
+  state->haar_mask_increment = 128;
+  OD_CDFS_INIT(state->haar_mask_cdf, state->haar_mask_increment >> 2);
+  state->haar_offset_increment = 128;
+  OD_CDFS_INIT(state->haar_offset_cdf, state->haar_offset_increment >> 2);
   for (pli = 0; pli < OD_NPLANES_MAX; pli++) {
     generic_model_init(&state->model_dc[pli]);
     generic_model_init(&state->model_g[pli]);
