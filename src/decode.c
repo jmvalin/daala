@@ -264,19 +264,16 @@ static void od_decode_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
   /* Encode max of each four children. */
   if (children_mag[y][x]) {
     int ref;
+    int xi;
+    int yi;
     ref = children_mag[y][x];
-    tree_mag[2*y][2*x] = children_mag[y][x] - od_decode_cdf_adapt(&dec->ec,
-     dec->state.adapt.haar_children_cdf[ref], ref+1,
-     dec->state.adapt.haar_children_increment);
-    tree_mag[2*y][2*x + 1] = children_mag[y][x] - od_decode_cdf_adapt(&dec->ec,
-     dec->state.adapt.haar_children_cdf[ref], ref+1,
-     dec->state.adapt.haar_children_increment);
-    tree_mag[2*y + 1][2*x] = children_mag[y][x] - od_decode_cdf_adapt(&dec->ec,
-     dec->state.adapt.haar_children_cdf[ref], ref+1,
-     dec->state.adapt.haar_children_increment);
-    tree_mag[2*y + 1][2*x + 1] = children_mag[y][x] - od_decode_cdf_adapt(&dec->ec,
-     dec->state.adapt.haar_children_cdf[ref], ref+1,
-     dec->state.adapt.haar_children_increment);
+    for (yi = 0; yi < 2; yi++) {
+      for (xi = 0; xi < 2; xi++) {
+        tree_mag[2*y + yi][2*x + xi] = children_mag[y][x] - od_decode_cdf_adapt(&dec->ec,
+         dec->state.adapt.haar_children_cdf[ref], ref+1,
+         dec->state.adapt.haar_children_increment);
+      }
+    }
   }
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
