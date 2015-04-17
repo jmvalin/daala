@@ -566,7 +566,7 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
         if (abs(in) > 1) {
           int bits;
           bits = OD_ILOG(abs(in)) - 1;
-          od_ec_enc_bits(&enc->ec, in & ((1 << bits) - 1), bits);
+          od_ec_enc_bits(&enc->ec, abs(in) & ((1 << bits) - 1), bits);
         }
       }
 
