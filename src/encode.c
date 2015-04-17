@@ -457,6 +457,8 @@ static int od_single_band_lossless_encode(daala_enc_ctx *enc, int ln,
   return vk == 0;
 }
 
+/* Compute magnitude at each level of each tree in tree_mag and the magnitude
+   of the children (including current node) in children_mag. */
 static int od_compute_max_tree(od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX],
  od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y,
  const od_coeff *c, int ln) {
@@ -481,6 +483,7 @@ static int od_compute_max_tree(od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX],
   return maxval;
 }
 
+/* Encode with unary (Rice) code. This should go away. */
 static void od_ec_enc_unary(od_ec_enc *ec, int x) {
   if (x) od_ec_enc_bits(ec, 0, x);
   od_ec_enc_bits(ec, 1, 1);
@@ -495,15 +498,16 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   n = 1 << ln;
   if (tree_mag[y][x] == 0) return;
   coeff_mag = OD_ILOG(abs(c[y*n + x]));
+  /* Encode current coeff magnitude relative to tree. */
   od_encode_cdf_adapt(&enc->ec, tree_mag[y][x] - coeff_mag,
    enc->state.adapt.haar_coeff_cdf[tree_mag[y][x]], tree_mag[y][x] + 1,
    enc->state.adapt.haar_coeff_increment);
-  /* Max of all children */
+  /* Encode max magnitude of the children */
   if (tree_mag[y][x] == coeff_mag) {
     od_encode_cdf_adapt(&enc->ec, tree_mag[y][x] - children_mag[y][x], enc->state.adapt.haar_offset_cdf[OD_ILOG(OD_MAXI(x, y)) - 1],
      15, enc->state.adapt.haar_offset_increment);
   }
-  /* Encode max of each four children. */
+  /* Encode max of each four children relative to tree. */
   if (children_mag[y][x]) {
     int ref;
     int xi;
@@ -516,11 +520,14 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
         mask |= (ref != tree_mag[2*y + yi][2*x + xi]) << (2*yi + xi);
       }
     }
+    /* Encode which of the children have the same magniture as the max we just
+     encoded. */
     od_encode_cdf_adapt(&enc->ec, mask, enc->state.adapt.haar_mask_cdf[OD_ILOG(OD_MAXI(x, y)) - 1],
      15, enc->state.adapt.haar_mask_increment);
     for (yi = 0; yi < 2; yi++) {
       for (xi = 0; xi < 2; xi++) {
         if (ref != tree_mag[2*y + yi][2*x + xi] && ref > 1) {
+          /* Encode the magnitude of the non-max children. */
           od_encode_cdf_adapt(&enc->ec, ref - 1 - tree_mag[2*y + yi][2*x + xi],
            enc->state.adapt.haar_children_cdf[ref], ref,
            enc->state.adapt.haar_children_increment);
@@ -547,23 +554,22 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX];
   n = 1 << ln;
   n2 = 1 << 2*ln;
+  /* Quantize everything by DC. */
   for (i = 1; i < n2; i++) {
     out[i] = OD_DIV_R0(cblock[i], quant);
   }
+  /* Compute magnitude at each level of each tree. */
   od_compute_max_tree(tree_mag, children_mag, 1, 0, out, ln);
   od_compute_max_tree(tree_mag, children_mag, 0, 1, out, ln);
   od_compute_max_tree(tree_mag, children_mag, 1, 1, out, ln);
-  tree_mag[0][0] = OD_MAXI(OD_MAXI(tree_mag[0][1], tree_mag[1][0]), tree_mag[1][1]);
-  /*for (i = 0; i < n; i++) {
-    int j;
-    for (j=0;j<n;j++) printf("%d ", abs(cblock[i*n + j]));
-  }printf("\n");*/
+  /* Encode magnitude for the top of each tree */
   od_ec_enc_unary(&enc->ec, tree_mag[0][1]);
   od_ec_enc_unary(&enc->ec, tree_mag[1][0]);
   od_ec_enc_unary(&enc->ec, tree_mag[1][1]);
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 0, pli);
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 0, 1, pli);
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 1, pli);
+  /* For all significant coeffs, encode sign and LSBs. */
   for (i = 0; i < n; i++) {
     int j;
     for (j = 0; j < n; j++) if (i + j) {
