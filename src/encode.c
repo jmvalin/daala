@@ -507,12 +507,23 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
     int ref;
     int xi;
     int yi;
+    int mask;
     ref = children_mag[y][x];
+    mask = 0;
     for (yi = 0; yi < 2; yi++) {
       for (xi = 0; xi < 2; xi++) {
-        od_encode_cdf_adapt(&enc->ec, ref - tree_mag[2*y + yi][2*x + xi],
-         enc->state.adapt.haar_children_cdf[ref], ref+1,
-         enc->state.adapt.haar_children_increment);
+        mask |= (ref != tree_mag[2*y + yi][2*x + xi]) << (2*yi + xi);
+      }
+    }
+    od_encode_cdf_adapt(&enc->ec, mask, enc->state.adapt.haar_mask_cdf[0],
+     15, enc->state.adapt.haar_mask_increment);
+    for (yi = 0; yi < 2; yi++) {
+      for (xi = 0; xi < 2; xi++) {
+        if (ref != tree_mag[2*y + yi][2*x + xi] && ref > 1) {
+          od_encode_cdf_adapt(&enc->ec, ref - 1 - tree_mag[2*y + yi][2*x + xi],
+           enc->state.adapt.haar_children_cdf[ref], ref,
+           enc->state.adapt.haar_children_increment);
+        }
       }
     }
   }

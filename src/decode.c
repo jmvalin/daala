@@ -266,12 +266,18 @@ static void od_decode_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
     int ref;
     int xi;
     int yi;
+    int mask;
     ref = children_mag[y][x];
+    mask = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_mask_cdf[0],
+     15, dec->state.adapt.haar_mask_increment);
     for (yi = 0; yi < 2; yi++) {
       for (xi = 0; xi < 2; xi++) {
-        tree_mag[2*y + yi][2*x + xi] = children_mag[y][x] - od_decode_cdf_adapt(&dec->ec,
-         dec->state.adapt.haar_children_cdf[ref], ref+1,
-         dec->state.adapt.haar_children_increment);
+        if (mask & (1 << (2*yi + xi))) {
+          tree_mag[2*y + yi][2*x + xi] = children_mag[y][x] - 1 - od_decode_cdf_adapt(&dec->ec,
+           dec->state.adapt.haar_children_cdf[ref], ref,
+          dec->state.adapt.haar_children_increment);
+        }
+        else tree_mag[2*y + yi][2*x + xi] = ref;
       }
     }
   }

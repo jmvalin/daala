@@ -150,6 +150,8 @@ struct od_adapt_ctx {
   int haar_children_increment;
   ogg_uint16_t haar_coeff_cdf[16][16];
   int haar_coeff_increment;
+  ogg_uint16_t haar_mask_cdf[5][16];
+  int haar_mask_increment;
 };
 
 struct od_state{

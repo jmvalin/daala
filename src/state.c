@@ -413,6 +413,8 @@ void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   OD_CDFS_INIT(state->haar_children_cdf, state->haar_children_increment >> 2);
   state->haar_coeff_increment = 128;
   OD_CDFS_INIT(state->haar_coeff_cdf, state->haar_coeff_increment >> 2);
+  state->haar_mask_increment = 128;
+  OD_CDFS_INIT(state->haar_mask_cdf, state->haar_coeff_increment >> 2);
   for (pli = 0; pli < OD_NPLANES_MAX; pli++) {
     generic_model_init(&state->model_dc[pli]);
     generic_model_init(&state->model_g[pli]);
