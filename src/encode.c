@@ -457,17 +457,6 @@ static int od_single_band_lossless_encode(daala_enc_ctx *enc, int ln,
   return vk == 0;
 }
 
-
-static void od_wavelet_encode(daala_enc_ctx *enc, od_coeff *tree, int ln) {
-  int nb;
-  int i;
-  nb = ((1 << 2*ln) - 1)/3;
-  for (i = 0; i < nb; i++) {
-    od_ec_enc_bits(&enc->ec, abs(tree[i]), 16);
-    od_ec_enc_bits(&enc->ec, tree[i]<0, 1);
-  }
-}
-
 static int od_compute_max_tree(od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX],
  od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y,
  const od_coeff *c, int ln) {
@@ -550,17 +539,6 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 0, pli);
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 0, 1, pli);
   od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 1, pli);
-  /*for (i = 0; i < n; i++) {
-    int j;
-    for (j = 0; j < n; j++) if (i+j) printf("%d ", OD_ILOG(abs(out[i*n+j])));
-    printf("\n");
-  }
-  printf("\n");*/
-#if 0
-  od_wavelet_encode(enc, out + 1, ln);
-  od_wavelet_encode(enc, out + 1 + (n2-1)/3, ln);
-  od_wavelet_encode(enc, out + 1 + 2*(n2-1)/3, ln);
-#else
   for (i = 0; i < n; i++) {
     int j;
     for (j = 0; j < n; j++) if (i + j) {
@@ -577,7 +555,6 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
 
     }
   }
-#endif
   for (i = 1; i < n2; i++) {
     out[i] *= quant;
   }

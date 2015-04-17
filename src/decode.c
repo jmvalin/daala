@@ -235,20 +235,6 @@ static void od_block_lossless_decode(daala_dec_ctx *dec, int ln,
   }
 }
 
-static void od_wavelet_decode(daala_dec_ctx *dec, od_coeff *tree, int ln) {
-  int nb;
-  int i;
-  nb = ((1 << 2*ln) - 1)/3;
-  for (i = 0; i < nb; i++) {
-    int tmp;
-    tmp = tree[i];
-    tree[i] = od_ec_dec_bits(&dec->ec, 16);
-    if (od_ec_dec_bits(&dec->ec, 1)) tree[i] = -tree[i];
-    /*printf("%d ", OD_ILOG(abs(tree[i]))-tmp);*/
-  }
-  /*printf("\n");*/
-}
-
 static int od_ec_dec_unary(od_ec_dec *ec) {
   int ret;
   ret = 0;
@@ -314,17 +300,6 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
   od_decode_tree(dec, pred, ln, tree_mag, children_mag, 1, 0, pli);
   od_decode_tree(dec, pred, ln, tree_mag, children_mag, 0, 1, pli);
   od_decode_tree(dec, pred, ln, tree_mag, children_mag, 1, 1, pli);
-  /*for (i = 0; i < n; i++) {
-    int j;
-    for (j = 0; j < n; j++) if (i+j) printf("%d ", pred[i*n + j]);
-    printf("\n");
-  }
-  printf("\n");*/
-#if 0
-  od_wavelet_decode(dec, pred + 1, ln);
-  od_wavelet_decode(dec, pred + 1 + (n2-1)/3, ln);
-  od_wavelet_decode(dec, pred + 1 + 2*(n2-1)/3, ln);
-#else
   for (i = 0; i < n; i++) {
     int j;
     for (j = 0; j < n; j++) if (i + j) {
@@ -344,7 +319,6 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
       pred[i*n + j] = in;
     }
   }
-#endif
   for (i = 1; i < n2; i++) {
     pred[i] = pred[i]*quant;
   }
