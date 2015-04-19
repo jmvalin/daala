@@ -498,14 +498,17 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   n = 1 << ln;
   if (tree_mag[y][x] == 0) return;
   coeff_mag = OD_ILOG(abs(c[y*n + x]));
-  /* Encode current coeff magnitude relative to tree. */
-  od_encode_cdf_adapt(&enc->ec, tree_mag[y][x] - coeff_mag,
-   enc->state.adapt.haar_coeff_cdf[tree_mag[y][x]], tree_mag[y][x] + 1,
-   enc->state.adapt.haar_coeff_increment);
-  /* Encode max magnitude of the children */
-  if (tree_mag[y][x] == coeff_mag) {
-    od_encode_cdf_adapt(&enc->ec, tree_mag[y][x] - children_mag[y][x], enc->state.adapt.haar_offset_cdf[OD_ILOG(OD_MAXI(x, y)) - 1],
-     15, enc->state.adapt.haar_offset_increment);
+  {
+    int d0;
+    int d1;
+    int id;
+    d0 = tree_mag[y][x] - coeff_mag;
+    d1 = tree_mag[y][x] - children_mag[y][x];
+    id = 2*OD_MAXI(d0, d1) - (d0 > d1);
+    od_encode_cdf_adapt(&enc->ec, OD_MINI(15, id),
+     enc->state.adapt.haar_coeff_cdf[tree_mag[y][x]],
+     OD_MINI(16, 2*tree_mag[y][x]+1), enc->state.adapt.haar_coeff_increment);
+    if (id >= 15 && tree_mag[y][x] >= 8) od_ec_enc_unary(&enc->ec, id - 15);
   }
   /* Encode max of each four children relative to tree. */
   if (children_mag[y][x]) {
@@ -520,7 +523,7 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
         mask |= (ref != tree_mag[2*y + yi][2*x + xi]) << (2*yi + xi);
       }
     }
-    /* Encode which of the children have the same magniture as the max we just
+    /* Encode which of the children have the same magnitude as the max we just
      encoded. */
     od_encode_cdf_adapt(&enc->ec, mask, enc->state.adapt.haar_mask_cdf[OD_ILOG(OD_MAXI(x, y)) - 1],
      15, enc->state.adapt.haar_mask_increment);
@@ -583,7 +586,6 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
           od_ec_enc_bits(&enc->ec, abs(in) & ((1 << bits) - 1), bits);
         }
       }
-
     }
   }
   for (i = 1; i < n2; i++) {
