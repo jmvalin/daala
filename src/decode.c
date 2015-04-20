@@ -276,7 +276,7 @@ static void od_decode_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
     int yi;
     int mask;
     ref = children_mag[y][x];
-    mask = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_mask_cdf[OD_ILOG(OD_MAXI(x, y)) - 1],
+    mask = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_mask_cdf[OD_ILOG(OD_MAXI(x, y))],
      15, dec->state.adapt.haar_mask_increment);
     for (yi = 0; yi < 2; yi++) {
       for (xi = 0; xi < 2; xi++) {
@@ -313,12 +313,26 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
   od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX] = {{0}};
   n = 1 << ln;
   n2 = 1 << 2*ln;
-  tree_mag[0][1] = od_ec_dec_unary(&dec->ec);
-  tree_mag[1][0] = od_ec_dec_unary(&dec->ec);
-  tree_mag[1][1] = od_ec_dec_unary(&dec->ec);
   for (i = 0; i < n; i++) {
     int j;
     for (j = 0; j < n; j++) if (i+j) pred[i*n + j] = 0;
+  }
+  tree_mag[0][0] = od_ec_dec_unary(&dec->ec);
+  if (tree_mag[0][0]) {
+    int mask;
+    int ref = tree_mag[0][0];
+    mask = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_mask_cdf[0],
+     7, dec->state.adapt.haar_mask_increment);
+    tree_mag[0][1] = tree_mag[1][0] = tree_mag[1][1] = ref;
+    if ((mask & 4)) tree_mag[0][1] = ref - 1 - od_decode_cdf_adapt(&dec->ec,
+     dec->state.adapt.haar_children_cdf[ref], ref,
+     dec->state.adapt.haar_coeff_increment);
+    if ((mask & 2)) tree_mag[1][0] = ref - 1 - od_decode_cdf_adapt(&dec->ec,
+     dec->state.adapt.haar_children_cdf[ref], ref,
+     dec->state.adapt.haar_coeff_increment);
+    if ((mask & 1)) tree_mag[1][1] = ref - 1 - od_decode_cdf_adapt(&dec->ec,
+     dec->state.adapt.haar_children_cdf[ref], ref,
+     dec->state.adapt.haar_coeff_increment);
   }
   od_decode_tree(dec, pred, ln, tree_mag, children_mag, 1, 0, pli);
   od_decode_tree(dec, pred, ln, tree_mag, children_mag, 0, 1, pli);
