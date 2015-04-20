@@ -183,6 +183,7 @@ static int32_t triangle_rand(kiss99_ctx *_kiss,int32_t _range){
   uint32_t m;
   uint32_t r1;
   uint32_t r2;
+  return 0;
   _range++;
   m=0xFFFFFFFFU/_range*_range;
   do r1=kiss99_rand(_kiss);
