@@ -547,6 +547,33 @@ static void od_encode_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   }
 }
 
+static void od_encode_mag_trees(daala_enc_ctx *enc, int ln, od_coeff *out,
+ od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX],
+ od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int pli) {
+ od_ec_enc_unary(&enc->ec, tree_mag[0][0]);
+  if (tree_mag[0][0]) {
+    int mask;
+    int ref;
+    ref = tree_mag[0][0];
+    mask = 4*(tree_mag[0][1] != tree_mag[0][0]) + 2*(tree_mag[1][0] != tree_mag[0][0]) +
+     (tree_mag[1][1] != tree_mag[0][0]);
+    od_encode_cdf_adapt(&enc->ec, mask, enc->state.adapt.haar_mask_cdf[0],
+     7, enc->state.adapt.haar_mask_increment);
+    if ((mask & 4) && ref > 1) od_encode_cdf_adapt(&enc->ec, ref - 1 - tree_mag[0][1],
+     enc->state.adapt.haar_children_cdf[ref], ref,
+     enc->state.adapt.haar_coeff_increment);
+    if ((mask & 2) && ref > 1) od_encode_cdf_adapt(&enc->ec, ref - 1 - tree_mag[1][0],
+     enc->state.adapt.haar_children_cdf[ref], ref,
+     enc->state.adapt.haar_coeff_increment);
+    if ((mask & 1) && ref > 1) od_encode_cdf_adapt(&enc->ec, ref - 1 - tree_mag[1][1],
+     enc->state.adapt.haar_children_cdf[ref], ref,
+     enc->state.adapt.haar_coeff_increment);
+  }
+  od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 0, pli);
+  od_encode_tree(enc, out, ln, tree_mag, children_mag, 0, 1, pli);
+  od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 1, pli);
+}
+
 static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
  od_coeff *out, const od_coeff *cblock, const od_coeff *predt,
  int quant, int pli) {
@@ -568,26 +595,7 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   od_compute_max_tree(tree_mag, children_mag, 1, 1, out, ln);
   /* Encode magnitude for the top of each tree */
   tree_mag[0][0] = OD_MAXI(OD_MAXI(tree_mag[0][1], tree_mag[1][0]), tree_mag[1][1]);
-  od_ec_enc_unary(&enc->ec, tree_mag[0][0]);
-  if (tree_mag[0][0]) {
-    int ref = tree_mag[0][0];
-    mask = 4*(tree_mag[0][1] != tree_mag[0][0]) + 2*(tree_mag[1][0] != tree_mag[0][0]) +
-     (tree_mag[1][1] != tree_mag[0][0]);
-    od_encode_cdf_adapt(&enc->ec, mask, enc->state.adapt.haar_mask_cdf[0],
-     7, enc->state.adapt.haar_mask_increment);
-    if ((mask & 4) && ref > 1) od_encode_cdf_adapt(&enc->ec, ref - 1 - tree_mag[0][1],
-     enc->state.adapt.haar_children_cdf[ref], ref,
-     enc->state.adapt.haar_coeff_increment);
-    if ((mask & 2) && ref > 1) od_encode_cdf_adapt(&enc->ec, ref - 1 - tree_mag[1][0],
-     enc->state.adapt.haar_children_cdf[ref], ref,
-     enc->state.adapt.haar_coeff_increment);
-    if ((mask & 1) && ref > 1) od_encode_cdf_adapt(&enc->ec, ref - 1 - tree_mag[1][1],
-     enc->state.adapt.haar_children_cdf[ref], ref,
-     enc->state.adapt.haar_coeff_increment);
-  }
-  od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 0, pli);
-  od_encode_tree(enc, out, ln, tree_mag, children_mag, 0, 1, pli);
-  od_encode_tree(enc, out, ln, tree_mag, children_mag, 1, 1, pli);
+  od_encode_mag_trees(enc, ln, out, tree_mag, children_mag, pli);
   /* For all significant coeffs, encode sign and LSBs. */
   for (i = 0; i < n; i++) {
     int j;

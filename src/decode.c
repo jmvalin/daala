@@ -296,19 +296,9 @@ static void od_decode_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
   }
 }
 
-static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
- const od_coeff *predt, int quant, int pli) {
-  int n2;
-  int n;
-  int i;
-  od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2];
-  od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX] = {{0}};
-  n = 1 << ln;
-  n2 = 1 << 2*ln;
-  for (i = 0; i < n; i++) {
-    int j;
-    for (j = 0; j < n; j++) if (i+j) pred[i*n + j] = 0;
-  }
+static void od_decode_mag_trees(daala_dec_ctx *dec, int ln, od_coeff *pred,
+ od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2],
+ od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX], int pli) {
   tree_mag[0][0] = od_ec_dec_unary(&dec->ec);
   if (tree_mag[0][0]) {
     int mask;
@@ -329,6 +319,22 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
   od_decode_tree(dec, pred, ln, tree_mag, children_mag, 1, 0, pli);
   od_decode_tree(dec, pred, ln, tree_mag, children_mag, 0, 1, pli);
   od_decode_tree(dec, pred, ln, tree_mag, children_mag, 1, 1, pli);
+}
+
+static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
+ const od_coeff *predt, int quant, int pli) {
+  int n2;
+  int n;
+  int i;
+  od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2];
+  od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX] = {{0}};
+  n = 1 << ln;
+  n2 = 1 << 2*ln;
+  for (i = 0; i < n; i++) {
+    int j;
+    for (j = 0; j < n; j++) if (i+j) pred[i*n + j] = 0;
+  }
+  od_decode_mag_trees(dec, ln, pred, children_mag, tree_mag, pli);
   for (i = 0; i < n; i++) {
     int j;
     for (j = 0; j < n; j++) if (i + j) {
