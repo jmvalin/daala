@@ -672,7 +672,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
 #if defined(OD_OUTPUT_PRED)
   for (zzi = 0; zzi < (n*n); zzi++) preds[zzi] = pred[zzi];
 #endif
-  if (ln != 3) {
+  if (0&&ln != 3) {
   /* Change ordering for encoding. */
   od_raster_to_coding_order(cblock,  n, &d[bo], w, lossless);
   od_raster_to_coding_order(predt,  n, &pred[0], n, lossless);
@@ -697,7 +697,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     }
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_AC_COEFFS);
-  if (ln != 3) {
+  if (0&&ln != 3) {
   if (lossless) {
     skip = od_single_band_lossless_encode(enc, ln, scalar_out, cblock, predt,
      pli);
@@ -732,7 +732,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     OD_ASSERT(ctx->dc_idx < OD_NB_SAVED_DCS);
     if (rdo_only && ctx->is_keyframe) scalar_out[0] = ctx->dc[ctx->dc_idx++];
   }
-  if (ln != 3) {
+  if (0&&ln != 3) {
   od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
   } else {
   od_wavelet_tree_to_raster(&d[bo], w, scalar_out, ln + 2);
