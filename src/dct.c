@@ -769,18 +769,26 @@ void od_bin_idct16(od_coeff *x, int xstride, const od_coeff y[16]) {
 
 void od_bin_fdct16x16(od_coeff *y, int ystride,
  const od_coeff *x, int xstride) {
+#if 0
   od_coeff z[16*16];
   int i;
   for (i = 0; i < 16; i++) od_bin_fdct16(z + 16*i, x + i, xstride);
   for (i = 0; i < 16; i++) od_bin_fdct16(y + ystride*i, z + i, 16);
+#else
+  od_haar(y, ystride, x, xstride, 4);
+#endif
 }
 
 void od_bin_idct16x16(od_coeff *x, int xstride,
  const od_coeff *y, int ystride) {
+#if 0
   od_coeff z[16*16];
   int i;
   for (i = 0; i < 16; i++) od_bin_idct16(z + i, 16, y + ystride*i);
   for (i = 0; i < 16; i++) od_bin_idct16(x + i, xstride, z + 16*i);
+#else
+  od_haar_inv(x, xstride, y, ystride, 4);
+#endif
 }
 
 #define OD_FDCT_2(t0, t1) \
@@ -1968,7 +1976,7 @@ void od_haar(od_coeff *y, int ystride,
       tmp[i*tstride + j] = x[i*xstride + j];
     }
   }
-  for (level = 0; level < 5; level++) {
+  for (level = 0; level < ln; level++) {
     int bound;
     bound = n >> level >> 1;
     for (i = 0; i < bound; i++) {
@@ -1998,7 +2006,7 @@ void od_haar_inv(od_coeff *x, int xstride,
   int j;
   int level;
   x[0] = y[0];
-  for (level = 4; level >= 0; level--) {
+  for (level = ln - 1; level >= 0; level--) {
     int bound = 1 << (ln - 1 - level);
     for (i = bound - 1; i >= 0; i--) {
       for (j = bound - 1; j >= 0; j--) {
