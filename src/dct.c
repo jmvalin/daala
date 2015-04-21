@@ -1953,22 +1953,26 @@ void od_bin_idct32(od_coeff *x, int xstride, const od_coeff y[32]) {
   x[31*xstride] = (od_coeff)tv;
 }
 
-void od_haar32x32(od_coeff *y, int ystride,
-  const od_coeff *x, int xstride) {
+void od_haar(od_coeff *y, int ystride,
+  const od_coeff *x, int xstride, int ln) {
   int i;
   int j;
   int level;
   int tstride;
-  od_coeff tmp[1024];
-  tstride = 32;
-  for (i = 0; i < 32; i++) {
-    for (j = 0; j < 32; j++) {
+  int n;
+  od_coeff tmp[OD_BSIZE_MAX*OD_BSIZE_MAX];
+  n = 1 << ln;
+  tstride = n;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
       tmp[i*tstride + j] = x[i*xstride + j];
     }
   }
   for (level = 0; level < 5; level++) {
-    for (i = 0; i < 16 >> level; i++) {
-      for (j = 0; j < 16 >> level; j++) {
+    int bound;
+    bound = n >> level >> 1;
+    for (i = 0; i < bound; i++) {
+      for (j = 0; j < bound; j++) {
         od_coeff a;
         od_coeff b;
         od_coeff c;
@@ -1979,40 +1983,33 @@ void od_haar32x32(od_coeff *y, int ystride,
         d = tmp[(2*i + 1)*tstride + 2*j + 1];
         OD_HAAR_KERNEL(a, b, c, d);
         tmp[i*tstride + j] = a;
-        y[i*ystride + j + (16 >> level)] = b;
-        y[(i + (16 >> level))*ystride + j] = c;
-        y[(i + (16 >> level))*ystride + j + (16 >> level)] = d;
+        y[i*ystride + j + bound] = b;
+        y[(i + bound)*ystride + j] = c;
+        y[(i + bound)*ystride + j + bound] = d;
       }
     }
   }
   y[0] = tmp[0];
-  /*for (i = 0; i < 32; i++) {
-    for (j=0;j<32;j++) printf("%d ", abs(y[i*xstride + j]));
-  }
-  printf("\n");*/
 }
 
-void od_haar32x32_inv(od_coeff *x, int xstride,
- const od_coeff *y, int ystride) {
+void od_haar_inv(od_coeff *x, int xstride,
+ const od_coeff *y, int ystride, int ln) {
   int i;
   int j;
   int level;
-  for (i = 0; i < 32; i++) {
-    for (j = 0; j < 32; j++) {
-      x[i*xstride + j] = y[i*ystride + j];
-    }
-  }
+  x[0] = y[0];
   for (level = 4; level >= 0; level--) {
-    for (i = (16 >> level) - 1; i >= 0; i--) {
-      for (j = (16 >> level) - 1; j >= 0; j--) {
+    int bound = 1 << (ln - 1 - level);
+    for (i = bound - 1; i >= 0; i--) {
+      for (j = bound - 1; j >= 0; j--) {
         od_coeff a;
         od_coeff b;
         od_coeff c;
         od_coeff d;
         a = x[i*xstride + j];
-        b = y[i*ystride + j + (16 >> level)];
-        c = y[(i + (16 >> level))*ystride + j];
-        d = y[(i + (16 >> level))*ystride + j + (16 >> level)];
+        b = y[i*ystride + j + bound];
+        c = y[(i + bound)*ystride + j];
+        d = y[(i + bound)*ystride + j + bound];
         OD_HAAR_KERNEL(a, b, c, d);
         x[2*i*xstride + 2*j] = a;
         x[(2*i + 1)*xstride + 2*j] = b;
@@ -2031,7 +2028,7 @@ void od_bin_fdct32x32(od_coeff *y, int ystride,
   for (i = 0; i < 32; i++) od_bin_fdct32(z + 32*i, x + i, xstride);
   for (i = 0; i < 32; i++) od_bin_fdct32(y + ystride*i, z + i, 32);
 #else
-  od_haar32x32(y, ystride, x, xstride);
+  od_haar(y, ystride, x, xstride, 5);
 #endif
 }
 
@@ -2043,7 +2040,7 @@ void od_bin_idct32x32(od_coeff *x, int xstride,
   for (i = 0; i < 32; i++) od_bin_idct32(z + i, 32, y + ystride*i);
   for (i = 0; i < 32; i++) od_bin_idct32(x + i, xstride, z + 32*i);
 #else
-  od_haar32x32_inv(x, xstride, y, ystride);
+  od_haar_inv(x, xstride, y, ystride, 5);
 #endif
 }
 
