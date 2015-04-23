@@ -259,6 +259,7 @@ static int od_decode_coeff_split(daala_dec_ctx *dec, int sum) {
   }
   a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_coeff_cdf[sum - 1],
    sum + 1, dec->state.adapt.haar_coeff_increment) << shift;
+  printf("c = %d (%d)\n", a, sum);
   return a;
 }
 
@@ -274,6 +275,7 @@ static int od_decode_tree_split(daala_dec_ctx *dec, int sum, int ctx) {
   }
   a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_split_cdf[15*ctx + sum - 1],
    sum + 1, dec->state.adapt.haar_split_increment) << shift;
+  printf("t = %d (%d)\n", a, sum);
   return a;
 }
 
@@ -287,14 +289,18 @@ static void od_decode_sum_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
   coeff_mag = od_decode_coeff_split(dec, tree_sum[y][x]);
   c[y*n + x] = coeff_mag;
   children_sum[y][x] = tree_sum[y][x] - coeff_mag;
+  printf("%d %d %d %d %d\n", tree_sum[y][x], coeff_mag, children_sum[y][x], x, y);
   /* Encode max of each four children relative to tree. */
   if (children_sum[y][x]) {
     int sum1;
     sum1 = od_decode_tree_split(dec, children_sum[y][x], 0);
+    printf("sum1 = %d (%d)\n", sum1, children_sum[y][x]);
     tree_sum[2*y][2*x] = od_decode_tree_split(dec, sum1, 0);
     tree_sum[2*y][2*x + 1] = sum1 - tree_sum[2*y][2*x];
+    printf("aa %d %d\n", children_sum[y][x], sum1);
     tree_sum[2*y + 1][2*x] = od_decode_tree_split(dec, children_sum[y][x] - sum1, 0);
     tree_sum[2*y + 1][2*x + 1] = children_sum[y][x] - sum1 - tree_sum[2*y + 1][2*x];
+    printf("ts %d %d %d %d\n", tree_sum[2*y][2*x], tree_sum[2*y][2*x + 1], tree_sum[2*y + 1][2*x], tree_sum[2*y + 1][2*x + 1]);
   }
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
@@ -327,6 +333,7 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
   {
     int bits;
     bits = od_ec_dec_unary(&dec->ec);
+    printf("bits = %d\n", bits);
     if (bits > 1) {
       tree_sum[0][0] = (1 << (bits - 1)) | od_ec_dec_bits(&dec->ec, bits - 1);
     }
@@ -334,6 +341,7 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
     tree_sum[0][1] = od_decode_tree_split(dec, tree_sum[0][0] - tree_sum[1][1], 2);
     tree_sum[1][0] = tree_sum[0][0] - tree_sum[1][1] - tree_sum[0][1];
   }
+  printf("begin %d %d %d %d\n", tree_sum[0][0], tree_sum[0][1], tree_sum[1][0], tree_sum[1][1]);
   od_decode_sum_tree(dec, pred, ln, tree_sum, children_sum, 1, 0, 0);
   od_decode_sum_tree(dec, pred, ln, tree_sum, children_sum, 0, 1, 0);
   od_decode_sum_tree(dec, pred, ln, tree_sum, children_sum, 1, 1, 0);
@@ -347,8 +355,10 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
         sign = od_ec_dec_bits(&dec->ec, 1);
         if (sign) in = -in;
       }
+      printf("%d ", in);
       pred[i*n + j] = in;
     }
+    printf("\n");
   }
   for (i = 1; i < n2; i++) {
     pred[i] = pred[i]*quant;

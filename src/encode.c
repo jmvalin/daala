@@ -501,6 +501,7 @@ static void od_ec_enc_unary(od_ec_enc *ec, int x) {
 static void od_encode_coeff_split(daala_enc_ctx *enc, int a, int sum) {
   int shift;
   if (sum == 0) return;
+  printf("c = %d (%d)\n", a, sum);
   shift = OD_MAXI(0, OD_ILOG(sum) - 4);
   if (shift) {
     od_ec_enc_bits(&enc->ec, a & ((1 << shift) - 1), shift);
@@ -514,6 +515,7 @@ static void od_encode_coeff_split(daala_enc_ctx *enc, int a, int sum) {
 static void od_encode_tree_split(daala_enc_ctx *enc, int a, int sum, int ctx) {
   int shift;
   if (sum == 0) return;
+  printf("t = %d (%d)\n", a, sum);
   shift = OD_MAXI(0, OD_ILOG(sum) - 4);
   if (shift) {
     od_ec_enc_bits(&enc->ec, a & ((1 << shift) - 1), shift);
@@ -534,6 +536,7 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   coeff_mag = abs(c[y*n + x]);
   od_encode_coeff_split(enc, coeff_mag, tree_sum[y][x]);
   /* Encode max of each four children relative to tree. */
+  printf("%d %d %d %d %d\n", tree_sum[y][x], coeff_mag, children_sum[y][x], x, y);
   if (children_sum[y][x]) {
     int sum4;
     sum4 = tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1]
@@ -541,8 +544,11 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
     OD_ASSERT(coeff_mag + sum4 == tree_sum[y][x]);
     od_encode_tree_split(enc, tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1],
      sum4, 0);
+    printf("sum1 = %d (%d)\n", tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1], sum4);
     od_encode_tree_split(enc, tree_sum[2*y][2*x], tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1], 0);
-    od_encode_tree_split(enc, tree_sum[2*y + 1][2*x], tree_sum[2*y + 1][2*x] + tree_sum[2*y][2*x + 1], 0);
+    printf("aa %d %d\n", children_sum[y][x], tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1]);
+    od_encode_tree_split(enc, tree_sum[2*y + 1][2*x], tree_sum[2*y + 1][2*x] + tree_sum[2*y + 1][2*x + 1], 0);
+    printf("ts %d %d %d %d\n", tree_sum[2*y][2*x], tree_sum[2*y][2*x + 1], tree_sum[2*y + 1][2*x], tree_sum[2*y + 1][2*x + 1]);
   }
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
@@ -578,6 +584,7 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     int bits;
     bits = OD_ILOG(tree_sum[0][0]);
     od_ec_enc_unary(&enc->ec, bits);
+    printf("bits = %d\n", bits);
     if (bits > 1) {
       od_ec_enc_bits(&enc->ec, tree_sum[0][0] & ((1 << (bits - 1)) - 1),
        bits - 1);
@@ -585,6 +592,7 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     od_encode_tree_split(enc, tree_sum[1][1], tree_sum[0][0], 1);
     od_encode_tree_split(enc, tree_sum[0][1], tree_sum[0][0] - tree_sum[1][1], 2);
   }
+  printf("begin %d %d %d %d\n", tree_sum[0][0], tree_sum[0][1], tree_sum[1][0], tree_sum[1][1]);
   od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 1, 0, pli);
   od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 0, 1, pli);
   od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 1, 1, pli);
@@ -593,8 +601,10 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     for (j = 0; j < n; j++) if (i + j) {
       od_coeff in;
       in = out[i*n + j];
+      printf("%d ", in);
       if (in) od_ec_enc_bits(&enc->ec, in < 0, 1);
     }
+    printf("\n");
   }
   for (i = 1; i < n2; i++) {
     out[i] *= quant;
@@ -658,7 +668,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
 #if defined(OD_OUTPUT_PRED)
   for (zzi = 0; zzi < (n*n); zzi++) preds[zzi] = pred[zzi];
 #endif
-  if (0&&ln != 3) {
+  if (ln != 3) {
   /* Change ordering for encoding. */
   od_raster_to_coding_order(cblock,  n, &d[bo], w, lossless);
   od_raster_to_coding_order(predt,  n, &pred[0], n, lossless);
@@ -683,7 +693,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     }
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_AC_COEFFS);
-  if (0&&ln != 3) {
+  if (ln != 3) {
   if (lossless) {
     skip = od_single_band_lossless_encode(enc, ln, scalar_out, cblock, predt,
      pli);
@@ -718,7 +728,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     OD_ASSERT(ctx->dc_idx < OD_NB_SAVED_DCS);
     if (rdo_only && ctx->is_keyframe) scalar_out[0] = ctx->dc[ctx->dc_idx++];
   }
-  if (0&&ln != 3) {
+  if (ln != 3) {
   od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
   } else {
   od_wavelet_tree_to_raster(&d[bo], w, scalar_out, ln + 2);
