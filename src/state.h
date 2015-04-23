@@ -154,6 +154,8 @@ struct od_adapt_ctx {
   int haar_mask_increment;
   ogg_uint16_t haar_offset_cdf[16][16];
   int haar_offset_increment;
+  ogg_uint16_t haar_split_cdf[256][16];
+  int haar_split_increment;
 };
 
 struct od_state{
