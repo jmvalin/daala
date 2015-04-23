@@ -239,86 +239,68 @@ static int od_ec_dec_unary(od_ec_dec *ec) {
   return ret;
 }
 
-static void od_decode_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
- od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX],
- od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2],
- int x, int y, int pli) {
+static int od_decode_coeff_split(daala_dec_ctx *dec, int sum) {
+  int shift;
+  int a;
+  a = 0;
+  if (sum == 0) return 0;
+  shift = OD_MAXI(0, OD_ILOG(sum) - 4);
+  if (shift) {
+    a = od_ec_dec_bits(&dec->ec, shift);
+    sum >>= shift;
+  }
+  a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_coeff_cdf[sum - 1],
+   sum + 1, dec->state.adapt.haar_coeff_increment) << shift;
+  return a;
+}
+
+static int od_decode_tree_split(daala_dec_ctx *dec, int sum, int ctx) {
+  int shift;
+  int a;
+  a = 0;
+  if (sum == 0) return 0;
+  shift = OD_MAXI(0, OD_ILOG(sum) - 4);
+  if (shift) {
+    a = od_ec_dec_bits(&dec->ec, shift);
+    sum >>= shift;
+  }
+  a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_split_cdf[15*ctx + sum - 1],
+   sum + 1, dec->state.adapt.haar_split_increment) << shift;
+  return a;
+}
+
+static void od_decode_sum_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
+ od_coeff tree_sum[OD_BSIZE_MAX][OD_BSIZE_MAX],
+ od_coeff children_sum[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y, int pli) {
   int n;
   int coeff_mag;
   n = 1 << ln;
-  if (tree_mag[y][x] == 0) return;
-  {
-    int id;
-    int d0, d1;
-    id = od_decode_cdf_adapt(&dec->ec,
-     dec->state.adapt.haar_coeff_cdf[tree_mag[y][x]],
-     OD_MINI(16, 2*tree_mag[y][x]+1), dec->state.adapt.haar_coeff_increment);
-    if (id == 15 && tree_mag[y][x] >= 8) id += od_ec_dec_unary(&dec->ec);
-    d0 = d1 = 0;
-    if (id & 1) d0 = (id + 1) / 2;
-    else d1 = id / 2;
-    coeff_mag = tree_mag[y][x] - d0;
-    children_mag[y][x] = tree_mag[y][x] - d1;
-    c[y*n + x] = coeff_mag;
-  }
-  /* Encode max of each four children. */
-  if (children_mag[y][x]) {
-    int ref;
-    int xi;
-    int yi;
-    int mask;
-    ref = children_mag[y][x];
-    mask = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_mask_cdf[OD_ILOG(OD_MAXI(x, y))],
-     15, dec->state.adapt.haar_mask_increment);
-    for (yi = 0; yi < 2; yi++) {
-      for (xi = 0; xi < 2; xi++) {
-        if (mask & (1 << (2*yi + xi))) {
-          tree_mag[2*y + yi][2*x + xi] = children_mag[y][x] - 1 - od_decode_cdf_adapt(&dec->ec,
-           dec->state.adapt.haar_children_cdf[ref], ref,
-          dec->state.adapt.haar_children_increment);
-        }
-        else tree_mag[2*y + yi][2*x + xi] = ref;
-      }
-    }
+  if (tree_sum[y][x] == 0) return;
+  coeff_mag = od_decode_coeff_split(dec, tree_sum[y][x]);
+  c[y*n + x] = coeff_mag;
+  children_sum[y][x] = tree_sum[y][x] - coeff_mag;
+  /* Encode max of each four children relative to tree. */
+  if (children_sum[y][x]) {
+    int sum1;
+    sum1 = od_decode_tree_split(dec, children_sum[y][x], 0);
+    tree_sum[2*y][2*x] = od_decode_tree_split(dec, sum1, 0);
+    tree_sum[2*y][2*x + 1] = sum1 - tree_sum[2*y][2*x];
+    tree_sum[2*y + 1][2*x] = od_decode_tree_split(dec, children_sum[y][x] - sum1, 0);
+    tree_sum[2*y + 1][2*x + 1] = children_sum[y][x] - sum1 - tree_sum[2*y + 1][2*x];
   }
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
-    od_decode_tree(dec, c, ln, tree_mag, children_mag, 2*x, 2*y, pli);
-    od_decode_tree(dec, c, ln, tree_mag, children_mag, 2*x + 1, 2*y, pli);
-    od_decode_tree(dec, c, ln, tree_mag, children_mag, 2*x, 2*y + 1, pli);
-    od_decode_tree(dec, c, ln, tree_mag, children_mag, 2*x + 1, 2*y + 1, pli);
+    od_decode_sum_tree(dec, c, ln, tree_sum, children_sum, 2*x, 2*y, pli);
+    od_decode_sum_tree(dec, c, ln, tree_sum, children_sum, 2*x + 1, 2*y, pli);
+    od_decode_sum_tree(dec, c, ln, tree_sum, children_sum, 2*x, 2*y + 1, pli);
+    od_decode_sum_tree(dec, c, ln, tree_sum, children_sum, 2*x + 1, 2*y + 1, pli);
   }
   else {
-    c[2*y*n + 2*x] = tree_mag[2*y][2*x];
-    c[2*y*n + 2*x + 1] = tree_mag[2*y][2*x + 1];
-    c[(2*y + 1)*n + 2*x] = tree_mag[2*y + 1][2*x];
-    c[(2*y + 1)*n + 2*x + 1] = tree_mag[2*y + 1][2*x + 1];
+    c[2*y*n + 2*x] = tree_sum[2*y][2*x];
+    c[2*y*n + 2*x + 1] = tree_sum[2*y][2*x + 1];
+    c[(2*y + 1)*n + 2*x] = tree_sum[2*y + 1][2*x];
+    c[(2*y + 1)*n + 2*x + 1] = tree_sum[2*y + 1][2*x + 1];
   }
-}
-
-static void od_decode_mag_trees(daala_dec_ctx *dec, int ln, od_coeff *pred,
- od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2],
- od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX], int pli) {
-  tree_mag[0][0] = od_ec_dec_unary(&dec->ec);
-  if (tree_mag[0][0]) {
-    int mask;
-    int ref = tree_mag[0][0];
-    mask = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_mask_cdf[0],
-     7, dec->state.adapt.haar_mask_increment);
-    tree_mag[0][1] = tree_mag[1][0] = tree_mag[1][1] = ref;
-    if ((mask & 4)) tree_mag[0][1] = ref - 1 - od_decode_cdf_adapt(&dec->ec,
-     dec->state.adapt.haar_children_cdf[ref], ref,
-     dec->state.adapt.haar_coeff_increment);
-    if ((mask & 2)) tree_mag[1][0] = ref - 1 - od_decode_cdf_adapt(&dec->ec,
-     dec->state.adapt.haar_children_cdf[ref], ref,
-     dec->state.adapt.haar_coeff_increment);
-    if ((mask & 1)) tree_mag[1][1] = ref - 1 - od_decode_cdf_adapt(&dec->ec,
-     dec->state.adapt.haar_children_cdf[ref], ref,
-     dec->state.adapt.haar_coeff_increment);
-  }
-  od_decode_tree(dec, pred, ln, tree_mag, children_mag, 1, 0, pli);
-  od_decode_tree(dec, pred, ln, tree_mag, children_mag, 0, 1, pli);
-  od_decode_tree(dec, pred, ln, tree_mag, children_mag, 1, 1, pli);
 }
 
 static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
@@ -326,31 +308,37 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
   int n2;
   int n;
   int i;
-  od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2];
-  od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX] = {{0}};
+  od_coeff children_sum[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2];
+  od_coeff tree_sum[OD_BSIZE_MAX][OD_BSIZE_MAX] = {{0}};
   n = 1 << ln;
   n2 = 1 << 2*ln;
   for (i = 0; i < n; i++) {
     int j;
     for (j = 0; j < n; j++) if (i+j) pred[i*n + j] = 0;
   }
-  od_decode_mag_trees(dec, ln, pred, children_mag, tree_mag, pli);
+  {
+    int bits;
+    bits = od_ec_dec_unary(&dec->ec);
+    if (bits > 1) {
+      tree_sum[0][0] = (1 << (bits - 1)) | od_ec_dec_bits(&dec->ec, bits - 1);
+    }
+    tree_sum[1][1] = od_decode_tree_split(dec, tree_sum[0][0], 1);
+    tree_sum[0][1] = od_decode_tree_split(dec, tree_sum[0][0] - tree_sum[1][1], 2);
+    tree_sum[1][0] = tree_sum[0][0] - tree_sum[1][1] - tree_sum[0][1];
+  }
+  od_decode_sum_tree(dec, pred, ln, tree_sum, children_sum, 1, 0, 0);
+  od_decode_sum_tree(dec, pred, ln, tree_sum, children_sum, 0, 1, 0);
+  od_decode_sum_tree(dec, pred, ln, tree_sum, children_sum, 1, 1, 0);
   for (i = 0; i < n; i++) {
     int j;
     for (j = 0; j < n; j++) if (i + j) {
-      int mag;
       int sign;
       od_coeff in;
-      mag = pred[i*n + j];
-      if (mag) {
+      in = pred[i*n + j];
+      if (in) {
         sign = od_ec_dec_bits(&dec->ec, 1);
-        if (mag > 1) {
-          in = (1 << (mag - 1)) | od_ec_dec_bits(&dec->ec, mag - 1);
-        }
-        else in = 1;
         if (sign) in = -in;
       }
-      else in = 0;
       pred[i*n + j] = in;
     }
   }
