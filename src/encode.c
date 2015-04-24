@@ -492,7 +492,6 @@ static void od_ec_enc_unary(od_ec_enc *ec, int x) {
 static void od_encode_coeff_split(daala_enc_ctx *enc, int a, int sum) {
   int shift;
   if (sum == 0) return;
-  printf("c = %d (%d)\n", a, sum);
   shift = OD_MAXI(0, OD_ILOG(sum) - 4);
   if (shift) {
     od_ec_enc_bits(&enc->ec, a & ((1 << shift) - 1), shift);
@@ -506,7 +505,6 @@ static void od_encode_coeff_split(daala_enc_ctx *enc, int a, int sum) {
 static void od_encode_tree_split(daala_enc_ctx *enc, int a, int sum, int ctx) {
   int shift;
   if (sum == 0) return;
-  printf("t = %d (%d)\n", a, sum);
   shift = OD_MAXI(0, OD_ILOG(sum) - 4);
   if (shift) {
     od_ec_enc_bits(&enc->ec, a & ((1 << shift) - 1), shift);
@@ -527,7 +525,6 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   coeff_mag = abs(c[y*n + x]);
   od_encode_coeff_split(enc, coeff_mag, tree_sum[y][x]);
   /* Encode max of each four children relative to tree. */
-  printf("%d %d %d %d %d\n", tree_sum[y][x], coeff_mag, children_sum[y][x], x, y);
   if (children_sum[y][x]) {
     int sum4;
     sum4 = tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1]
@@ -535,11 +532,8 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
     OD_ASSERT(coeff_mag + sum4 == tree_sum[y][x]);
     od_encode_tree_split(enc, tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1],
      sum4, 0);
-    printf("sum1 = %d (%d)\n", tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1], sum4);
     od_encode_tree_split(enc, tree_sum[2*y][2*x], tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1], 0);
-    printf("aa %d %d\n", children_sum[y][x], tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1]);
     od_encode_tree_split(enc, tree_sum[2*y + 1][2*x], tree_sum[2*y + 1][2*x] + tree_sum[2*y + 1][2*x + 1], 0);
-    printf("ts %d %d %d %d\n", tree_sum[2*y][2*x], tree_sum[2*y][2*x + 1], tree_sum[2*y + 1][2*x], tree_sum[2*y + 1][2*x + 1]);
   }
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
@@ -579,11 +573,9 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
       od_ec_enc_bits(&enc->ec, tree_sum[0][0] & ((1 << (bits - 1)) - 1),
        bits - 1);
     }
-    printf("bits = %d %d %d (%d) %d\n", bits, ln, pli, tree_sum[0][0], od_ec_enc_tell_frac(&enc->ec));
     od_encode_tree_split(enc, tree_sum[1][1], tree_sum[0][0], 1);
     od_encode_tree_split(enc, tree_sum[0][1], tree_sum[0][0] - tree_sum[1][1], 2);
   }
-  printf("begin %d %d %d %d\n", tree_sum[0][0], tree_sum[0][1], tree_sum[1][0], tree_sum[1][1]);
   od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 1, 0, pli);
   od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 0, 1, pli);
   od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 1, 1, pli);
@@ -592,10 +584,8 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     for (j = 0; j < n; j++) if (i + j) {
       od_coeff in;
       in = out[i*n + j];
-      printf("%d ", in);
       if (in) od_ec_enc_bits(&enc->ec, in < 0, 1);
     }
-    printf("\n");
   }
   for (i = 1; i < n2; i++) {
     out[i] *= quant;
