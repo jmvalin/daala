@@ -575,11 +575,11 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     int bits;
     bits = OD_ILOG(tree_sum[0][0]);
     od_ec_enc_unary(&enc->ec, bits);
-    printf("bits = %d\n", bits);
     if (bits > 1) {
       od_ec_enc_bits(&enc->ec, tree_sum[0][0] & ((1 << (bits - 1)) - 1),
        bits - 1);
     }
+    printf("bits = %d %d %d (%d) %d\n", bits, ln, pli, tree_sum[0][0], od_ec_enc_tell_frac(&enc->ec));
     od_encode_tree_split(enc, tree_sum[1][1], tree_sum[0][0], 1);
     od_encode_tree_split(enc, tree_sum[0][1], tree_sum[0][0] - tree_sum[1][1], 2);
   }
@@ -657,7 +657,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
 #if defined(OD_OUTPUT_PRED)
   for (zzi = 0; zzi < (n*n); zzi++) preds[zzi] = pred[zzi];
 #endif
-  if (ln != 3) {
+  if (0&&ln != 3) {
   /* Change ordering for encoding. */
   od_raster_to_coding_order(cblock,  n, &d[bo], w, lossless);
   od_raster_to_coding_order(predt,  n, &pred[0], n, lossless);
@@ -682,7 +682,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     }
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_AC_COEFFS);
-  if (ln != 3) {
+  if (0&&ln != 3) {
   if (lossless) {
     skip = od_single_band_lossless_encode(enc, ln, scalar_out, cblock, predt,
      pli);
@@ -717,7 +717,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     OD_ASSERT(ctx->dc_idx < OD_NB_SAVED_DCS);
     if (rdo_only && ctx->is_keyframe) scalar_out[0] = ctx->dc[ctx->dc_idx++];
   }
-  if (ln != 3) {
+  if (0&&ln != 3) {
   od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
   } else {
   od_wavelet_tree_to_raster(&d[bo], w, scalar_out, ln + 2);
@@ -1301,7 +1301,7 @@ static void od_predict_frame(daala_enc_ctx *enc) {
 #endif
 }
 
-#if OD_DISABLE_FIXED_LAPPING
+#if 1
 static void od_split_superblocks(daala_enc_ctx *enc, int is_keyframe) {
   int nhsb;
   int nvsb;
@@ -1912,7 +1912,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration) {
 #endif
   }
   else {
-#if !OD_DISABLE_FIXED_LAPPING
+#if 0
     od_split_superblocks_rdo(enc, &mbctx);
 #else
     od_split_superblocks(enc, 1);

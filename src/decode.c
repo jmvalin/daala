@@ -242,6 +242,8 @@ static int od_ec_dec_unary(od_ec_dec *ec) {
 static int od_decode_coeff_split(daala_dec_ctx *dec, int sum) {
   int shift;
   int a;
+  int sum0;
+  sum0 = sum;
   a = 0;
   if (sum == 0) return 0;
   shift = OD_MAXI(0, OD_ILOG(sum) - 4);
@@ -251,13 +253,15 @@ static int od_decode_coeff_split(daala_dec_ctx *dec, int sum) {
   }
   a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_coeff_cdf[sum - 1],
    sum + 1, dec->state.adapt.haar_coeff_increment) << shift;
-  printf("c = %d (%d)\n", a, sum);
+  printf("c = %d (%d)\n", a, sum0);
   return a;
 }
 
 static int od_decode_tree_split(daala_dec_ctx *dec, int sum, int ctx) {
   int shift;
   int a;
+  int sum0;
+  sum0 = sum;
   a = 0;
   if (sum == 0) return 0;
   shift = OD_MAXI(0, OD_ILOG(sum) - 4);
@@ -267,7 +271,7 @@ static int od_decode_tree_split(daala_dec_ctx *dec, int sum, int ctx) {
   }
   a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_split_cdf[15*ctx + sum - 1],
    sum + 1, dec->state.adapt.haar_split_increment) << shift;
-  printf("t = %d (%d)\n", a, sum);
+  printf("t = %d (%d)\n", a, sum0);
   return a;
 }
 
@@ -325,10 +329,10 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
   {
     int bits;
     bits = od_ec_dec_unary(&dec->ec);
-    printf("bits = %d\n", bits);
     if (bits > 1) {
       tree_sum[0][0] = (1 << (bits - 1)) | od_ec_dec_bits(&dec->ec, bits - 1);
-    }
+    } else tree_sum[0][0] = bits;
+    printf("bits = %d %d %d (%d) %d\n", bits, ln, pli, tree_sum[0][0], od_ec_dec_tell_frac(&dec->ec));
     tree_sum[1][1] = od_decode_tree_split(dec, tree_sum[0][0], 1);
     tree_sum[0][1] = od_decode_tree_split(dec, tree_sum[0][0] - tree_sum[1][1], 2);
     tree_sum[1][0] = tree_sum[0][0] - tree_sum[1][1] - tree_sum[0][1];
@@ -403,7 +407,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
     dc_quant = OD_MAXI(1, quant*
      dec->state.pvq_qm_q4[pli][od_qm_get_index(ln, 0)] >> 4);
   }
-  if (ln != 3) {
+  if (0&&ln != 3) {
   if (lossless) {
     od_block_lossless_decode(dec, ln, pred, predt, pli);
   }
@@ -431,7 +435,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
   else {
     pred[0] = d[bo];
   }
-  if (ln != 3) {
+  if (0&&ln != 3) {
   od_coding_order_to_raster(&d[bo], w, pred, n, lossless);
   } else {
   od_wavelet_tree_to_raster(&d[bo], w, pred, ln + 2);
