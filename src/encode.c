@@ -460,23 +460,21 @@ static int od_single_band_lossless_encode(daala_enc_ctx *enc, int ln,
 /* Compute magnitude at each level of each tree in tree_mag and the magnitude
    of the children (including current node) in children_mag. */
 static int od_compute_max_tree(od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX],
- od_coeff children_mag[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y,
- const od_coeff *c, int ln) {
+ int x, int y, const od_coeff *c, int ln) {
   int n;
   int maxval;
   n = 1 << ln;
   maxval = 0;
   if (2*x < n && 2*y < n) {
     int tmp;
-    tmp = od_compute_max_tree(tree_mag, children_mag, 2*x, 2*y, c, ln);
+    tmp = od_compute_max_tree(tree_mag, 2*x, 2*y, c, ln);
     maxval = maxval + tmp;
-    tmp = od_compute_max_tree(tree_mag, children_mag, 2*x + 1, 2*y, c, ln);
+    tmp = od_compute_max_tree(tree_mag, 2*x + 1, 2*y, c, ln);
     maxval = maxval + tmp;
-    tmp = od_compute_max_tree(tree_mag, children_mag, 2*x, 2*y + 1, c, ln);
+    tmp = od_compute_max_tree(tree_mag, 2*x, 2*y + 1, c, ln);
     maxval = maxval + tmp;
-    tmp = od_compute_max_tree(tree_mag, children_mag, 2*x + 1, 2*y + 1, c, ln);
+    tmp = od_compute_max_tree(tree_mag, 2*x + 1, 2*y + 1, c, ln);
     maxval = maxval + tmp;
-    children_mag[y][x] = maxval;
   }
   maxval = maxval + abs(c[y*n + x]);
   tree_mag[y][x] = maxval;
@@ -517,25 +515,24 @@ static void od_encode_tree_split(daala_enc_ctx *enc, int a, int sum, int ctx) {
 }
 
 static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
- od_coeff tree_sum[OD_BSIZE_MAX][OD_BSIZE_MAX],
- od_coeff children_sum[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y, int dir,
+ od_coeff tree_sum[OD_BSIZE_MAX][OD_BSIZE_MAX], int x, int y, int dir,
  int pli) {
   int n;
   int coeff_mag;
+  int children_sum;
   n = 1 << ln;
   if (tree_sum[y][x] == 0) return;
   coeff_mag = abs(c[y*n + x]);
   od_encode_coeff_split(enc, coeff_mag, tree_sum[y][x], dir
    + 3*OD_ILOG(OD_MAXI(x,y)));
   /* Encode max of each four children relative to tree. */
-  if (children_sum[y][x]) {
-    int sum4;
-    sum4 = tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1]
-     + tree_sum[2*y + 1][2*x] + tree_sum[2*y + 1][2*x + 1];
-    OD_ASSERT(coeff_mag + sum4 == tree_sum[y][x]);
+  children_sum = tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1]
+   + tree_sum[2*y + 1][2*x] + tree_sum[2*y + 1][2*x + 1];
+  if (children_sum) {
+    OD_ASSERT(coeff_mag + children_sum == tree_sum[y][x]);
     if (dir==0) {
       od_encode_tree_split(enc, tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1],
-       sum4, 0);
+       children_sum, 0);
       od_encode_tree_split(enc, tree_sum[2*y][2*x], tree_sum[2*y][2*x]
        + tree_sum[2*y][2*x + 1], 3);
       od_encode_tree_split(enc, tree_sum[2*y + 1][2*x], tree_sum[2*y + 1][2*x]
@@ -543,7 +540,7 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
     }
     else {
       od_encode_tree_split(enc, tree_sum[2*y][2*x] + tree_sum[2*y + 1][2*x],
-       sum4, 6);
+       children_sum, 6);
       od_encode_tree_split(enc, tree_sum[2*y][2*x], tree_sum[2*y][2*x]
        + tree_sum[2*y + 1][2*x], 3);
       od_encode_tree_split(enc, tree_sum[2*y][2*x + 1], tree_sum[2*y][2*x + 1]
@@ -552,14 +549,10 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   }
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
-    od_encode_sum_tree(enc, c, ln, tree_sum, children_sum, 2*x, 2*y, dir,
-     pli);
-    od_encode_sum_tree(enc, c, ln, tree_sum, children_sum, 2*x + 1, 2*y, dir,
-     pli);
-    od_encode_sum_tree(enc, c, ln, tree_sum, children_sum, 2*x, 2*y + 1, dir,
-     pli);
-    od_encode_sum_tree(enc, c, ln, tree_sum, children_sum, 2*x + 1, 2*y + 1,
-     dir, pli);
+    od_encode_sum_tree(enc, c, ln, tree_sum, 2*x, 2*y, dir, pli);
+    od_encode_sum_tree(enc, c, ln, tree_sum, 2*x + 1, 2*y, dir, pli);
+    od_encode_sum_tree(enc, c, ln, tree_sum, 2*x, 2*y + 1, dir, pli);
+    od_encode_sum_tree(enc, c, ln, tree_sum, 2*x + 1, 2*y + 1, dir, pli);
   }
 }
 
@@ -569,7 +562,6 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   int n2;
   int n;
   int i, j;
-  od_coeff children_sum[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2];
   od_coeff tree_sum[OD_BSIZE_MAX][OD_BSIZE_MAX];
   n = 1 << ln;
   n2 = 1 << 2*ln;
@@ -578,9 +570,9 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     out[i] = OD_DIV_R0(cblock[i], quant);
   }
   /* Compute magnitude at each level of each tree. */
-  od_compute_max_tree(tree_sum, children_sum, 1, 0, out, ln);
-  od_compute_max_tree(tree_sum, children_sum, 0, 1, out, ln);
-  od_compute_max_tree(tree_sum, children_sum, 1, 1, out, ln);
+  od_compute_max_tree(tree_sum, 1, 0, out, ln);
+  od_compute_max_tree(tree_sum, 0, 1, out, ln);
+  od_compute_max_tree(tree_sum, 1, 1, out, ln);
   /*if (ln==5)for (i=0;i<n;i++)for(j=0;j<n;j++)printf("%d ", tree_sum[i][j]);printf("\n");*/
   /* Encode magnitude for the top of each tree */
   tree_sum[0][0] = tree_sum[0][1] + tree_sum[1][0] + tree_sum[1][1];
@@ -602,9 +594,9 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     od_encode_tree_split(enc, tree_sum[1][1], tree_sum[0][0], 1);
     od_encode_tree_split(enc, tree_sum[0][1], tree_sum[0][0] - tree_sum[1][1], 2);
   }
-  od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 1, 0, 0, pli);
-  od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 0, 1, 1, pli);
-  od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 1, 1, 2, pli);
+  od_encode_sum_tree(enc, out, ln, tree_sum, 1, 0, 0, pli);
+  od_encode_sum_tree(enc, out, ln, tree_sum, 0, 1, 1, pli);
+  od_encode_sum_tree(enc, out, ln, tree_sum, 1, 1, 2, pli);
   /* For all significant coeffs, encode sign. */
   for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) if (i + j) {
