@@ -596,10 +596,13 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   {
     int bits;
     bits = OD_ILOG(tree_sum[0][0]);
-#if 1
+#if 0
     od_ec_enc_unary(&enc->ec, bits);
 #else
-    od_encode_cdf_adapt(&enc->ec, OD_MINI(bits, 15), enc->state.adapt.haar_bits_cdf[pli], 16, enc->state.adapt.haar_bits_increment);
+    od_encode_cdf_adapt(&enc->ec, OD_MINI(bits, 15),
+     enc->state.adapt.haar_bits_cdf[pli], 16,
+     enc->state.adapt.haar_bits_increment);
+    if (bits >= 15) od_ec_enc_unary(&enc->ec, bits - 15);
 #endif
     if (bits > 1) {
       od_ec_enc_bits(&enc->ec, tree_sum[0][0] & ((1 << (bits - 1)) - 1),
