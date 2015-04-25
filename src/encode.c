@@ -489,7 +489,7 @@ static void od_ec_enc_unary(od_ec_enc *ec, int x) {
   od_ec_enc_bits(ec, 1, 1);
 }
 
-static void od_encode_coeff_split(daala_enc_ctx *enc, int a, int sum) {
+static void od_encode_coeff_split(daala_enc_ctx *enc, int a, int sum, int ctx) {
   int shift;
   if (sum == 0) return;
   shift = OD_MAXI(0, OD_ILOG(sum) - 4);
@@ -498,8 +498,8 @@ static void od_encode_coeff_split(daala_enc_ctx *enc, int a, int sum) {
     a >>= shift;
     sum >>= shift;
   }
-  od_encode_cdf_adapt(&enc->ec, a, enc->state.adapt.haar_coeff_cdf[sum - 1],
-   sum + 1, enc->state.adapt.haar_coeff_increment);
+  od_encode_cdf_adapt(&enc->ec, a, enc->state.adapt.haar_coeff_cdf[15*ctx + sum
+   - 1], sum + 1, enc->state.adapt.haar_coeff_increment);
 }
 
 static void od_encode_tree_split(daala_enc_ctx *enc, int a, int sum, int ctx) {
@@ -511,36 +511,55 @@ static void od_encode_tree_split(daala_enc_ctx *enc, int a, int sum, int ctx) {
     a >>= shift;
     sum >>= shift;
   }
-  od_encode_cdf_adapt(&enc->ec, a, enc->state.adapt.haar_split_cdf[15*ctx + sum - 1],
-   sum + 1, enc->state.adapt.haar_split_increment);
+  od_encode_cdf_adapt(&enc->ec, a, enc->state.adapt.haar_split_cdf[15*
+   (2*ctx + OD_MINI(shift, 1)) + sum - 1], sum + 1,
+   enc->state.adapt.haar_split_increment);
 }
 
 static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
  od_coeff tree_sum[OD_BSIZE_MAX][OD_BSIZE_MAX],
- od_coeff children_sum[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y, int pli) {
+ od_coeff children_sum[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y, int dir,
+ int pli) {
   int n;
   int coeff_mag;
   n = 1 << ln;
   if (tree_sum[y][x] == 0) return;
   coeff_mag = abs(c[y*n + x]);
-  od_encode_coeff_split(enc, coeff_mag, tree_sum[y][x]);
+  od_encode_coeff_split(enc, coeff_mag, tree_sum[y][x], dir
+   + 3*OD_ILOG(OD_MAXI(x,y)));
   /* Encode max of each four children relative to tree. */
   if (children_sum[y][x]) {
     int sum4;
     sum4 = tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1]
      + tree_sum[2*y + 1][2*x] + tree_sum[2*y + 1][2*x + 1];
     OD_ASSERT(coeff_mag + sum4 == tree_sum[y][x]);
-    od_encode_tree_split(enc, tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1],
-     sum4, 0);
-    od_encode_tree_split(enc, tree_sum[2*y][2*x], tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1], 0);
-    od_encode_tree_split(enc, tree_sum[2*y + 1][2*x], tree_sum[2*y + 1][2*x] + tree_sum[2*y + 1][2*x + 1], 0);
+    if (dir==0) {
+      od_encode_tree_split(enc, tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1],
+       sum4, 0);
+      od_encode_tree_split(enc, tree_sum[2*y][2*x], tree_sum[2*y][2*x]
+       + tree_sum[2*y][2*x + 1], 3);
+      od_encode_tree_split(enc, tree_sum[2*y + 1][2*x], tree_sum[2*y + 1][2*x]
+       + tree_sum[2*y + 1][2*x + 1], 3);
+    }
+    else {
+      od_encode_tree_split(enc, tree_sum[2*y][2*x] + tree_sum[2*y + 1][2*x],
+       sum4, 6);
+      od_encode_tree_split(enc, tree_sum[2*y][2*x], tree_sum[2*y][2*x]
+       + tree_sum[2*y + 1][2*x], 3);
+      od_encode_tree_split(enc, tree_sum[2*y][2*x + 1], tree_sum[2*y][2*x + 1]
+       + tree_sum[2*y + 1][2*x + 1], 3);
+    }
   }
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
-    od_encode_sum_tree(enc, c, ln, tree_sum, children_sum, 2*x, 2*y, pli);
-    od_encode_sum_tree(enc, c, ln, tree_sum, children_sum, 2*x + 1, 2*y, pli);
-    od_encode_sum_tree(enc, c, ln, tree_sum, children_sum, 2*x, 2*y + 1, pli);
-    od_encode_sum_tree(enc, c, ln, tree_sum, children_sum, 2*x + 1, 2*y + 1, pli);
+    od_encode_sum_tree(enc, c, ln, tree_sum, children_sum, 2*x, 2*y, dir,
+     pli);
+    od_encode_sum_tree(enc, c, ln, tree_sum, children_sum, 2*x + 1, 2*y, dir,
+     pli);
+    od_encode_sum_tree(enc, c, ln, tree_sum, children_sum, 2*x, 2*y + 1, dir,
+     pli);
+    od_encode_sum_tree(enc, c, ln, tree_sum, children_sum, 2*x + 1, 2*y + 1,
+     dir, pli);
   }
 }
 
@@ -568,7 +587,11 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   {
     int bits;
     bits = OD_ILOG(tree_sum[0][0]);
+#if 1
     od_ec_enc_unary(&enc->ec, bits);
+#else
+    od_encode_cdf_adapt(&enc->ec, OD_MINI(bits, 15), enc->state.adapt.haar_bits_cdf[pli], 16, enc->state.adapt.haar_bits_increment);
+#endif
     if (bits > 1) {
       od_ec_enc_bits(&enc->ec, tree_sum[0][0] & ((1 << (bits - 1)) - 1),
        bits - 1);
@@ -576,9 +599,9 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     od_encode_tree_split(enc, tree_sum[1][1], tree_sum[0][0], 1);
     od_encode_tree_split(enc, tree_sum[0][1], tree_sum[0][0] - tree_sum[1][1], 2);
   }
-  od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 1, 0, pli);
-  od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 0, 1, pli);
-  od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 1, 1, pli);
+  od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 1, 0, 0, pli);
+  od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 0, 1, 1, pli);
+  od_encode_sum_tree(enc, out, ln, tree_sum, children_sum, 1, 1, 2, pli);
   /* For all significant coeffs, encode sign. */
   for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) if (i + j) {
