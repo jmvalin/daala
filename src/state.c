@@ -500,6 +500,8 @@ void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   OD_CDFS_INIT(state->haar_offset_cdf, state->haar_offset_increment >> 2);
   state->haar_split_increment = 128;
   OD_CDFS_INIT(state->haar_split_cdf, state->haar_split_increment >> 2);
+  state->haar_bits_increment = 128;
+  OD_CDFS_INIT(state->haar_bits_cdf, state->haar_bits_increment >> 2);
   for (pli = 0; pli < OD_NPLANES_MAX; pli++) {
     generic_model_init(&state->model_dc[pli]);
     generic_model_init(&state->model_g[pli]);
