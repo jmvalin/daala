@@ -239,7 +239,7 @@ static int od_ec_dec_unary(od_ec_dec *ec) {
   return ret;
 }
 
-static int od_decode_coeff_split(daala_dec_ctx *dec, int sum) {
+static int od_decode_coeff_split(daala_dec_ctx *dec, int sum, int ctx) {
   int shift;
   int a;
   a = 0;
@@ -249,8 +249,8 @@ static int od_decode_coeff_split(daala_dec_ctx *dec, int sum) {
     a = od_ec_dec_bits(&dec->ec, shift);
     sum >>= shift;
   }
-  a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_coeff_cdf[sum - 1],
-   sum + 1, dec->state.adapt.haar_coeff_increment) << shift;
+  a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_coeff_cdf[15*ctx
+   + sum - 1], sum + 1, dec->state.adapt.haar_coeff_increment) << shift;
   return a;
 }
 
@@ -264,36 +264,55 @@ static int od_decode_tree_split(daala_dec_ctx *dec, int sum, int ctx) {
     a = od_ec_dec_bits(&dec->ec, shift);
     sum >>= shift;
   }
-  a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_split_cdf[15*ctx + sum - 1],
-   sum + 1, dec->state.adapt.haar_split_increment) << shift;
+  a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_split_cdf[15*(2*ctx
+   + OD_MINI(shift, 1)) + sum - 1], sum + 1,
+   dec->state.adapt.haar_split_increment) << shift;
   return a;
 }
 
 static void od_decode_sum_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
  od_coeff tree_sum[OD_BSIZE_MAX][OD_BSIZE_MAX],
- od_coeff children_sum[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y, int pli) {
+ od_coeff children_sum[OD_BSIZE_MAX/2][OD_BSIZE_MAX/2], int x, int y, int dir,
+ int pli) {
   int n;
   int coeff_mag;
   n = 1 << ln;
   if (tree_sum[y][x] == 0) return;
-  coeff_mag = od_decode_coeff_split(dec, tree_sum[y][x]);
+  coeff_mag = od_decode_coeff_split(dec, tree_sum[y][x], dir
+   + 3*OD_ILOG(OD_MAXI(x,y)));
   c[y*n + x] = coeff_mag;
   children_sum[y][x] = tree_sum[y][x] - coeff_mag;
   /* Encode max of each four children relative to tree. */
   if (children_sum[y][x]) {
     int sum1;
-    sum1 = od_decode_tree_split(dec, children_sum[y][x], 0);
-    tree_sum[2*y][2*x] = od_decode_tree_split(dec, sum1, 0);
-    tree_sum[2*y][2*x + 1] = sum1 - tree_sum[2*y][2*x];
-    tree_sum[2*y + 1][2*x] = od_decode_tree_split(dec, children_sum[y][x] - sum1, 0);
-    tree_sum[2*y + 1][2*x + 1] = children_sum[y][x] - sum1 - tree_sum[2*y + 1][2*x];
+    if (dir == 0) {
+      sum1 = od_decode_tree_split(dec, children_sum[y][x], 0);
+      tree_sum[2*y][2*x] = od_decode_tree_split(dec, sum1, 3);
+      tree_sum[2*y][2*x + 1] = sum1 - tree_sum[2*y][2*x];
+      tree_sum[2*y + 1][2*x] = od_decode_tree_split(dec, children_sum[y][x]
+       - sum1, 3);
+      tree_sum[2*y + 1][2*x + 1] = children_sum[y][x] - sum1
+       - tree_sum[2*y + 1][2*x];
+    }
+    else {
+      sum1 = od_decode_tree_split(dec, children_sum[y][x], 6);
+      tree_sum[2*y][2*x] = od_decode_tree_split(dec, sum1, 3);
+      tree_sum[2*y + 1][2*x] = sum1 - tree_sum[2*y][2*x];
+      tree_sum[2*y][2*x + 1] = od_decode_tree_split(dec, children_sum[y][x]
+       - sum1, 3);
+      tree_sum[2*y + 1][2*x + 1] = children_sum[y][x] - sum1
+       - tree_sum[2*y][2*x + 1];
+    }
   }
   if (4*x < n && 4*y < n) {
     /* Recursive calls. */
-    od_decode_sum_tree(dec, c, ln, tree_sum, children_sum, 2*x, 2*y, pli);
-    od_decode_sum_tree(dec, c, ln, tree_sum, children_sum, 2*x + 1, 2*y, pli);
-    od_decode_sum_tree(dec, c, ln, tree_sum, children_sum, 2*x, 2*y + 1, pli);
-    od_decode_sum_tree(dec, c, ln, tree_sum, children_sum, 2*x + 1, 2*y + 1, pli);
+    od_decode_sum_tree(dec, c, ln, tree_sum, children_sum, 2*x, 2*y, dir, pli);
+    od_decode_sum_tree(dec, c, ln, tree_sum, children_sum, 2*x + 1, 2*y, dir,
+     pli);
+    od_decode_sum_tree(dec, c, ln, tree_sum, children_sum, 2*x, 2*y + 1, dir,
+     pli);
+    od_decode_sum_tree(dec, c, ln, tree_sum, children_sum, 2*x + 1, 2*y + 1,
+     dir, pli);
   }
   else {
     c[2*y*n + 2*x] = tree_sum[2*y][2*x];
@@ -323,12 +342,13 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
       tree_sum[0][0] = (1 << (bits - 1)) | od_ec_dec_bits(&dec->ec, bits - 1);
     } else tree_sum[0][0] = bits;
     tree_sum[1][1] = od_decode_tree_split(dec, tree_sum[0][0], 1);
-    tree_sum[0][1] = od_decode_tree_split(dec, tree_sum[0][0] - tree_sum[1][1], 2);
+    tree_sum[0][1] = od_decode_tree_split(dec, tree_sum[0][0] - tree_sum[1][1],
+     2);
     tree_sum[1][0] = tree_sum[0][0] - tree_sum[1][1] - tree_sum[0][1];
   }
-  od_decode_sum_tree(dec, pred, ln, tree_sum, children_sum, 1, 0, 0);
-  od_decode_sum_tree(dec, pred, ln, tree_sum, children_sum, 0, 1, 0);
-  od_decode_sum_tree(dec, pred, ln, tree_sum, children_sum, 1, 1, 0);
+  od_decode_sum_tree(dec, pred, ln, tree_sum, children_sum, 1, 0, 0, 0);
+  od_decode_sum_tree(dec, pred, ln, tree_sum, children_sum, 0, 1, 1, 0);
+  od_decode_sum_tree(dec, pred, ln, tree_sum, children_sum, 1, 1, 2, 0);
   for (i = 0; i < n; i++) {
     int j;
     for (j = 0; j < n; j++) if (i + j) {
