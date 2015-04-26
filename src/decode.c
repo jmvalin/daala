@@ -341,13 +341,9 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
   }
   {
     int bits;
-#if 0
-    bits = od_ec_dec_unary(&dec->ec);
-#else
     bits = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_bits_cdf[pli],
      16, dec->state.adapt.haar_bits_increment);
     if (bits == 15) bits += od_ec_dec_unary(&dec->ec);
-#endif
     if (bits > 1) {
       tree_sum[0][0] = (1 << (bits - 1)) | od_ec_dec_bits(&dec->ec, bits - 1);
     } else tree_sum[0][0] = bits;
