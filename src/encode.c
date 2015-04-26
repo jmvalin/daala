@@ -457,8 +457,7 @@ static int od_single_band_lossless_encode(daala_enc_ctx *enc, int ln,
   return vk == 0;
 }
 
-/* Compute magnitude at each level of each tree in tree_mag and the magnitude
-   of the children (including current node) in children_mag. */
+/* Compute the sum of the tree (parent and descendents) at each level. */
 static int od_compute_max_tree(od_coeff tree_mag[OD_BSIZE_MAX][OD_BSIZE_MAX],
  int x, int y, const od_coeff *c, int ln) {
   int n;
@@ -487,6 +486,8 @@ static void od_ec_enc_unary(od_ec_enc *ec, int x) {
   od_ec_enc_bits(ec, 1, 1);
 }
 
+/* Encodes the magnitude of the coefficient at the root of a tree based
+   on the sum for the entire tree (distribution can be highly biased). */
 static void od_encode_coeff_split(daala_enc_ctx *enc, int a, int sum, int ctx) {
   int shift;
   if (sum == 0) return;
@@ -500,6 +501,8 @@ static void od_encode_coeff_split(daala_enc_ctx *enc, int a, int sum, int ctx) {
    - 1], sum + 1, enc->state.adapt.haar_coeff_increment);
 }
 
+/* Encodes the magnitude of one side of a tree split based on the sum of the
+   two sides. The distribution should be roughly symmetric. */
 static void od_encode_tree_split(daala_enc_ctx *enc, int a, int sum, int ctx) {
   int shift;
   if (sum == 0) return;
@@ -530,6 +533,7 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
    + tree_sum[2*y + 1][2*x] + tree_sum[2*y + 1][2*x + 1];
   if (children_sum) {
     OD_ASSERT(coeff_mag + children_sum == tree_sum[y][x]);
+    /* Split in a different order depending on direction. */
     if (dir==0) {
       od_encode_tree_split(enc, tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1],
        children_sum, 0);
@@ -579,21 +583,22 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   {
     int bits;
     bits = OD_ILOG(tree_sum[0][0]);
-#if 0
-    od_ec_enc_unary(&enc->ec, bits);
-#else
+    /* Encode the sum of quantized coefficients for the entire block as log2(x)
+       followed by the LSBs. */
     od_encode_cdf_adapt(&enc->ec, OD_MINI(bits, 15),
      enc->state.adapt.haar_bits_cdf[pli], 16,
      enc->state.adapt.haar_bits_increment);
     if (bits >= 15) od_ec_enc_unary(&enc->ec, bits - 15);
-#endif
     if (bits > 1) {
       od_ec_enc_bits(&enc->ec, tree_sum[0][0] & ((1 << (bits - 1)) - 1),
        bits - 1);
     }
+    /* Encode diagonal tree sum. */
     od_encode_tree_split(enc, tree_sum[1][1], tree_sum[0][0], 1);
+    /* Horizontal vs vertical. */
     od_encode_tree_split(enc, tree_sum[0][1], tree_sum[0][0] - tree_sum[1][1], 2);
   }
+  /* Encode all 3 trees. */
   od_encode_sum_tree(enc, out, ln, tree_sum, 1, 0, 0, pli);
   od_encode_sum_tree(enc, out, ln, tree_sum, 0, 1, 1, pli);
   od_encode_sum_tree(enc, out, ln, tree_sum, 1, 1, 2, pli);
