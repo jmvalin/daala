@@ -2035,7 +2035,7 @@ void od_mv_est_check_rd_state(od_mv_est_ctx *est, int ref, int mv_res) {
       }
       mv = est->mvs[vy] + vx;
       equal_mvs = od_state_get_predictor(state, pred, vx, vy,
-       OD_MC_LEVEL[vy & OD_MVB_MASK][vx & OD_MVB_MASK], mv_res);
+       OD_MC_LEVEL[vy & OD_MVB_MASK][vx & OD_MVB_MASK], mv_res, NULL);
       mv_rate = od_mv_est_bits(est, equal_mvs,
        mvg->mv[0] >> mv_res, mvg->mv[1] >> mv_res, pred[0], pred[1]);
       if (mv_rate != mv->mv_rate) {
@@ -2460,7 +2460,7 @@ static void od_mv_est_init_mv(od_mv_est_ctx *est, int ref, int vx, int vy) {
    "Initialized MV (%2i, %2i): (%3i, %3i), SAD: %i",
    vx, vy, best_vec[0], best_vec[1], best_sad));
 #if defined(OD_ENABLE_ASSERTIONS) || defined(OD_ENABLE_LOGGING)
-  equal_mvs = od_state_get_predictor(state, a[0], vx, vy, level, 2);
+  equal_mvs = od_state_get_predictor(state, a[0], vx, vy, level, 2, NULL);
   if (a[0][0] != predx || a[0][1] != predy) {
     OD_LOG((OD_LOG_MOTION_ESTIMATION, OD_LOG_ERR,
      "Failure in MV predictor init: (%i, %i) != (%i, %i)",
@@ -4061,7 +4061,7 @@ static int od_mv_dp_get_rate_change(od_mv_est_ctx *est, od_mv_dp_node *dp,
   /*Compute the new rate for the current MV.*/
   mv = dp->mv;
   equal_mvs = od_state_get_predictor(state, pred, mv->vx, mv->vy,
-   OD_MC_LEVEL[mv->vy & OD_MVB_MASK][mv->vx & OD_MVB_MASK], mv_res);
+   OD_MC_LEVEL[mv->vy & OD_MVB_MASK][mv->vx & OD_MVB_MASK], mv_res, NULL);
   mvg = dp->mvg;
   *cur_mv_rate = od_mv_est_bits(est, equal_mvs,
    mvg->mv[0] >> mv_res, mvg->mv[1] >> mv_res, pred[0], pred[1]);
@@ -4077,7 +4077,7 @@ static int od_mv_dp_get_rate_change(od_mv_est_ctx *est, od_mv_dp_node *dp,
     mv = dp->predicted_mvs[pi];
     mvg = dp->predicted_mvgs[pi];
     equal_mvs = od_state_get_predictor(state, pred, mv->vx, mv->vy,
-     OD_MC_LEVEL[mv->vy & OD_MVB_MASK][mv->vx & OD_MVB_MASK], mv_res);
+     OD_MC_LEVEL[mv->vy & OD_MVB_MASK][mv->vx & OD_MVB_MASK], mv_res, NULL);
     pred_mv_rates[pi] = od_mv_est_bits(est, equal_mvs,
      mvg->mv[0] >> mv_res, mvg->mv[1] >> mv_res, pred[0], pred[1]);
     OD_LOG((OD_LOG_MOTION_ESTIMATION, OD_LOG_DEBUG,
@@ -5811,7 +5811,7 @@ int od_mv_est_update_mv_rates(od_mv_est_ctx *est, int mv_res) {
       if (!mvg->valid) continue;
       mv = est->mvs[vy] + vx;
       equal_mvs = od_state_get_predictor(state, pred,
-       vx, vy, OD_MC_LEVEL[vy & OD_MVB_MASK][vx & OD_MVB_MASK], mv_res);
+       vx, vy, OD_MC_LEVEL[vy & OD_MVB_MASK][vx & OD_MVB_MASK], mv_res, NULL);
       dr -= mv->mv_rate;
       mv->mv_rate = od_mv_est_bits(est, equal_mvs,
        mvg->mv[0] >> mv_res, mvg->mv[1] >> mv_res, pred[0], pred[1]);

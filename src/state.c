@@ -477,6 +477,8 @@ void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
       }
     }
   }
+  state->pred_select_increment = 128;
+  OD_CDFS_INIT(state->pred_select_cdf, state->pred_select_increment >> 1);
 }
 
 void od_state_set_mv_res(od_state *state, int mv_res) {

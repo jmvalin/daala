@@ -1038,9 +1038,59 @@ static void od_encode_mv(daala_enc_ctx *enc, od_mv_grid_pt *mvg, int vx,
   int oy;
   int id;
   int equal_mvs;
-  equal_mvs = od_state_get_predictor(&enc->state, pred, vx, vy, level, mv_res);
-  ox = (mvg->mv[0] >> mv_res) - pred[0];
-  oy = (mvg->mv[1] >> mv_res) - pred[1];
+  int neighbors[4][2];
+  equal_mvs = od_state_get_predictor(&enc->state, pred, vx, vy, level, mv_res, neighbors);
+  ox = (mvg->mv[0] >> mv_res);
+  oy = (mvg->mv[1] >> mv_res);
+  if (1) {
+    int candidates[6][2];
+    int nb_candidates;
+    int i;
+    int min_dist;
+    int pred_select;
+    candidates[0][0] = pred[0];
+    candidates[0][1] = pred[1];
+    nb_candidates = 1;
+    for (i = 0; i < 5; i++) {
+      int same;
+      int j;
+      same = 0;
+      for (j = 0; j < nb_candidates; j++) {
+        int dist;
+        dist = abs(candidates[j][0] - neighbors[i][0])
+         + abs(candidates[j][1] - neighbors[i][1]);
+        if (dist <= 12) same = 1;
+      }
+      if (!same) {
+        candidates[nb_candidates][0] = neighbors[i][0];
+        candidates[nb_candidates][1] = neighbors[i][1];
+        nb_candidates++;
+      }
+    }
+    min_dist = 100000;
+    pred_select = -1;
+    for (i=0;i<nb_candidates;i++) {
+      int dist;
+      dist = abs(ox - candidates[i][0]) + abs(oy - candidates[i][1]) + 5*(i != 0);
+      if (dist < min_dist) {
+        min_dist = dist;
+        pred_select = i;
+      }
+    }
+    od_encode_cdf_adapt(&enc->ec, pred_select,
+     enc->state.adapt.pred_select_cdf[nb_candidates], nb_candidates,
+     enc->state.adapt.pred_select_increment);
+    pred[0] = candidates[pred_select][0];
+    pred[1] = candidates[pred_select][1];
+    /*min_dist = 1000;
+    for (i=0;i<4;i++) {
+      min_dist = OD_MINI(min_dist, abs(neighbors[i][0] - (mvg->mv[0] >> mv_res)) +
+        abs(neighbors[i][1] - (mvg->mv[1] >> mv_res)));
+    }
+    printf("%d %d %d\n", ox, oy, min_dist);*/
+  }
+  ox -= pred[0];
+  oy -= pred[1];
   /*Interleave positive and negative values.*/
   model = &enc->state.adapt.mv_model;
   id = OD_MINI(abs(oy), 3)*4 + OD_MINI(abs(ox), 3);

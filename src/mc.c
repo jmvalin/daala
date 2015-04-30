@@ -2377,7 +2377,7 @@ void od_mc_predict8(od_state *state, unsigned char *dst, int dystride,
 
 /*Gets the predictor for a given MV node at the given MV resolution.*/
 int od_state_get_predictor(od_state *state,
- int pred[2], int vx, int vy, int level, int mv_res) {
+ int pred[2], int vx, int vy, int level, int mv_res, int (*diff)[2]) {
   static const od_mv_grid_pt ZERO_GRID_PT;
   const od_mv_grid_pt *cneighbors[4];
   int a[4][2];
@@ -2486,6 +2486,13 @@ This last compare is unneeded for a median:
      pred[1] == OD_DIV_POW2_RE(cneighbors[ci]->mv[1], mv_res)) {
       equal_mvs++;
     }
+    if (diff) {
+      diff[ci][0] = OD_DIV_POW2_RE(cneighbors[ci]->mv[0], mv_res);
+      diff[ci][1] = OD_DIV_POW2_RE(cneighbors[ci]->mv[1], mv_res);
+    }
+  }
+  for (; ci < 5; ci++) {
+    if (diff) diff[ci][0] = diff[ci][1] = 0;
   }
   return equal_mvs;
 }
