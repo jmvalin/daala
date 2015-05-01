@@ -713,7 +713,10 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     }
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_AC_COEFFS);
-  if (0&&ln != 3) {
+#if OD_USE_HAAR_WAVELET
+  skip = od_wavelet_quantize(enc, ln + 2, scalar_out, cblock, predt, quant,
+   pli);
+#else
   if (lossless) {
     skip = od_single_band_lossless_encode(enc, ln, scalar_out, cblock, predt,
      pli);
@@ -722,10 +725,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     skip = od_pvq_encode(enc, predt, cblock, scalar_out, quant, pli, ln,
      OD_PVQ_BETA[pli][ln], OD_ROBUST_STREAM, ctx->is_keyframe);
   }
-  } else {
-    skip = od_wavelet_quantize(enc, ln + 2, scalar_out, cblock, predt, quant,
-     pli);
-  }
+#endif
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_UNKNOWN);
   if (OD_DISABLE_HAAR_DC || !ctx->is_keyframe) {
     int has_dc_skip;
@@ -1348,7 +1348,7 @@ static void od_predict_frame(daala_enc_ctx *enc) {
 #endif
 }
 
-#if 1
+#if OD_DISABLE_FIXED_LAPPING
 static void od_split_superblocks(daala_enc_ctx *enc, int is_keyframe) {
   int nhsb;
   int nvsb;
@@ -1961,7 +1961,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration) {
 #endif
   }
   else {
-#if 0
+#if !OD_DISABLE_FIXED_LAPPING
     od_split_superblocks_rdo(enc, &mbctx);
 #else
     od_split_superblocks(enc, 1);
