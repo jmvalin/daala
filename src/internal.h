@@ -84,6 +84,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # define OD_ROBUST_STREAM (0)
 
 # define OD_USE_HAAR_WAVELET (1)
+# if OD_USE_HAAR_WAVELET && \
+   !(OD_DISABLE_FILTER && OD_DISABLE_MASKING && OD_DISABLE_QM)
+#  error "Haar needs filter, AM and QM disabled"
+# endif
 
 # define OD_COEFF_SHIFT (4)
 /*OD_QUALITY_SHIFT specifies the number of fractional bits in a
