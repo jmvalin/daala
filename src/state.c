@@ -472,14 +472,8 @@ void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   OD_CDFS_INIT(state->pvq_gaintheta_cdf, state->pvq_gaintheta_increment >> 2);
   state->pvq_skip_dir_increment = 128;
   OD_CDFS_INIT(state->pvq_skip_dir_cdf, state->pvq_skip_dir_increment >> 2);
-  state->haar_children_increment = 128;
-  OD_CDFS_INIT(state->haar_children_cdf, state->haar_children_increment >> 2);
   state->haar_coeff_increment = 128;
   OD_CDFS_INIT(state->haar_coeff_cdf, state->haar_coeff_increment >> 2);
-  state->haar_mask_increment = 128;
-  OD_CDFS_INIT(state->haar_mask_cdf, state->haar_mask_increment >> 2);
-  state->haar_offset_increment = 128;
-  OD_CDFS_INIT(state->haar_offset_cdf, state->haar_offset_increment >> 2);
   state->haar_split_increment = 128;
   OD_CDFS_INIT(state->haar_split_cdf, state->haar_split_increment >> 2);
   state->haar_bits_increment = 128;

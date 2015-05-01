@@ -280,7 +280,7 @@ static void od_decode_sum_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
   n = 1 << ln;
   if (tree_sum == 0) return;
   coeff_mag = od_decode_coeff_split(dec, tree_sum, dir
-   + 3*OD_ILOG(OD_MAXI(x,y)));
+   + 3*(OD_ILOG(OD_MAXI(x,y)) - 1));
   c[y*n + x] = coeff_mag;
   children_sum = tree_sum - coeff_mag;
   /* Encode max of each four children relative to tree. */
@@ -288,16 +288,16 @@ static void od_decode_sum_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
     int sum1;
     if (dir == 0) {
       sum1 = od_decode_tree_split(dec, children_sum, 0);
-      children[0][0] = od_decode_tree_split(dec, sum1, 3);
+      children[0][0] = od_decode_tree_split(dec, sum1, 2);
       children[0][1] = sum1 - children[0][0];
-      children[1][0] = od_decode_tree_split(dec, children_sum - sum1, 3);
+      children[1][0] = od_decode_tree_split(dec, children_sum - sum1, 2);
       children[1][1] = children_sum - sum1 - children[1][0];
     }
     else {
-      sum1 = od_decode_tree_split(dec, children_sum, 6);
-      children[0][0] = od_decode_tree_split(dec, sum1, 3);
+      sum1 = od_decode_tree_split(dec, children_sum, 1);
+      children[0][0] = od_decode_tree_split(dec, sum1, 2);
       children[1][0] = sum1 - children[0][0];
-      children[0][1] = od_decode_tree_split(dec, children_sum - sum1, 3);
+      children[0][1] = od_decode_tree_split(dec, children_sum - sum1, 2);
       children[1][1] = children_sum - sum1 - children[0][1];
     }
   } else {
@@ -338,9 +338,9 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
     if (bits > 1) {
       tree_sum[0][0] = (1 << (bits - 1)) | od_ec_dec_bits(&dec->ec, bits - 1);
     } else tree_sum[0][0] = bits;
-    tree_sum[1][1] = od_decode_tree_split(dec, tree_sum[0][0], 1);
+    tree_sum[1][1] = od_decode_tree_split(dec, tree_sum[0][0], 3);
     tree_sum[0][1] = od_decode_tree_split(dec, tree_sum[0][0] - tree_sum[1][1],
-     2);
+     4);
     tree_sum[1][0] = tree_sum[0][0] - tree_sum[1][1] - tree_sum[0][1];
   }
   od_decode_sum_tree(dec, pred, ln, tree_sum[0][1], 1, 0, 0, pli);
