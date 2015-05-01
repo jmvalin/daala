@@ -442,11 +442,19 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
   else {
     pred[0] = d[bo];
   }
-  if (0&&ln != 3) {
-  od_coding_order_to_raster(&d[bo], w, pred, n, lossless);
-  } else {
-  od_wavelet_tree_to_raster(&d[bo], w, pred, ln + 2);
+#if OD_USE_HAAR_WAVELET
+  {
+    int i;
+    int j;
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        d[bo + i*w + j] = pred[i*n + j];
+      }
+    }
   }
+#else
+  od_coding_order_to_raster(&d[bo], w, pred, n, lossless);
+#endif
 #if OD_USE_HAAR_WAVELET
   od_haar_inv(c + bo, w, d + bo, w, ln + 2);
 #else
