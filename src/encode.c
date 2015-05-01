@@ -665,6 +665,14 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   mc = ctx->mc;
   lossless = (enc->quantizer[pli] == 0);
   /* Apply forward transform. */
+#if OD_USE_HAAR_WAVELET
+  if (OD_DISABLE_HAAR_DC || rdo_only || !ctx->is_keyframe) {
+    od_haar(d + bo, w, c + bo, w, ln + 2);
+  }
+  if (!ctx->is_keyframe) {
+    od_haar(md + bo, w, mc + bo, w, ln + 2);
+  }
+#else
   if (OD_DISABLE_HAAR_DC || rdo_only || !ctx->is_keyframe) {
     (*enc->state.opt_vtbl.fdct_2d[ln])(d + bo, w, c + bo, w);
     if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 0);
@@ -673,6 +681,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     (*enc->state.opt_vtbl.fdct_2d[ln])(md + bo, w, mc + bo, w);
     if (!lossless) od_apply_qm(md + bo, w, md + bo, w, ln, xdec, 0);
   }
+#endif
   od_encode_compute_pred(enc, ctx, pred, ln, pli, bx, by);
   if (ctx->is_keyframe && pli == 0) {
     od_hv_intra_pred(pred, d, w, bx, by, enc->state.bsize,
@@ -748,8 +757,12 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   }
   /*Apply the inverse transform.*/
 #if !defined(OD_OUTPUT_PRED)
+#if OD_USE_HAAR_WAVELET
+  od_haar_inv(c + bo, w, d + bo, w, ln + 2);
+#else
   if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
   (*enc->state.opt_vtbl.idct_2d[ln])(c + bo, w, d + bo, w);
+#endif
 #else
 # if 0
   /*Output the resampled luma plane.*/
@@ -786,8 +799,12 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
   if (d == l) {
     d -= xdec;
     bo = (by << (OD_LOG_BSIZE0 + d))*w + (bx << (OD_LOG_BSIZE0 + d));
+#if OD_USE_HAAR_WAVELET
+    od_haar(c + bo, w, ctx->c + bo, w, d + 2);
+#else
     (*enc->state.opt_vtbl.fdct_2d[d])(c + bo, w, ctx->c + bo, w);
     if (!lossless) od_apply_qm(c + bo, w, c + bo, w, d, xdec, 0);
+#endif
   }
   else {
     int f;
