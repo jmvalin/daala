@@ -679,13 +679,22 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
 #if defined(OD_OUTPUT_PRED)
   for (zzi = 0; zzi < (n*n); zzi++) preds[zzi] = pred[zzi];
 #endif
-  if (0&&ln != 3) {
+#if OD_USE_HAAR_WAVELET
+  {
+    int i;
+    int j;
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        cblock[i*n + j] = d[bo + i*w + j];
+        predt[i*n + j] = pred[i*n + j];
+      }
+    }
+  }
+#else
   /* Change ordering for encoding. */
   od_raster_to_coding_order(cblock,  n, &d[bo], w, lossless);
   od_raster_to_coding_order(predt,  n, &pred[0], n, lossless);
-  } else {
-  od_raster_to_wavelet_tree(cblock, ln + 2, &d[bo], w);
-  }
+#endif
   /* Lossless encoding uses an actual quantizer of 1, but is signalled
      with a 'quantizer' of 0. */
   quant = OD_MAXI(1, enc->quantizer[pli]);
@@ -739,11 +748,19 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     OD_ASSERT(ctx->dc_idx < OD_NB_SAVED_DCS);
     if (rdo_only && ctx->is_keyframe) scalar_out[0] = ctx->dc[ctx->dc_idx++];
   }
-  if (0&&ln != 3) {
-  od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
-  } else {
-  od_wavelet_tree_to_raster(&d[bo], w, scalar_out, ln + 2);
+#if OD_USE_HAAR_WAVELET
+  {
+    int i;
+    int j;
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        d[bo + i*w + j] = scalar_out[i*n + j];
+      }
+    }
   }
+#else
+  od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
+#endif
   /*Apply the inverse transform.*/
 #if !defined(OD_OUTPUT_PRED)
 #if OD_USE_HAAR_WAVELET
