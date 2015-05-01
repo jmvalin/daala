@@ -395,8 +395,12 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
   mc = ctx->mc;
   /*Apply forward transform to MC predictor.*/
   if (!ctx->is_keyframe) {
+#if OD_USE_HAAR_WAVELET
+    od_haar(md + bo, w, mc + bo, w, ln + 2);
+#else
     (*dec->state.opt_vtbl.fdct_2d[ln])(md + bo, w, mc + bo, w);
     if (!lossless) od_apply_qm(md + bo, w, md + bo, w, ln, xdec, 0);
+#endif
   }
   od_decode_compute_pred(dec, ctx, pred, ln, pli, bx, by);
   if (ctx->is_keyframe && pli == 0) {
@@ -443,10 +447,13 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
   } else {
   od_wavelet_tree_to_raster(&d[bo], w, pred, ln + 2);
   }
-
+#if OD_USE_HAAR_WAVELET
+  od_haar_inv(c + bo, w, d + bo, w, ln + 2);
+#else
   if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
   /*Apply the inverse transform.*/
   (*dec->state.opt_vtbl.idct_2d[ln])(c + bo, w, d + bo, w);
+#endif
 }
 
 #if !OD_DISABLE_HAAR_DC

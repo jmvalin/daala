@@ -769,26 +769,18 @@ void od_bin_idct16(od_coeff *x, int xstride, const od_coeff y[16]) {
 
 void od_bin_fdct16x16(od_coeff *y, int ystride,
  const od_coeff *x, int xstride) {
-#if 0
   od_coeff z[16*16];
   int i;
   for (i = 0; i < 16; i++) od_bin_fdct16(z + 16*i, x + i, xstride);
   for (i = 0; i < 16; i++) od_bin_fdct16(y + ystride*i, z + i, 16);
-#else
-  od_haar(y, ystride, x, xstride, 4);
-#endif
 }
 
 void od_bin_idct16x16(od_coeff *x, int xstride,
  const od_coeff *y, int ystride) {
-#if 0
   od_coeff z[16*16];
   int i;
   for (i = 0; i < 16; i++) od_bin_idct16(z + i, 16, y + ystride*i);
   for (i = 0; i < 16; i++) od_bin_idct16(x + i, xstride, z + 16*i);
-#else
-  od_haar_inv(x, xstride, y, ystride, 4);
-#endif
 }
 
 #define OD_FDCT_2(t0, t1) \
@@ -2030,26 +2022,18 @@ void od_haar_inv(od_coeff *x, int xstride,
 
 void od_bin_fdct32x32(od_coeff *y, int ystride,
  const od_coeff *x, int xstride) {
-#if 0
   od_coeff z[32*32];
   int i;
   for (i = 0; i < 32; i++) od_bin_fdct32(z + 32*i, x + i, xstride);
   for (i = 0; i < 32; i++) od_bin_fdct32(y + ystride*i, z + i, 32);
-#else
-  od_haar(y, ystride, x, xstride, 5);
-#endif
 }
 
 void od_bin_idct32x32(od_coeff *x, int xstride,
  const od_coeff *y, int ystride) {
-#if 0
   od_coeff z[32*32];
   int i;
   for (i = 0; i < 32; i++) od_bin_idct32(z + i, 32, y + ystride*i);
   for (i = 0; i < 32; i++) od_bin_idct32(x + i, xstride, z + 32*i);
-#else
-  od_haar_inv(x, xstride, y, ystride, 5);
-#endif
 }
 
 #if defined(OD_CHECKASM)
