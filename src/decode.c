@@ -424,7 +424,9 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
     dc_quant = OD_MAXI(1, quant*
      dec->state.pvq_qm_q4[pli][od_qm_get_index(ln, 0)] >> 4);
   }
-  if (0&&ln != 3) {
+#if OD_USE_HAAR_WAVELET
+  od_wavelet_unquantize(dec, ln + 2, pred, predt, quant, pli);
+#else
   if (lossless) {
     od_block_lossless_decode(dec, ln, pred, predt, pli);
   }
@@ -436,9 +438,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
       dec->user_flags[by*dec->user_fstride + bx] = flags;
     }
   }
-  } else {
-  od_wavelet_unquantize(dec, ln + 2, pred, predt, quant, pli);
-  }
+#endif
   if (OD_DISABLE_HAAR_DC || !ctx->is_keyframe) {
     int has_dc_skip;
     has_dc_skip = !ctx->is_keyframe && !lossless;
