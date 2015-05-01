@@ -2195,6 +2195,7 @@ static void od_mv_est_init_mv(od_mv_est_ctx *est, int ref, int vx, int vy) {
     cands[ci][0] = OD_CLAMPI(mvxmin, a[ci][0], mvxmax);
     cands[ci][1] = OD_CLAMPI(mvymin, a[ci][1], mvymax);
   }
+#if 0
   /*Compute the median predictor:*/
   if (ncns > 3) {
     /*Median-of-4.*/
@@ -2224,6 +2225,13 @@ static void od_mv_est_init_mv(od_mv_est_ctx *est, int ref, int vx, int vy) {
     candx = OD_CLAMPI(mvxmin, a[1][0], mvxmax);
     candy = OD_CLAMPI(mvymin, a[1][1], mvymax);
   }
+#else
+  compute_median(a[1], a, ncns);
+  predx = a[1][0];
+  predy = a[1][1];
+  candx = OD_CLAMPI(mvxmin, OD_DIV2_RE(predx), mvxmax);
+  candy = OD_CLAMPI(mvymin, OD_DIV2_RE(predy), mvymax);
+#endif
   equal_mvs = 0;
   for (ci = 0; ci < ncns; ci++) {
     if (predx == (cneighbors[ci]->bma_mvs[0][ref][0] << 1) &&

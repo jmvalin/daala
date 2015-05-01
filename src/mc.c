@@ -2375,6 +2375,69 @@ void od_mc_predict8(od_state *state, unsigned char *dst, int dystride,
    oc, s, log_xblk_sz, log_yblk_sz);
 }
 
+#if 0
+void compute_median(int pred[2], int (*neighbors)[2], int n) {
+  int i;
+  int j;
+  int threshold;
+  int ndist[4][4] = {{0}};
+  int distsum[4] = {0};
+  int nclose[4] = {0};
+  int first;
+  threshold = 5;
+  for (i = 0; i < n; i++) {
+    for (j = i + 1; j < n; j++) {
+      int dist;
+      dist = abs(neighbors[j][0] - neighbors[i][0])
+           + abs(neighbors[j][1] - neighbors[i][1]);
+      if (dist <= threshold) {
+        nclose[i]++;
+        nclose[j]++;
+      }
+      if (dist <= threshold/2) {
+        nclose[i]++;
+        nclose[j]++;
+      }
+      distsum[i] += dist;
+      distsum[j] += dist;
+      ndist[i][j] = ndist[j][i] = dist;
+    }
+  }
+  first = 0;
+  for (i = 1; i < 4; i++) {
+    if (distsum[i] < distsum[first]) first = i;
+  }
+  pred[0] = neighbors[first][0] << 1;
+  pred[1] = neighbors[first][1] << 1;
+}
+#else
+void compute_median(int pred[2], int (*a)[2], int ncns) {
+  if (ncns > 3) {
+    /*Median-of-4.*/
+    OD_SORT2I(a[0][0], a[1][0]);
+    OD_SORT2I(a[0][1], a[1][1]);
+    OD_SORT2I(a[2][0], a[3][0]);
+    OD_SORT2I(a[2][1], a[3][1]);
+    OD_SORT2I(a[0][0], a[2][0]);
+    OD_SORT2I(a[0][1], a[2][1]);
+    OD_SORT2I(a[1][0], a[3][0]);
+    OD_SORT2I(a[1][1], a[3][1]);
+    pred[0] = a[1][0] + a[2][0];
+    pred[1] = a[1][1] + a[2][1];
+  }
+  else {
+    /*Median-of-3.*/
+    OD_SORT2I(a[0][0], a[1][0]);
+    OD_SORT2I(a[0][1], a[1][1]);
+    OD_SORT2I(a[1][0], a[2][0]);
+    OD_SORT2I(a[1][1], a[2][1]);
+    OD_SORT2I(a[0][0], a[1][0]);
+    OD_SORT2I(a[0][1], a[1][1]);
+    pred[0] = a[1][0] << 1;
+    pred[1] = a[1][1] << 1;
+  }
+}
+#endif
 /*Gets the predictor for a given MV node at the given MV resolution.*/
 int od_state_get_predictor(od_state *state,
  int pred[2], int vx, int vy, int level, int mv_res, int (*diff)[2]) {
@@ -2423,6 +2486,7 @@ int od_state_get_predictor(od_state *state,
     a[ci][0] = cneighbors[ci]->mv[0];
     a[ci][1] = cneighbors[ci]->mv[1];
   }
+#if 0
   /*Median-of-4.*/
   if (ncns > 3) {
     OD_LOG((OD_LOG_MOTION_COMPENSATION, OD_LOG_DEBUG, "Median of 4:"));
@@ -2480,6 +2544,11 @@ This last compare is unneeded for a median:
     pred[0] = OD_DIV_POW2_RE(a[1][0], mv_res);
     pred[1] = OD_DIV_POW2_RE(a[1][1], mv_res);
   }
+#else
+  compute_median(pred, a, ncns);
+  pred[0] = OD_DIV_POW2_RE(pred[0], mv_res + 1);
+  pred[1] = OD_DIV_POW2_RE(pred[1], mv_res + 1);
+#endif
   equal_mvs = 0;
   for (ci = 0; ci < ncns; ci++) {
     if (pred[0] == OD_DIV_POW2_RE(cneighbors[ci]->mv[0], mv_res) &&

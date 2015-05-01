@@ -1042,7 +1042,7 @@ static void od_encode_mv(daala_enc_ctx *enc, od_mv_grid_pt *mvg, int vx,
   equal_mvs = od_state_get_predictor(&enc->state, pred, vx, vy, level, mv_res, neighbors);
   ox = (mvg->mv[0] >> mv_res);
   oy = (mvg->mv[1] >> mv_res);
-  if (1) {
+  if (0) {
     int candidates[6][2];
     int nb_candidates;
     int i;
@@ -1088,6 +1088,49 @@ static void od_encode_mv(daala_enc_ctx *enc, od_mv_grid_pt *mvg, int vx,
         abs(neighbors[i][1] - (mvg->mv[1] >> mv_res)));
     }
     printf("%d %d %d\n", ox, oy, min_dist);*/
+  }
+  if (0) {
+    int candidates[6][2];
+    int nb_candidates;
+    int i;
+    int j;
+    int threshold;
+    int ndist[4][4] = {{0}};
+    int distsum[4] = {0};
+    int nclose[4] = {0};
+    int first;
+    threshold = 5;
+    for (i = 0; i < 4; i++) {
+      for (j = i + 1; j < 4; j++) {
+        int dist;
+        dist = abs(neighbors[j][0] - neighbors[i][0])
+         + abs(neighbors[j][1] - neighbors[i][1]);
+        if (dist <= threshold) {
+          nclose[i]++;
+          nclose[j]++;
+        }
+        if (dist <= threshold/2) {
+          nclose[i]++;
+          nclose[j]++;
+        }
+        distsum[i] += dist;
+        distsum[j] += dist;
+        ndist[i][j] = ndist[j][i] = dist;
+      }
+    }
+    first = 0;
+#if 0
+    for (i = 1; i < 4; i++) {
+      if (nclose[i] > nclose[first]) first = i;
+    }
+#else
+    for (i = 1; i < 4; i++) {
+      if (distsum[i] < distsum[first]) first = i;
+    }
+#endif
+    printf("%d\n", nclose[first]);
+    pred[0] = neighbors[first][0];
+    pred[1] = neighbors[first][1];
   }
   ox -= pred[0];
   oy -= pred[1];
