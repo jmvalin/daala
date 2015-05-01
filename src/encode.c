@@ -536,7 +536,7 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   if (tree_sum[y][x] == 0) return;
   coeff_mag = abs(c[y*n + x]);
   od_encode_coeff_split(enc, coeff_mag, tree_sum[y][x], dir
-   + 3*OD_ILOG(OD_MAXI(x,y)));
+   + 3*(OD_ILOG(OD_MAXI(x,y)) - 1));
   /* Encode max of each four children relative to tree. */
   children_sum = tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1]
    + tree_sum[2*y + 1][2*x] + tree_sum[2*y + 1][2*x + 1];
@@ -547,17 +547,17 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
       od_encode_tree_split(enc, tree_sum[2*y][2*x] + tree_sum[2*y][2*x + 1],
        children_sum, 0);
       od_encode_tree_split(enc, tree_sum[2*y][2*x], tree_sum[2*y][2*x]
-       + tree_sum[2*y][2*x + 1], 3);
+       + tree_sum[2*y][2*x + 1], 2);
       od_encode_tree_split(enc, tree_sum[2*y + 1][2*x], tree_sum[2*y + 1][2*x]
-       + tree_sum[2*y + 1][2*x + 1], 3);
+       + tree_sum[2*y + 1][2*x + 1], 2);
     }
     else {
       od_encode_tree_split(enc, tree_sum[2*y][2*x] + tree_sum[2*y + 1][2*x],
-       children_sum, 6);
+       children_sum, 1);
       od_encode_tree_split(enc, tree_sum[2*y][2*x], tree_sum[2*y][2*x]
-       + tree_sum[2*y + 1][2*x], 3);
+       + tree_sum[2*y + 1][2*x], 2);
       od_encode_tree_split(enc, tree_sum[2*y][2*x + 1], tree_sum[2*y][2*x + 1]
-       + tree_sum[2*y + 1][2*x + 1], 3);
+       + tree_sum[2*y + 1][2*x + 1], 2);
     }
   }
   if (4*x < n && 4*y < n) {
@@ -603,9 +603,9 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
        bits - 1);
     }
     /* Encode diagonal tree sum. */
-    od_encode_tree_split(enc, tree_sum[1][1], tree_sum[0][0], 1);
+    od_encode_tree_split(enc, tree_sum[1][1], tree_sum[0][0], 3);
     /* Horizontal vs vertical. */
-    od_encode_tree_split(enc, tree_sum[0][1], tree_sum[0][0] - tree_sum[1][1], 2);
+    od_encode_tree_split(enc, tree_sum[0][1], tree_sum[0][0] - tree_sum[1][1], 4);
   }
   /* Encode all 3 trees. */
   od_encode_sum_tree(enc, out, ln, tree_sum, 1, 0, 0, pli);

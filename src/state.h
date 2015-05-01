@@ -146,15 +146,9 @@ struct od_adapt_ctx {
   /* Joint skip flag for DC and AC */
   ogg_uint16_t skip_cdf[OD_NPLANES_MAX][4];
   int skip_increment;
-  ogg_uint16_t haar_children_cdf[16][16];
-  int haar_children_increment;
-  ogg_uint16_t haar_coeff_cdf[256][16];
+  ogg_uint16_t haar_coeff_cdf[15*3*(OD_NBSIZES + 1)][16];
   int haar_coeff_increment;
-  ogg_uint16_t haar_mask_cdf[16][16];
-  int haar_mask_increment;
-  ogg_uint16_t haar_offset_cdf[16][16];
-  int haar_offset_increment;
-  ogg_uint16_t haar_split_cdf[1256][16];
+  ogg_uint16_t haar_split_cdf[15*2*5][16];
   int haar_split_increment;
   ogg_uint16_t haar_bits_cdf[3][16];
   int haar_bits_increment;
