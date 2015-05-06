@@ -569,19 +569,40 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   }
 }
 
+static int OD_HAAR_QM[2][5] = {
+  {16, 16, 16, 24, 32},
+  {16, 16, 24, 32, 48},
+};
 static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
  od_coeff *out, const od_coeff *cblock, const od_coeff *predt,
  int quant, int pli) {
   int n2;
   int n;
   int i, j;
+  int dir;
   od_coeff tree_sum[OD_BSIZE_MAX][OD_BSIZE_MAX];
   n = 1 << ln;
   n2 = 1 << 2*ln;
   /* Quantize everything by DC. */
+#if 0
   for (i = 1; i < n2; i++) {
     out[i] = OD_DIV_R0(cblock[i], quant);
   }
+#else
+  for (dir = 0; dir < 3; dir++) {
+    int level;
+    for (level = 0; level < ln; level++) {
+      int bo;
+      int q;
+      bo = (((dir + 1) >> 1) << level)*n + (((dir + 1) & 1) << level);
+      q = quant*OD_HAAR_QM[dir==2][level] >> 4;
+      for (i = 0; i < 1 << level; i++) {
+        for (j = 0; j < 1 << level; j++)
+          out[bo + i*n + j] = OD_DIV_R0(cblock[bo + i*n + j], q);
+      }
+    }
+  }
+#endif
   /* Compute magnitude at each level of each tree. */
   od_compute_max_tree(tree_sum, 1, 0, out, ln);
   od_compute_max_tree(tree_sum, 0, 1, out, ln);
@@ -619,9 +640,25 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
       if (in) od_ec_enc_bits(&enc->ec, in < 0, 1);
     }
   }
+#if 0
   for (i = 1; i < n2; i++) {
     out[i] *= quant;
   }
+#else
+  for (dir = 0; dir < 3; dir++) {
+    int level;
+    for (level = 0; level < ln; level++) {
+      int bo;
+      int q;
+      bo = (((dir + 1) >> 1) << level)*n + (((dir + 1) & 1) << level);
+      q = quant*OD_HAAR_QM[dir==2][level] >> 4;
+      for (i = 0; i < 1 << level; i++) {
+        for (j = 0; j < 1 << level; j++)
+          out[bo + i*n + j] *= q;
+      }
+    }
+  }
+#endif
   return 0;
 }
 
