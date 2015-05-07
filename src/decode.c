@@ -323,6 +323,7 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
   int n2;
   int n;
   int i;
+  int dir;
   od_coeff tree_sum[2][2] = {{0}};
   n = 1 << ln;
   n2 = 1 << 2*ln;
@@ -359,9 +360,28 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
       pred[i*n + j] = in;
     }
   }
+#if 0
   for (i = 1; i < n2; i++) {
     pred[i] = pred[i]*quant;
   }
+#else
+  for (dir = 0; dir < 3; dir++) {
+    int level;
+    for (level = 0; level < ln; level++) {
+      int bo;
+      int q;
+      bo = (((dir + 1) >> 1) << level)*n + (((dir + 1) & 1) << level);
+      if (quant == 0) q = 1;
+      else q = quant*OD_HAAR_QM[dir==2][level] >> 4;
+      for (i = 0; i < 1 << level; i++) {
+        int j;
+        for (j = 0; j < 1 << level; j++)
+          pred[bo + i*n + j] *= q;
+      }
+    }
+  }
+
+#endif
 }
 
 static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
@@ -415,7 +435,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
      dec->state.pvq_qm_q4[pli][od_qm_get_index(ln, 0)] >> 4);
   }
 #if OD_USE_HAAR_WAVELET
-  od_wavelet_unquantize(dec, ln + 2, pred, predt, quant, pli);
+  od_wavelet_unquantize(dec, ln + 2, pred, predt, dec->quantizer[pli], pli);
 #else
   if (lossless) {
     od_block_lossless_decode(dec, ln, pred, predt, pli);

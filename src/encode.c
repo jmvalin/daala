@@ -560,10 +560,6 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   }
 }
 
-static int OD_HAAR_QM[2][5] = {
-  {16, 16, 16, 24, 32},
-  {16, 16, 24, 32, 48},
-};
 static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
  od_coeff *out, const od_coeff *cblock, const od_coeff *predt,
  int quant, int pli) {
@@ -586,7 +582,8 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
       int bo;
       int q;
       bo = (((dir + 1) >> 1) << level)*n + (((dir + 1) & 1) << level);
-      q = quant*OD_HAAR_QM[dir==2][level] >> 4;
+      if (quant == 0) q = 1;
+      else q = quant*OD_HAAR_QM[dir==2][level] >> 4;
       for (i = 0; i < 1 << level; i++) {
         for (j = 0; j < 1 << level; j++)
           out[bo + i*n + j] = OD_DIV_R0(cblock[bo + i*n + j], q);
@@ -642,7 +639,8 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
       int bo;
       int q;
       bo = (((dir + 1) >> 1) << level)*n + (((dir + 1) & 1) << level);
-      q = quant*OD_HAAR_QM[dir==2][level] >> 4;
+      if (quant == 0) q = 1;
+      else q = quant*OD_HAAR_QM[dir==2][level] >> 4;
       for (i = 0; i < 1 << level; i++) {
         for (j = 0; j < 1 << level; j++)
           out[bo + i*n + j] *= q;
@@ -751,8 +749,8 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_AC_COEFFS);
 #if OD_USE_HAAR_WAVELET
-  skip = od_wavelet_quantize(enc, ln + 2, scalar_out, cblock, predt, quant,
-   pli);
+  skip = od_wavelet_quantize(enc, ln + 2, scalar_out, cblock, predt,
+   enc->quantizer[pli], pli);
 #else
   if (lossless) {
     skip = od_single_band_lossless_encode(enc, ln, scalar_out, cblock, predt,

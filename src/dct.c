@@ -2019,7 +2019,7 @@ void od_inv_haar_1d(od_coeff *x, int stride, int ln) {
   }
 }
 
-#if 0
+#if 1
 void od_haar(od_coeff *y, int ystride,
   const od_coeff *x, int xstride, int ln) {
   int i;
@@ -2034,31 +2034,6 @@ void od_haar(od_coeff *y, int ystride,
     for (j = 0; j < n; j++) {
       tmp[i*tstride + j] = x[i*xstride + j];
     }
-  }
-  if (0) {
-    od_coeff foo[1024];
-    int x0, x1;
-    x0 = 1024; x1 = 0;
-    OD_HAAR_KERNEL_1D(x0, x1);
-    printf("%d %d\n", x0, x1);
-    x0 = 1024; x1 = 1024;
-    OD_HAAR_KERNEL_1D(x0, x1);
-    printf("%d %d\n", x0, x1);
-    x0 = 1024; x1 = -1024;
-    OD_HAAR_KERNEL_1D(x0, x1);
-    printf("%d %d\n", x0, x1);
-
-    for (i=0;i<16;i++) {
-      for(j=0;j<16;j++) foo[j] = 0;
-      foo[i] = 1024;
-      od_haar_1d(foo, 1, 4);
-      for(j=0;j<16;j++) printf("%d ", foo[j]);
-      printf("\n");
-      od_inv_haar_1d(foo, 1, 4);
-      for(j=0;j<16;j++) printf("%d ", foo[j]);
-      printf("\n\n");
-    }
-    exit(1);
   }
   for (level = 0; level < ln; level++) {
     int bound;
