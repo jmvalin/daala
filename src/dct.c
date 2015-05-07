@@ -1953,6 +1953,73 @@ void od_bin_idct32(od_coeff *x, int xstride, const od_coeff y[32]) {
   x[31*xstride] = (od_coeff)tv;
 }
 
+/* (1-sqrt(.5))/sqrt(.5) = 0.41421 */
+#define OD_HAAR_CONST1_Q7 (53)
+/* sqrt(.5) = 0.70711 */
+#define OD_HAAR_CONST2_Q8 (181)
+
+#define OD_INV_HAAR_KERNEL_1D(x0, x1) \
+  do { \
+    (x0) -= OD_HAAR_CONST1_Q7*(x1) >> 7; \
+    (x1) += OD_HAAR_CONST2_Q8*(x0) >> 8; \
+    (x0) -= OD_HAAR_CONST1_Q7*(x1) >> 7; \
+  } \
+  while(0)
+
+#define OD_HAAR_KERNEL_1D(x0, x1) \
+  do { \
+    (x0) += OD_HAAR_CONST1_Q7*(x1) >> 7; \
+    (x1) -= OD_HAAR_CONST2_Q8*(x0) >> 8; \
+    (x0) += OD_HAAR_CONST1_Q7*(x1) >> 7; \
+  } \
+  while(0)
+
+void od_haar_1d(od_coeff *x, int stride, int ln) {
+  od_coeff t[OD_BSIZE_MAX];
+  int i;
+  int level;
+  int n;
+  n = 1 << ln;
+  for (i = 0; i < n; i++) t[i] = x[i*stride];
+  for (level = 0; level < ln; level++) {
+    int bound;
+    bound = n >> level >> 1;
+    for (i = 0; i < bound; i++) {
+      od_coeff x0;
+      od_coeff x1;
+      x0 = t[2*i];
+      x1 = t[2*i + 1];
+      OD_HAAR_KERNEL_1D(x0, x1);
+      t[i] = x0;
+      x[(i + bound)*stride] = x1;
+    }
+  }
+  x[0] = t[0];
+}
+
+void od_inv_haar_1d(od_coeff *x, int stride, int ln) {
+  od_coeff t[OD_BSIZE_MAX];
+  int i;
+  int level;
+  int n;
+  n = 1 << ln;
+  for (i = 0; i < n; i++) t[i] = x[i*stride];
+  for (level = ln - 1; level >= 0; level--) {
+    int bound;
+    bound = 1 << (ln - 1 - level);
+    for (i = bound - 1; i >= 0; i--) {
+      od_coeff x0;
+      od_coeff x1;
+      x0 = x[i*stride];
+      x1 = t[i + bound];
+      OD_INV_HAAR_KERNEL_1D(x0, x1);
+      x[2*i*stride] = x0;
+      x[(2*i + 1)*stride] = x1;
+    }
+  }
+}
+
+#if 0
 void od_haar(od_coeff *y, int ystride,
   const od_coeff *x, int xstride, int ln) {
   int i;
@@ -1967,6 +2034,31 @@ void od_haar(od_coeff *y, int ystride,
     for (j = 0; j < n; j++) {
       tmp[i*tstride + j] = x[i*xstride + j];
     }
+  }
+  if (0) {
+    od_coeff foo[1024];
+    int x0, x1;
+    x0 = 1024; x1 = 0;
+    OD_HAAR_KERNEL_1D(x0, x1);
+    printf("%d %d\n", x0, x1);
+    x0 = 1024; x1 = 1024;
+    OD_HAAR_KERNEL_1D(x0, x1);
+    printf("%d %d\n", x0, x1);
+    x0 = 1024; x1 = -1024;
+    OD_HAAR_KERNEL_1D(x0, x1);
+    printf("%d %d\n", x0, x1);
+
+    for (i=0;i<16;i++) {
+      for(j=0;j<16;j++) foo[j] = 0;
+      foo[i] = 1024;
+      od_haar_1d(foo, 1, 4);
+      for(j=0;j<16;j++) printf("%d ", foo[j]);
+      printf("\n");
+      od_inv_haar_1d(foo, 1, 4);
+      for(j=0;j<16;j++) printf("%d ", foo[j]);
+      printf("\n\n");
+    }
+    exit(1);
   }
   for (level = 0; level < ln; level++) {
     int bound;
@@ -2019,6 +2111,46 @@ void od_haar_inv(od_coeff *x, int xstride,
     }
   }
 }
+#else
+void od_haar(od_coeff *y, int ystride,
+  const od_coeff *x, int xstride, int ln) {
+  int i;
+  int j;
+  int n;
+  n = 1 << ln;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      y[i*ystride + j] = x[i*xstride + j];
+    }
+  }
+  for (i = 0; i < n; i++) {
+    od_haar_1d(&y[i*ystride], 1, ln);
+  }
+  for (i = 0; i < n; i++) {
+    od_haar_1d(&y[i], ystride, ln);
+  }
+}
+
+void od_haar_inv(od_coeff *x, int xstride,
+ const od_coeff *y, int ystride, int ln) {
+  int i;
+  int j;
+  int n;
+  n = 1 << ln;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      x[i*xstride + j] = y[i*ystride + j];
+    }
+  }
+  for (i = 0; i < n; i++) {
+    od_inv_haar_1d(&x[i], xstride, ln);
+  }
+  for (i = 0; i < n; i++) {
+    od_inv_haar_1d(&x[i*xstride], 1, ln);
+  }
+}
+#endif
+
 
 void od_bin_fdct32x32(od_coeff *y, int ystride,
  const od_coeff *x, int xstride) {
