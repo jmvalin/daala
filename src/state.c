@@ -57,6 +57,11 @@ const od_coeff OD_DC_QM[2][OD_NBSIZES - 1][2] = {
 };
 #endif
 
+const int OD_HAAR_QM[2][5] = {
+  {16, 16, 16, 24, 32},
+  {16, 16, 24, 32, 48},
+};
+
 static void *od_aligned_malloc(size_t _sz,size_t _align) {
   unsigned char *p;
   if (_align - 1 > UCHAR_MAX || (_align&_align-1) || _sz > ~(size_t)0-_align)
