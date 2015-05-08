@@ -179,7 +179,7 @@ static void od_decode_compute_pred(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, od_co
   md = ctx->md;
   l = ctx->l;
   if (ctx->is_keyframe) {
-    if (pli == 0 || OD_DISABLE_CFL) {
+    if (pli == 0 || OD_DISABLE_CFL || OD_USE_HAAR_WAVELET) {
       OD_CLEAR(pred, n2);
     }
     else {
@@ -376,7 +376,7 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
       for (i = 0; i < 1 << level; i++) {
         int j;
         for (j = 0; j < 1 << level; j++)
-          pred[bo + i*n + j] *= q;
+          pred[bo + i*n + j] = q*pred[bo + i*n + j] + predt[bo + i*n + j];
       }
     }
   }
@@ -423,7 +423,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
 #endif
   }
   od_decode_compute_pred(dec, ctx, pred, ln, pli, bx, by);
-  if (ctx->is_keyframe && pli == 0) {
+  if (ctx->is_keyframe && pli == 0 && !OD_USE_HAAR_WAVELET) {
     od_hv_intra_pred(pred, d, w, bx, by, dec->state.bsize,
      dec->state.bstride, ln);
   }
