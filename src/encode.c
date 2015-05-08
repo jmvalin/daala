@@ -404,7 +404,7 @@ static void od_encode_compute_pred(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, od_co
   md = ctx->md;
   l = ctx->l;
   if (ctx->is_keyframe) {
-    if (pli == 0 || OD_DISABLE_CFL) {
+    if (pli == 0 || OD_DISABLE_CFL || OD_USE_HAAR_WAVELET) {
       OD_CLEAR(pred, n2);
     }
     else {
@@ -594,8 +594,9 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
       if (quant == 0) q = 1;
       else q = quant*OD_HAAR_QM[dir==2][level] >> 4;
       for (i = 0; i < 1 << level; i++) {
-        for (j = 0; j < 1 << level; j++)
-          out[bo + i*n + j] = OD_DIV_R0(cblock[bo + i*n + j], q);
+        for (j = 0; j < 1 << level; j++) {
+          out[bo + i*n + j] = OD_DIV_R0(cblock[bo + i*n + j] - predt[bo + i*n + j], q);
+        }
       }
     }
   }
@@ -652,7 +653,7 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
       else q = quant*OD_HAAR_QM[dir==2][level] >> 4;
       for (i = 0; i < 1 << level; i++) {
         for (j = 0; j < 1 << level; j++)
-          out[bo + i*n + j] *= q;
+          out[bo + i*n + j] = q*out[bo + i*n + j] + predt[bo + i*n + j];
       }
     }
   }
@@ -718,7 +719,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   }
 #endif
   od_encode_compute_pred(enc, ctx, pred, ln, pli, bx, by);
-  if (ctx->is_keyframe && pli == 0) {
+  if (ctx->is_keyframe && pli == 0 && !OD_USE_HAAR_WAVELET) {
     od_hv_intra_pred(pred, d, w, bx, by, enc->state.bsize,
      enc->state.bstride, ln);
   }
