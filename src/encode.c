@@ -776,7 +776,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_UNKNOWN);
   if (OD_DISABLE_HAAR_DC || !ctx->is_keyframe) {
     int has_dc_skip;
-    has_dc_skip = !ctx->is_keyframe && !lossless;
+    has_dc_skip = !ctx->is_keyframe && !lossless && !OD_USE_HAAR_WAVELET;
     OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_DC_COEFF);
     if (!has_dc_skip || scalar_out[0]) {
       generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli],
