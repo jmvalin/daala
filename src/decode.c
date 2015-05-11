@@ -437,7 +437,19 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
     od_hv_intra_pred(pred, d, w, bx, by, dec->state.bsize,
      dec->state.bstride, ln);
   }
+#if OD_USE_HAAR_WAVELET
+  {
+    int i;
+    int j;
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        predt[i*n + j] = pred[i*n + j];
+      }
+    }
+  }
+#else
   od_raster_to_coding_order(predt,  n, &pred[0], n, lossless);
+#endif
   quant = OD_MAXI(1, dec->quantizer[pli]);
   if (lossless) dc_quant = 1;
   else {
