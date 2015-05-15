@@ -166,9 +166,9 @@ const int OD_QM8_Q4[] = {
    magnitude compensation is done here for inter (Haar DC doesn't need it). */
 static const unsigned char od_flat_luma_qm_q4[OD_QM_SIZE] = {
   27, 16,
-  23, 16, 16, 16,
-  19, 16, 16, 16, 16, 16,
-  17, 16, 16, 16, 16, 16, 16, 16
+  23, 18, 16, 16,
+  19, 14, 16, 16, 16, 16,
+  17, 11, 16, 16, 16, 16, 16, 16
 };
 
 /* Chroma quantization is different because of the reduced lapping.
@@ -230,9 +230,9 @@ const od_qm_entry OD_DEFAULT_QMS[][OD_NPLANES_MAX] = {
 #if OD_DISABLE_MASKING
 
 static const double OD_PVQ_BETA4_LUMA[1] = {1.};
-static const double OD_PVQ_BETA8_LUMA[4] = {1., 1., 1., 1.};
-static const double OD_PVQ_BETA16_LUMA[7] = {1., 1., 1., 1., 1., 1., 1.};
-static const double OD_PVQ_BETA32_LUMA[10] = {1., 1., 1., 1., 1., 1., 1.,
+static const double OD_PVQ_BETA8_LUMA[4] = {1.5, 1., 1., 1.};
+static const double OD_PVQ_BETA16_LUMA[7] = {1.5, 1., 1., 1., 1., 1., 1.};
+static const double OD_PVQ_BETA32_LUMA[10] = {1.5, 1., 1., 1., 1., 1., 1.,
  1., 1., 1.};
 
 #else
