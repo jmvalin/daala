@@ -2019,7 +2019,6 @@ void od_inv_haar_1d(od_coeff *x, int stride, int ln) {
   }
 }
 
-#if 1
 void od_haar(od_coeff *y, int ystride,
   const od_coeff *x, int xstride, int ln) {
   int i;
@@ -2086,46 +2085,6 @@ void od_haar_inv(od_coeff *x, int xstride,
     }
   }
 }
-#else
-void od_haar(od_coeff *y, int ystride,
-  const od_coeff *x, int xstride, int ln) {
-  int i;
-  int j;
-  int n;
-  n = 1 << ln;
-  for (i = 0; i < n; i++) {
-    for (j = 0; j < n; j++) {
-      y[i*ystride + j] = x[i*xstride + j];
-    }
-  }
-  for (i = 0; i < n; i++) {
-    od_haar_1d(&y[i*ystride], 1, ln);
-  }
-  for (i = 0; i < n; i++) {
-    od_haar_1d(&y[i], ystride, ln);
-  }
-}
-
-void od_haar_inv(od_coeff *x, int xstride,
- const od_coeff *y, int ystride, int ln) {
-  int i;
-  int j;
-  int n;
-  n = 1 << ln;
-  for (i = 0; i < n; i++) {
-    for (j = 0; j < n; j++) {
-      x[i*xstride + j] = y[i*ystride + j];
-    }
-  }
-  for (i = 0; i < n; i++) {
-    od_inv_haar_1d(&x[i], xstride, ln);
-  }
-  for (i = 0; i < n; i++) {
-    od_inv_haar_1d(&x[i*xstride], 1, ln);
-  }
-}
-#endif
-
 
 void od_bin_fdct32x32(od_coeff *y, int ystride,
  const od_coeff *x, int xstride) {
