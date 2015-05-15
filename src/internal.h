@@ -85,8 +85,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 # define OD_USE_HAAR_WAVELET (1)
 # if OD_USE_HAAR_WAVELET && \
-   !(OD_DISABLE_FILTER && OD_DISABLE_MASKING)
-#  error "Haar needs filter, AM and QM disabled"
+   !OD_DISABLE_FILTER
+#  error "Haar needs filter disabled"
 # endif
 
 # define OD_COEFF_SHIFT (4)
