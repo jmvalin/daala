@@ -329,16 +329,14 @@ static void od_decode_sum_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
 
 static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
  const od_coeff *predt, int quant, int pli) {
-  int n2;
   int n;
   int i;
   int dir;
   od_coeff tree_sum[2][2] = {{0}};
   n = 1 << ln;
-  n2 = 1 << 2*ln;
   for (i = 0; i < n; i++) {
     int j;
-    for (j = 0; j < n; j++) if (i+j) pred[i*n + j] = 0;
+    for (j = 0; j < n; j++) if (i + j) pred[i*n + j] = 0;
   }
   {
     int bits;
@@ -369,11 +367,6 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
       pred[i*n + j] = in;
     }
   }
-#if 0
-  for (i = 1; i < n2; i++) {
-    pred[i] = pred[i]*quant;
-  }
-#else
   for (dir = 0; dir < 3; dir++) {
     int level;
     for (level = 0; level < ln; level++) {
@@ -389,8 +382,6 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
       }
     }
   }
-
-#endif
 }
 
 static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,

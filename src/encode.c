@@ -499,7 +499,8 @@ static void od_ec_enc_unary(od_ec_enc *ec, int x) {
 
 /* Encodes the magnitude of the coefficient at the root of a tree based
    on the sum for the entire tree (distribution can be highly biased). */
-static void od_encode_coeff_split(daala_enc_ctx *enc, int a, int sum, int ctx) {
+static void od_encode_coeff_split(daala_enc_ctx *enc, int a, int sum,
+ int ctx) {
   int shift;
   if (sum == 0) return;
   shift = OD_MAXI(0, OD_ILOG(sum) - 4);
@@ -574,19 +575,12 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
 static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
  od_coeff *out, const od_coeff *cblock, const od_coeff *predt,
  int quant, int pli) {
-  int n2;
   int n;
   int i, j;
   int dir;
   od_coeff tree_sum[OD_BSIZE_MAX][OD_BSIZE_MAX];
   n = 1 << ln;
-  n2 = 1 << 2*ln;
-  /* Quantize everything by DC. */
-#if 0
-  for (i = 1; i < n2; i++) {
-    out[i] = OD_DIV_R0(cblock[i], quant);
-  }
-#else
+  /* Quantize everything but DC. */
   for (dir = 0; dir < 3; dir++) {
     int level;
     for (level = 0; level < ln; level++) {
@@ -597,17 +591,16 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
       else q = quant*OD_HAAR_QM[dir==2][level] >> 4;
       for (i = 0; i < 1 << level; i++) {
         for (j = 0; j < 1 << level; j++) {
-          out[bo + i*n + j] = OD_DIV_R0(cblock[bo + i*n + j] - predt[bo + i*n + j], q);
+          out[bo + i*n + j] = OD_DIV_R0(cblock[bo + i*n + j]
+           - predt[bo + i*n + j], q);
         }
       }
     }
   }
-#endif
   /* Compute magnitude at each level of each tree. */
   od_compute_max_tree(tree_sum, 1, 0, out, ln);
   od_compute_max_tree(tree_sum, 0, 1, out, ln);
   od_compute_max_tree(tree_sum, 1, 1, out, ln);
-  /*if (ln==5)for (i=0;i<n;i++)for(j=0;j<n;j++)printf("%d ", tree_sum[i][j]);printf("\n");*/
   /* Encode magnitude for the top of each tree */
   tree_sum[0][0] = tree_sum[0][1] + tree_sum[1][0] + tree_sum[1][1];
   {
@@ -626,7 +619,8 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     /* Encode diagonal tree sum. */
     od_encode_tree_split(enc, tree_sum[1][1], tree_sum[0][0], 3);
     /* Horizontal vs vertical. */
-    od_encode_tree_split(enc, tree_sum[0][1], tree_sum[0][0] - tree_sum[1][1], 4);
+    od_encode_tree_split(enc, tree_sum[0][1], tree_sum[0][0] - tree_sum[1][1],
+     4);
   }
   /* Encode all 3 trees. */
   od_encode_sum_tree(enc, out, ln, tree_sum, 1, 0, 0, pli);
@@ -640,11 +634,6 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
       if (in) od_ec_enc_bits(&enc->ec, in < 0, 1);
     }
   }
-#if 0
-  for (i = 1; i < n2; i++) {
-    out[i] *= quant;
-  }
-#else
   for (dir = 0; dir < 3; dir++) {
     int level;
     for (level = 0; level < ln; level++) {
@@ -659,7 +648,6 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
       }
     }
   }
-#endif
   return 0;
 }
 
