@@ -1888,7 +1888,8 @@ static void od_split_superblocks_rdo(daala_enc_ctx *enc,
   od_encode_checkpoint(enc, &rbuf);
   for (i = 0; i < 4*nvsb; i++) {
     for (j = 0; j < 4*nhsb; j++) {
-      state->bsize[i*state->bstride + j] = OD_LIMIT_BSIZE_MIN;
+      state->bsize[i*state->bstride + j] = mbctx->use_haar_wavelet ?
+       OD_BLOCK_32X32 :  OD_LIMIT_BSIZE_MIN;
     }
   }
   od_encode_residual(enc, mbctx, OD_ENCODE_RDO);
