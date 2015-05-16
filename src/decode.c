@@ -162,6 +162,7 @@ struct od_mb_dec_ctx {
   od_coeff *l;
   int is_keyframe;
   int use_activity_masking;
+  int use_haar_wavelet;
 };
 typedef struct od_mb_dec_ctx od_mb_dec_ctx;
 
@@ -639,7 +640,7 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
        ctx->d[0] + (by << (2 + l))*frame_width + (bx << (2 + l)),
        frame_width, xdec, ydec, d, od);
     }
-    od_block_decode(dec, ctx, d, pli, bx, by, OD_USE_HAAR_WAVELET);
+    od_block_decode(dec, ctx, d, pli, bx, by, ctx->use_haar_wavelet);
   }
   else {
     int f;
@@ -914,6 +915,7 @@ int daala_decode_packet_in(daala_dec_ctx *dec, od_img *img,
   if (od_ec_decode_bool_q15(&dec->ec, 16384)) return OD_EBADPACKET;
   mbctx.is_keyframe = od_ec_decode_bool_q15(&dec->ec, 16384);
   mbctx.use_activity_masking = od_ec_decode_bool_q15(&dec->ec, 16384);
+  mbctx.use_haar_wavelet = od_ec_decode_bool_q15(&dec->ec, 16384);
   if (mbctx.is_keyframe) {
     int nplanes;
     int pli;

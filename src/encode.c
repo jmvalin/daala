@@ -97,6 +97,7 @@ static int od_enc_init(od_enc_ctx *enc, const daala_info *info) {
   }
   enc->complexity = 7;
   enc->use_activity_masking = 1;
+  enc->use_haar_wavelet = OD_USE_HAAR_WAVELET;
   enc->mvest = od_mv_est_alloc(enc);
   if (OD_UNLIKELY(!enc->mvest)) {
     return OD_EFAULT;
@@ -366,6 +367,7 @@ struct od_mb_enc_ctx {
   od_coeff *l;
   int is_keyframe;
   int use_activity_masking;
+  int use_haar_wavelet;
   /** The quantized DC (dc) is saved in this buffer in recursive raster order,
       with higher levels sub-blocks stored just before the smaller subblocks
       they contain. We save all the DCs for each of the levels we consider.
@@ -1171,7 +1173,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
        frame_width, xdec, ydec, d, od);
     }
     return od_block_encode(enc, ctx, d, pli, bx, by, rdo_only,
-     OD_USE_HAAR_WAVELET);
+     ctx->use_haar_wavelet);
   }
   else {
     int f;
@@ -1210,7 +1212,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       }
       od_encode_checkpoint(enc, &pre_encode_buf);
       skip_nosplit = od_block_encode(enc, ctx, d, pli, bx, by, rdo_only,
-       OD_USE_HAAR_WAVELET);
+       ctx->use_haar_wavelet);
       rate_nosplit = od_ec_enc_tell_frac(&enc->ec) - tell;
       od_encode_checkpoint(enc, &post_nosplit_buf);
       od_encode_rollback(enc, &pre_encode_buf);
@@ -1689,7 +1691,7 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
             od_encode_checkpoint(enc, &buf);
           }
           od_compute_dcts(enc, mbctx, pli, sbx, sby, 3, xdec, ydec,
-           OD_USE_HAAR_WAVELET && !rdo_only);
+           mbctx->use_haar_wavelet && !rdo_only);
           od_quantize_haar_dc(enc, mbctx, pli, sbx, sby, 3, xdec, ydec, 0,
            0, sby > 0 && sbx < nhsb - 1, rdo_only);
           if (rdo_only) {
@@ -1958,6 +1960,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration) {
   mbctx.is_keyframe |= !(enc->state.ref_imgi[OD_FRAME_PREV] >= 0);
   /* FIXME: This should be dynamic */
   mbctx.use_activity_masking = enc->use_activity_masking;
+  mbctx.use_haar_wavelet = enc->use_haar_wavelet;
   /*Initialize the entropy coder.*/
   od_ec_enc_reset(&enc->ec);
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_FRAME);
@@ -1968,6 +1971,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration) {
   od_ec_encode_bool_q15(&enc->ec, mbctx.is_keyframe, 16384);
   /*Code whether or not activity masking is being used.*/
   od_ec_encode_bool_q15(&enc->ec, mbctx.use_activity_masking, 16384);
+  od_ec_encode_bool_q15(&enc->ec, mbctx.use_haar_wavelet, 16384);
   for (pli = 0; pli < nplanes; pli++) {
     enc->quantizer[pli] = od_quantizer_from_quality(enc->quality[pli]);
   }
