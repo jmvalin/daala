@@ -382,8 +382,8 @@ struct od_mb_enc_ctx {
 };
 typedef struct od_mb_enc_ctx od_mb_enc_ctx;
 
-static void od_encode_compute_pred(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, od_coeff *pred,
-  int ln, int pli, int bx, int by) {
+static void od_encode_compute_pred(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
+ od_coeff *pred, int ln, int pli, int bx, int by, int use_haar) {
   int n;
   int n2;
   int xdec;
@@ -404,7 +404,7 @@ static void od_encode_compute_pred(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, od_co
   md = ctx->md;
   l = ctx->l;
   if (ctx->is_keyframe) {
-    if (pli == 0 || OD_DISABLE_CFL || OD_USE_HAAR_WAVELET) {
+    if (pli == 0 || OD_DISABLE_CFL || use_haar) {
       OD_CLEAR(pred, n2);
     }
     else {
@@ -663,7 +663,7 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
 
 /* Returns 1 if the block is skipped, zero otherwise. */
 static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
- int pli, int bx, int by, int rdo_only) {
+ int pli, int bx, int by, int rdo_only, int use_haar) {
   int n;
   int xdec;
   int w;
@@ -701,14 +701,15 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   mc = ctx->mc;
   lossless = (enc->quantizer[pli] == 0);
   /* Apply forward transform. */
-#if OD_USE_HAAR_WAVELET
+  if (use_haar) {
   if (OD_DISABLE_HAAR_DC || rdo_only || !ctx->is_keyframe) {
     od_haar(d + bo, w, c + bo, w, ln + 2);
   }
   if (!ctx->is_keyframe) {
     od_haar(md + bo, w, mc + bo, w, ln + 2);
   }
-#else
+  }
+  else {
   if (OD_DISABLE_HAAR_DC || rdo_only || !ctx->is_keyframe) {
     (*enc->state.opt_vtbl.fdct_2d[ln])(d + bo, w, c + bo, w);
     if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 0);
@@ -717,16 +718,16 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     (*enc->state.opt_vtbl.fdct_2d[ln])(md + bo, w, mc + bo, w);
     if (!lossless) od_apply_qm(md + bo, w, md + bo, w, ln, xdec, 0);
   }
-#endif
-  od_encode_compute_pred(enc, ctx, pred, ln, pli, bx, by);
-  if (ctx->is_keyframe && pli == 0 && !OD_USE_HAAR_WAVELET) {
+  }
+  od_encode_compute_pred(enc, ctx, pred, ln, pli, bx, by, use_haar);
+  if (ctx->is_keyframe && pli == 0 && !use_haar) {
     od_hv_intra_pred(pred, d, w, bx, by, enc->state.bsize,
      enc->state.bstride, ln);
   }
 #if defined(OD_OUTPUT_PRED)
   for (zzi = 0; zzi < (n*n); zzi++) preds[zzi] = pred[zzi];
 #endif
-#if OD_USE_HAAR_WAVELET
+  if (use_haar) {
   {
     int i;
     int j;
@@ -737,11 +738,12 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
       }
     }
   }
-#else
+  }
+  else {
   /* Change ordering for encoding. */
   od_raster_to_coding_order(cblock,  n, &d[bo], w, lossless);
   od_raster_to_coding_order(predt,  n, &pred[0], n, lossless);
-#endif
+  }
   /* Lossless encoding uses an actual quantizer of 1, but is signalled
      with a 'quantizer' of 0. */
   quant = OD_MAXI(1, enc->quantizer[pli]);
@@ -760,10 +762,11 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     }
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_AC_COEFFS);
-#if OD_USE_HAAR_WAVELET
+  if (use_haar) {
   skip = od_wavelet_quantize(enc, ln + 2, scalar_out, cblock, predt,
    enc->quantizer[pli], pli);
-#else
+  }
+  else {
   if (lossless) {
     skip = od_single_band_lossless_encode(enc, ln, scalar_out, cblock, predt,
      pli);
@@ -772,11 +775,11 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     skip = od_pvq_encode(enc, predt, cblock, scalar_out, quant, pli, ln,
      OD_PVQ_BETA[use_masking][pli][ln], OD_ROBUST_STREAM, ctx->is_keyframe);
   }
-#endif
+  }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_UNKNOWN);
   if (OD_DISABLE_HAAR_DC || !ctx->is_keyframe) {
     int has_dc_skip;
-    has_dc_skip = !ctx->is_keyframe && !lossless && !OD_USE_HAAR_WAVELET;
+    has_dc_skip = !ctx->is_keyframe && !lossless && !use_haar;
     OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_DC_COEFF);
     if (!has_dc_skip || scalar_out[0]) {
       generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli],
@@ -795,7 +798,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     OD_ASSERT(ctx->dc_idx < OD_NB_SAVED_DCS);
     if (rdo_only && ctx->is_keyframe) scalar_out[0] = ctx->dc[ctx->dc_idx++];
   }
-#if OD_USE_HAAR_WAVELET
+  if (use_haar)
   {
     int i;
     int j;
@@ -805,17 +808,18 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
       }
     }
   }
-#else
+  else {
   od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
-#endif
+  }
   /*Apply the inverse transform.*/
 #if !defined(OD_OUTPUT_PRED)
-#if OD_USE_HAAR_WAVELET
+  if (use_haar) {
   od_haar_inv(c + bo, w, d + bo, w, ln + 2);
-#else
+  }
+  else {
   if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
   (*enc->state.opt_vtbl.idct_2d[ln])(c + bo, w, d + bo, w);
-#endif
+  }
 #else
 # if 0
   /*Output the resampled luma plane.*/
@@ -833,7 +837,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
 }
 
 static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
-  int bx, int by, int l, int xdec, int ydec) {
+  int bx, int by, int l, int xdec, int ydec, int use_haar) {
   int od;
   int d;
   int w;
@@ -852,12 +856,13 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
   if (d == l) {
     d -= xdec;
     bo = (by << (OD_LOG_BSIZE0 + d))*w + (bx << (OD_LOG_BSIZE0 + d));
-#if OD_USE_HAAR_WAVELET
-    od_haar(c + bo, w, ctx->c + bo, w, d + 2);
-#else
-    (*enc->state.opt_vtbl.fdct_2d[d])(c + bo, w, ctx->c + bo, w);
-    if (!lossless) od_apply_qm(c + bo, w, c + bo, w, d, xdec, 0);
-#endif
+    if (use_haar) {
+      od_haar(c + bo, w, ctx->c + bo, w, d + 2);
+    }
+    else {
+      (*enc->state.opt_vtbl.fdct_2d[d])(c + bo, w, ctx->c + bo, w);
+      if (!lossless) od_apply_qm(c + bo, w, c + bo, w, d, xdec, 0);
+    }
   }
   else {
     int f;
@@ -868,10 +873,10 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
     l--;
     bx <<= 1;
     by <<= 1;
-    od_compute_dcts(enc, ctx, pli, bx + 0, by + 0, l, xdec, ydec);
-    od_compute_dcts(enc, ctx, pli, bx + 1, by + 0, l, xdec, ydec);
-    od_compute_dcts(enc, ctx, pli, bx + 0, by + 1, l, xdec, ydec);
-    od_compute_dcts(enc, ctx, pli, bx + 1, by + 1, l, xdec, ydec);
+    od_compute_dcts(enc, ctx, pli, bx + 0, by + 0, l, xdec, ydec, use_haar);
+    od_compute_dcts(enc, ctx, pli, bx + 1, by + 0, l, xdec, ydec, use_haar);
+    od_compute_dcts(enc, ctx, pli, bx + 0, by + 1, l, xdec, ydec, use_haar);
+    od_compute_dcts(enc, ctx, pli, bx + 1, by + 1, l, xdec, ydec, use_haar);
     if (!OD_DISABLE_HAAR_DC && ctx->is_keyframe) {
       od_coeff x[4];
       int l2;
@@ -1166,7 +1171,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
        ctx->d[0] + (by << (2 + l))*frame_width + (bx << (2 + l)),
        frame_width, xdec, ydec, d, od);
     }
-    return od_block_encode(enc, ctx, d, pli, bx, by, rdo_only);
+    return od_block_encode(enc, ctx, d, pli, bx, by, rdo_only,
+     OD_USE_HAAR_WAVELET);
   }
   else {
     int f;
@@ -1204,7 +1210,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
         for (j = 0; j < n; j++) mc_orig[n*i + j] = ctx->mc[bo + i*w + j];
       }
       od_encode_checkpoint(enc, &pre_encode_buf);
-      skip_nosplit = od_block_encode(enc, ctx, d, pli, bx, by, rdo_only);
+      skip_nosplit = od_block_encode(enc, ctx, d, pli, bx, by, rdo_only,
+       OD_USE_HAAR_WAVELET);
       rate_nosplit = od_ec_enc_tell_frac(&enc->ec) - tell;
       od_encode_checkpoint(enc, &post_nosplit_buf);
       od_encode_rollback(enc, &pre_encode_buf);
@@ -1682,7 +1689,8 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
             }
             od_encode_checkpoint(enc, &buf);
           }
-          od_compute_dcts(enc, mbctx, pli, sbx, sby, 3, xdec, ydec);
+          od_compute_dcts(enc, mbctx, pli, sbx, sby, 3, xdec, ydec,
+           OD_USE_HAAR_WAVELET && !rdo_only);
           od_quantize_haar_dc(enc, mbctx, pli, sbx, sby, 3, xdec, ydec, 0,
            0, sby > 0 && sbx < nhsb - 1, rdo_only);
           if (rdo_only) {
