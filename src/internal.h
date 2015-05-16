@@ -75,7 +75,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # if OD_LIMIT_BSIZE_MIN > OD_BLOCK_32X32 || OD_LIMIT_BSIZE_MAX > OD_BLOCK_32X32
 #  error "block sizes above 32x32 not supported"
 # endif
-# define OD_DISABLE_FILTER (1)
+# define OD_DISABLE_FILTER (0)
 # define OD_DISABLE_HAAR_DC (0)
 # define OD_DISABLE_CFL (0)
 # define OD_DISABLE_QM (0)
@@ -84,10 +84,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # define OD_ROBUST_STREAM (0)
 
 # define OD_USE_HAAR_WAVELET (1)
-# if OD_USE_HAAR_WAVELET && \
-   !OD_DISABLE_FILTER
-#  error "Haar needs filter disabled"
-# endif
 
 # define OD_COEFF_SHIFT (4)
 /*OD_QUALITY_SHIFT specifies the number of fractional bits in a

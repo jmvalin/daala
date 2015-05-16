@@ -1653,10 +1653,13 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
        state->bsize, state->bstride, xdec);
     }
 #else
-    od_apply_prefilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec, ydec);
-    if (!mbctx->is_keyframe) {
-      od_apply_prefilter_frame_sbs(state->mctmp[pli], w, nhsb, nvsb, xdec,
+    if (!mbctx->use_haar_wavelet) {
+      od_apply_prefilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec,
        ydec);
+      if (!mbctx->is_keyframe) {
+        od_apply_prefilter_frame_sbs(state->mctmp[pli], w, nhsb, nvsb, xdec,
+         ydec);
+      }
     }
 #endif
   }
@@ -1747,7 +1750,10 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     od_apply_postfilter_frame(state->ctmp[pli], w, nhsb, nvsb,
      state->bsize, state->bstride, xdec);
 #else
-    od_apply_postfilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec, ydec);
+    if (!mbctx->use_haar_wavelet) {
+      od_apply_postfilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec,
+       ydec);
+    }
 #endif
     if (!rdo_only) {
       for (sby = 0; sby < nvsb; sby++) {
