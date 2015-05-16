@@ -426,11 +426,11 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
   /*Apply forward transform to MC predictor.*/
   if (!ctx->is_keyframe) {
     if (use_haar) {
-    od_haar(md + bo, w, mc + bo, w, ln + 2);
+      od_haar(md + bo, w, mc + bo, w, ln + 2);
     }
     else {
-    (*dec->state.opt_vtbl.fdct_2d[ln])(md + bo, w, mc + bo, w);
-    if (!lossless) od_apply_qm(md + bo, w, md + bo, w, ln, xdec, 0);
+      (*dec->state.opt_vtbl.fdct_2d[ln])(md + bo, w, mc + bo, w);
+      if (!lossless) od_apply_qm(md + bo, w, md + bo, w, ln, xdec, 0);
     }
   }
   od_decode_compute_pred(dec, ctx, pred, ln, pli, bx, by, use_haar);
@@ -457,20 +457,20 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
      dec->state.pvq_qm_q4[pli][od_qm_get_index(ln, 0)] >> 4);
   }
   if (use_haar) {
-  od_wavelet_unquantize(dec, ln + 2, pred, predt, dec->quantizer[pli], pli);
+    od_wavelet_unquantize(dec, ln + 2, pred, predt, dec->quantizer[pli], pli);
   }
   else {
-  if (lossless) {
-    od_block_lossless_decode(dec, ln, pred, predt, pli);
-  }
-  else {
-    unsigned int flags;
-    od_pvq_decode(dec, predt, pred, quant, pli, ln,
-     OD_PVQ_BETA[use_masking][pli][ln], OD_ROBUST_STREAM, ctx->is_keyframe, &flags);
-    if (pli == 0 && dec->user_flags != NULL) {
-      dec->user_flags[by*dec->user_fstride + bx] = flags;
+    if (lossless) {
+      od_block_lossless_decode(dec, ln, pred, predt, pli);
     }
-  }
+    else {
+      unsigned int flags;
+      od_pvq_decode(dec, predt, pred, quant, pli, ln,
+       OD_PVQ_BETA[use_masking][pli][ln], OD_ROBUST_STREAM, ctx->is_keyframe, &flags);
+      if (pli == 0 && dec->user_flags != NULL) {
+        dec->user_flags[by*dec->user_fstride + bx] = flags;
+      }
+    }
   }
   if (OD_DISABLE_HAAR_DC || !ctx->is_keyframe) {
     int has_dc_skip;
@@ -495,15 +495,15 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
     }
   }
   else {
-  od_coding_order_to_raster(&d[bo], w, pred, n, lossless);
+    od_coding_order_to_raster(&d[bo], w, pred, n, lossless);
   }
   if (use_haar) {
-  od_haar_inv(c + bo, w, d + bo, w, ln + 2);
+    od_haar_inv(c + bo, w, d + bo, w, ln + 2);
   }
   else {
-  if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
-  /*Apply the inverse transform.*/
-  (*dec->state.opt_vtbl.idct_2d[ln])(c + bo, w, d + bo, w);
+    if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
+    /*Apply the inverse transform.*/
+    (*dec->state.opt_vtbl.idct_2d[ln])(c + bo, w, d + bo, w);
   }
 }
 

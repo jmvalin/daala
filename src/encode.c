@@ -702,22 +702,22 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   lossless = (enc->quantizer[pli] == 0);
   /* Apply forward transform. */
   if (use_haar) {
-  if (OD_DISABLE_HAAR_DC || rdo_only || !ctx->is_keyframe) {
-    od_haar(d + bo, w, c + bo, w, ln + 2);
-  }
-  if (!ctx->is_keyframe) {
-    od_haar(md + bo, w, mc + bo, w, ln + 2);
-  }
+    if (OD_DISABLE_HAAR_DC || rdo_only || !ctx->is_keyframe) {
+      od_haar(d + bo, w, c + bo, w, ln + 2);
+    }
+    if (!ctx->is_keyframe) {
+      od_haar(md + bo, w, mc + bo, w, ln + 2);
+    }
   }
   else {
-  if (OD_DISABLE_HAAR_DC || rdo_only || !ctx->is_keyframe) {
-    (*enc->state.opt_vtbl.fdct_2d[ln])(d + bo, w, c + bo, w);
-    if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 0);
-  }
-  if (!ctx->is_keyframe) {
-    (*enc->state.opt_vtbl.fdct_2d[ln])(md + bo, w, mc + bo, w);
-    if (!lossless) od_apply_qm(md + bo, w, md + bo, w, ln, xdec, 0);
-  }
+    if (OD_DISABLE_HAAR_DC || rdo_only || !ctx->is_keyframe) {
+      (*enc->state.opt_vtbl.fdct_2d[ln])(d + bo, w, c + bo, w);
+      if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 0);
+    }
+    if (!ctx->is_keyframe) {
+      (*enc->state.opt_vtbl.fdct_2d[ln])(md + bo, w, mc + bo, w);
+      if (!lossless) od_apply_qm(md + bo, w, md + bo, w, ln, xdec, 0);
+    }
   }
   od_encode_compute_pred(enc, ctx, pred, ln, pli, bx, by, use_haar);
   if (ctx->is_keyframe && pli == 0 && !use_haar) {
@@ -763,18 +763,18 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_AC_COEFFS);
   if (use_haar) {
-  skip = od_wavelet_quantize(enc, ln + 2, scalar_out, cblock, predt,
-   enc->quantizer[pli], pli);
+    skip = od_wavelet_quantize(enc, ln + 2, scalar_out, cblock, predt,
+     enc->quantizer[pli], pli);
   }
   else {
-  if (lossless) {
-    skip = od_single_band_lossless_encode(enc, ln, scalar_out, cblock, predt,
-     pli);
-  }
-  else {
-    skip = od_pvq_encode(enc, predt, cblock, scalar_out, quant, pli, ln,
-     OD_PVQ_BETA[use_masking][pli][ln], OD_ROBUST_STREAM, ctx->is_keyframe);
-  }
+    if (lossless) {
+      skip = od_single_band_lossless_encode(enc, ln, scalar_out, cblock, predt,
+        pli);
+    }
+    else {
+      skip = od_pvq_encode(enc, predt, cblock, scalar_out, quant, pli, ln,
+       OD_PVQ_BETA[use_masking][pli][ln], OD_ROBUST_STREAM, ctx->is_keyframe);
+    }
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_UNKNOWN);
   if (OD_DISABLE_HAAR_DC || !ctx->is_keyframe) {
@@ -798,8 +798,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     OD_ASSERT(ctx->dc_idx < OD_NB_SAVED_DCS);
     if (rdo_only && ctx->is_keyframe) scalar_out[0] = ctx->dc[ctx->dc_idx++];
   }
-  if (use_haar)
-  {
+  if (use_haar) {
     int i;
     int j;
     for (i = 0; i < n; i++) {
@@ -809,16 +808,16 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     }
   }
   else {
-  od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
+    od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
   }
   /*Apply the inverse transform.*/
 #if !defined(OD_OUTPUT_PRED)
   if (use_haar) {
-  od_haar_inv(c + bo, w, d + bo, w, ln + 2);
+    od_haar_inv(c + bo, w, d + bo, w, ln + 2);
   }
   else {
-  if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
-  (*enc->state.opt_vtbl.idct_2d[ln])(c + bo, w, d + bo, w);
+    if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 1);
+    (*enc->state.opt_vtbl.idct_2d[ln])(c + bo, w, d + bo, w);
   }
 #else
 # if 0
