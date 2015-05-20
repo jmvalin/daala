@@ -1006,6 +1006,10 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     bx <<= 1;
     by <<= 1;
     skip_split = 1;
+    if (!ctx->is_keyframe && pli == 0) {
+      od_encode_cdf_adapt(&enc->ec, 4, enc->state.adapt.skip_cdf[pli],
+       5, enc->state.adapt.skip_increment);
+    }
     skip_split &= od_encode_recursive(enc, ctx, pli, bx + 0, by + 0, l, xdec,
      ydec, rdo_only);
     skip_split &= od_encode_recursive(enc, ctx, pli, bx + 1, by + 0, l, xdec,
@@ -1027,7 +1031,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       }
       /* Adds a 2-bit cost to splitting (that doesn't propagate) that biases
          towards larger blocks. We do not yet understand why it helps. */
-      rate_split = 16 + od_ec_enc_tell_frac(&enc->ec) - tell;
+      rate_split = od_ec_enc_tell_frac(&enc->ec) - tell;
+      if (ctx->is_keyframe && rdo_only) rate_split += 16;
       dist_split = od_compute_dist(enc, c_orig, split, n);
       dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n);
       lambda = (1./(1 << OD_BITRES))*OD_PVQ_LAMBDA*enc->quantizer[pli]*
@@ -1795,7 +1800,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration) {
     od_split_superblocks(enc, 1);
 #endif
   }
-  od_encode_block_sizes(enc);
+  if (mbctx.is_keyframe) od_encode_block_sizes(enc);
   od_encode_residual(enc, &mbctx, OD_ENCODE_REAL);
 #if defined(OD_DUMP_IMAGES) || defined(OD_DUMP_RECONS)
   /*Dump YUV*/

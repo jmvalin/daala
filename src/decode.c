@@ -452,11 +452,14 @@ static void od_decode_haar_dc(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
 }
 #endif
 
+extern int foobar;
+
 static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
  int bx, int by, int l, int xdec, int ydec) {
   int od;
   int d;
   int w;
+  int skip;
   int frame_width;
   /*This code assumes 4:4:4 or 4:2:0 input.*/
   OD_ASSERT(xdec == ydec);
@@ -464,10 +467,23 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
    dec->state.bstride, bx << l, by << l);
   frame_width = dec->state.frame_width;
   w = frame_width >> xdec;
+  if (!ctx->is_keyframe && pli==0) {
+   skip = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.skip_cdf[pli], 5,
+    dec->state.adapt.skip_increment);
+   foobar = skip;
+   if (skip < 4) od = l;
+   else {
+     od = - 10;
+   }
+  }
   d = OD_MAXI(od, xdec);
   OD_ASSERT(d <= l);
   if (d == l) {
     d -= xdec;
+    if (pli == 0) {
+      OD_BLOCK_SIZE4x4(dec->state.bsize,
+        dec->state.bstride, bx << l, by << l) = l;
+    }
     /*Construct the luma predictors for chroma planes.*/
     if (ctx->l != NULL) {
       OD_ASSERT(pli > 0);
@@ -793,7 +809,7 @@ int daala_decode_packet_in(daala_dec_ctx *dec, od_img *img,
       od_img_copy(dec->user_mc_img, &dec->state.io_imgs[OD_FRAME_REC]);
     }
   }
-  od_decode_block_sizes(dec);
+  if (mbctx.is_keyframe) od_decode_block_sizes(dec);
   od_decode_residual(dec, &mbctx);
 #if defined(OD_DUMP_IMAGES) || defined(OD_DUMP_RECONS)
   /*Dump YUV*/
