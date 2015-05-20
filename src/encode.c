@@ -1007,7 +1007,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     by <<= 1;
     skip_split = 1;
     if (!ctx->is_keyframe && pli == 0) {
-      od_encode_cdf_adapt(&enc->ec, 4, enc->state.adapt.skip_cdf[pli],
+      od_encode_cdf_adapt(&enc->ec, 4, enc->state.adapt.skip_cdf[pli*4 + l + 1],
        5, enc->state.adapt.skip_increment);
     }
     skip_split &= od_encode_recursive(enc, ctx, pli, bx + 0, by + 0, l, xdec,

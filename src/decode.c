@@ -468,7 +468,7 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
   frame_width = dec->state.frame_width;
   w = frame_width >> xdec;
   if (!ctx->is_keyframe && pli==0) {
-   skip = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.skip_cdf[pli], 5,
+   skip = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.skip_cdf[pli*4 + l], 5,
     dec->state.adapt.skip_increment);
    foobar = skip;
    if (skip < 4) od = l;
