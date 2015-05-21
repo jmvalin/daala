@@ -330,7 +330,7 @@ void od_pvq_decode(daala_dec_ctx *dec,
   skip[0] = block_skip;
   if (!is_keyframe) {
     out[0] = skip[0]&1;
-    skip[0] >>= 1;
+    skip[0] = !(skip[0] >> 1);
   }
   if (skip[0]) {
     for (i = 1; i < 1 << (2*ln + 4); i++) out[i] = ref[i];
