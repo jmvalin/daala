@@ -468,8 +468,9 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
   w = frame_width >> xdec;
   skip = 0;
   if (!ctx->is_keyframe && pli==0) {
-    skip = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.skip_cdf[pli*4 + l],
-     5, dec->state.adapt.skip_increment);
+    skip = od_decode_cdf_adapt(&dec->ec,
+     dec->state.adapt.skip_cdf[pli*OD_NBSIZES + l], 5,
+     dec->state.adapt.skip_increment);
     if (skip < 4) od = l;
     else od = -1;
   }
@@ -495,6 +496,11 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
       od_resample_luma_coeffs(ctx->l + (by << (2 + d))*w + (bx << (2 + d)), w,
        ctx->d[0] + (by << (2 + l))*frame_width + (bx << (2 + l)),
        frame_width, xdec, ydec, d, od);
+    }
+    if (!ctx->is_keyframe && pli > 0) {
+      skip = od_decode_cdf_adapt(&dec->ec,
+       dec->state.adapt.skip_cdf[pli*OD_NBSIZES + l], 5,
+       dec->state.adapt.skip_increment);
     }
     od_block_decode(dec, ctx, d, pli, bx, by, skip);
   }

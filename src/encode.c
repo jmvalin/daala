@@ -1007,7 +1007,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     by <<= 1;
     skip_split = 1;
     if (!ctx->is_keyframe && pli == 0) {
-      od_encode_cdf_adapt(&enc->ec, 4, enc->state.adapt.skip_cdf[pli*4 + l + 1],
+      od_encode_cdf_adapt(&enc->ec, 4, enc->state.adapt.skip_cdf[pli*OD_NBSIZES + l + 1],
        5, enc->state.adapt.skip_increment);
     }
     skip_split &= od_encode_recursive(enc, ctx, pli, bx + 0, by + 0, l, xdec,
@@ -1032,7 +1032,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       /* Adds a 2-bit cost to splitting (that doesn't propagate) that biases
          towards larger blocks. We do not yet understand why it helps. */
       rate_split = od_ec_enc_tell_frac(&enc->ec) - tell;
-      if (ctx->is_keyframe && rdo_only) rate_split += 16;
+      if (ctx->is_keyframe) rate_split += 16;
       dist_split = od_compute_dist(enc, c_orig, split, n);
       dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n);
       lambda = (1./(1 << OD_BITRES))*OD_PVQ_LAMBDA*enc->quantizer[pli]*
