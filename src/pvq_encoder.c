@@ -639,10 +639,10 @@ int od_pvq_encode(daala_enc_ctx *enc,
   if (!is_keyframe) {
     double dc_rate;
     od_encode_checkpoint(enc, &buf);
-    dc_rate = -OD_LOG2((double)(skip_cdf[1]-skip_cdf[0])/(double)skip_cdf[0]);
+    dc_rate = -OD_LOG2((double)(skip_cdf[2]-skip_cdf[0])/(double)skip_cdf[0]);
     out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate);
     /* Code as if we're not skipping. */
-    od_encode_cdf_adapt(&enc->ec, (out[0] != 0), skip_cdf,
+    od_encode_cdf_adapt(&enc->ec, 2*(out[0] != 0), skip_cdf,
      5, enc->state.adapt.skip_increment);
     /* Excluding skip flag from the rate since it's minor and would be prone
        to greedy decision issues. */
@@ -695,11 +695,11 @@ int od_pvq_encode(daala_enc_ctx *enc,
     if (nb_bands == 0 || skip_diff <= OD_PVQ_LAMBDA/8*tell) {
       double dc_rate;
       dc_rate = -OD_LOG2((double)(skip_cdf[3]-skip_cdf[2])/
-       (double)(skip_cdf[2]-skip_cdf[1]));
+       (double)(skip_cdf[1]-skip_cdf[0]));
       out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate);
       /* We decide to skip, roll back everything as it was before. */
       od_encode_rollback(enc, &buf);
-      od_encode_cdf_adapt(&enc->ec, 2 + (out[0] != 0), skip_cdf,
+      od_encode_cdf_adapt(&enc->ec, 1 + 2*(out[0] != 0), skip_cdf,
        5, enc->state.adapt.skip_increment);
       for (i = 1; i < 1 << (2*ln + 4); i++) out[i] = ref[i];
       if ((out[0] == 0)) return 1;
