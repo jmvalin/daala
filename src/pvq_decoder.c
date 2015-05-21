@@ -278,8 +278,6 @@ static void pvq_decode_partition(od_ec_dec *ec,
   *skip = !!*skip;
 }
 
-int foobar;
-
 /** Decodes a coefficient block (except for DC) encoded using PVQ
  *
  * @param [in,out] dec     daala decoder context
@@ -303,7 +301,8 @@ void od_pvq_decode(daala_dec_ctx *dec,
                    const double *beta,
                    int robust,
                    int is_keyframe,
-                   unsigned int *flags){
+                   unsigned int *flags,
+                   int block_skip){
 
   int noref[PVQ_MAX_PARTITIONS];
   int skip[PVQ_MAX_PARTITIONS];
@@ -330,9 +329,12 @@ void od_pvq_decode(daala_dec_ctx *dec,
   off = &OD_BAND_OFFSETS[ln][1];
   if (is_keyframe) skip[0] = 0;
   else {
-    if (pli == 0) skip[0] = foobar;
-    else skip[0] = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.skip_cdf[pli*4 + ln], 5,
-     dec->state.adapt.skip_increment);
+    if (pli == 0) skip[0] = block_skip;
+    else {
+      skip[0] = od_decode_cdf_adapt(&dec->ec,
+       dec->state.adapt.skip_cdf[pli*4 + ln], 5,
+       dec->state.adapt.skip_increment);
+    }
     out[0] = skip[0]&1;
     skip[0] >>= 1;
   }
