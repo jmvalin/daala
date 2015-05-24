@@ -523,7 +523,10 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   lossless = (enc->quantizer[pli] == 0);
   /* Apply forward transform. */
   if (OD_DISABLE_HAAR_DC || rdo_only || !ctx->is_keyframe) {
+    int quantized_dc;
+    quantized_dc = d[bo];
     (*enc->state.opt_vtbl.fdct_2d[ln])(d + bo, w, c + bo, w);
+    d[bo] = quantized_dc;
     if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 0, qm);
   }
   if (!ctx->is_keyframe) {
@@ -587,7 +590,6 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   else {
     scalar_out[0] = cblock[0];
     OD_ASSERT(ctx->dc_idx < OD_NB_SAVED_DCS);
-    if (rdo_only && ctx->is_keyframe) scalar_out[0] = ctx->dc[ctx->dc_idx++];
   }
   od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
   /*Apply the inverse transform.*/
@@ -811,8 +813,6 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     x[2] += vgrad/5;
     hgrad = x[1];
     vgrad = x[2];
-    OD_HAAR_KERNEL(x[0], x[1], x[2], x[3]);
-    c[(by << l2)*w + (bx << l2)] = x[0];
     c[(by << l2)*w + ((bx + 1) << l2)] = x[1];
     c[((by + 1) << l2)*w + (bx << l2)] = x[2];
     c[((by + 1) << l2)*w + ((bx + 1) << l2)] = x[3];
@@ -991,12 +991,16 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     if (rdo_only) {
       int i;
       int j;
+      od_coeff dc_orig[32*32];
       tell = od_ec_enc_tell_frac(&enc->ec);
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) c_orig[n*i + j] = ctx->c[bo + i*w + j];
       }
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) mc_orig[n*i + j] = ctx->mc[bo + i*w + j];
+      }
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) dc_orig[n*i + j] = ctx->d[pli][bo + i*w + j];
       }
       od_encode_checkpoint(enc, &pre_encode_buf);
       skip_nosplit = od_block_encode(enc, ctx, d, pli, bx, by, rdo_only);
@@ -1008,6 +1012,9 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       }
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) ctx->c[bo + i*w + j] = c_orig[n*i + j];
+      }
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) ctx->d[pli][bo + i*w + j] = dc_orig[n*i + j];
       }
       if (rdo_only && ctx->is_keyframe) {
         int bits;
@@ -1031,6 +1038,18 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       od_encode_cdf_adapt(&enc->ec, 4,
        enc->state.adapt.skip_cdf[pli*OD_NBSIZES + l + 1], 5,
        enc->state.adapt.skip_increment);
+    }
+    if (1) {
+      od_coeff x[4];
+      x[0] = ctx->d[pli][bo];
+      x[1] = ctx->d[pli][bo + (1 << (l - xdec + 2))];
+      x[2] = ctx->d[pli][bo + (1 << (l - xdec + 2))*w];
+      x[3] = ctx->d[pli][bo + (1 << (l - xdec + 2))*(w + 1)];
+      OD_HAAR_KERNEL(x[0], x[1], x[2], x[3]);
+      ctx->d[pli][bo] = x[0];
+      ctx->d[pli][bo + (1 << (l - xdec + 2))] = x[1];
+      ctx->d[pli][bo + (1 << (l - xdec + 2))*w] = x[2];
+      ctx->d[pli][bo + (1 << (l - xdec + 2))*(w + 1)] = x[3];
     }
     skip_split &= od_encode_recursive(enc, ctx, pli, bx + 0, by + 0, l, xdec,
      ydec, rdo_only);
