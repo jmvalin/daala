@@ -1043,13 +1043,12 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
        enc->state.adapt.skip_cdf[pli*OD_NBSIZES + l + 1], 5,
        enc->state.adapt.skip_increment);
     }
-    if (1) {
+    if (ctx->is_keyframe) {
       od_coeff x[4];
       int l2;
       int ac_quant[2];
       int i;
       int dc_quant;
-if (1) {
       if (enc->quantizer[pli] == 0) dc_quant = 1;
       else {
         dc_quant = OD_MAXI(1, enc->quantizer[pli]*OD_DC_RES[pli] >> 4);
@@ -1075,7 +1074,7 @@ if (1) {
         q = ac_quant[i == 3];
         sign = x[i] < 0;
         x[i] = abs(x[i]);
-  #if 0 /* Set to zero to disable RDO. */
+  #if 1 /* Set to zero to disable RDO. */
         quant = x[i]/q;
         cost = generic_encode_cost(&enc->state.adapt.model_dc[pli], quant + 1,
          -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
@@ -1099,14 +1098,6 @@ if (1) {
       x[2] += vgrad/5;
       hgrad = x[1];
       vgrad = x[2];
-      ctx->d[pli][(by << l2)*w + ((bx + 1) << l2)] = x[1];
-      ctx->d[pli][((by + 1) << l2)*w + (bx << l2)] = x[2];
-      ctx->d[pli][((by + 1) << l2)*w + ((bx + 1) << l2)] = x[3];
-}
-      x[0] = ctx->d[pli][bo];
-      x[1] = ctx->d[pli][bo + (1 << (l - xdec + 2))];
-      x[2] = ctx->d[pli][bo + (1 << (l - xdec + 2))*w];
-      x[3] = ctx->d[pli][bo + (1 << (l - xdec + 2))*(w + 1)];
       OD_HAAR_KERNEL(x[0], x[1], x[2], x[3]);
       ctx->d[pli][bo] = x[0];
       ctx->d[pli][bo + (1 << (l - xdec + 2))] = x[1];
