@@ -513,7 +513,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
     int quantized_dc;
     quantized_dc = d[bo];
     (*enc->state.opt_vtbl.fdct_2d[ln])(d + bo, w, c + bo, w);
-    d[bo] = quantized_dc;
+    if (ctx->is_keyframe) d[bo] = quantized_dc;
     if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 0, qm);
   }
   if (!ctx->is_keyframe) {
