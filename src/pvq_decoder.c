@@ -329,10 +329,8 @@ void od_pvq_decode(daala_dec_ctx *dec,
   nb_bands = OD_BAND_OFFSETS[ln][0];
   off = &OD_BAND_OFFSETS[ln][1];
   skip[0] = block_skip;
-  if (1) {
-    out[0] = skip[0]&1;
-    skip[0] >>= 1;
-  }
+  out[0] = skip[0] & 1;
+  skip[0] >>= 1;
   if (skip[0]) {
     if (is_keyframe) for (i = 1; i < 1 << (2*ln + 4); i++) out[i] = 0;
     else for (i = 1; i < 1 << (2*ln + 4); i++) out[i] = ref[i];
