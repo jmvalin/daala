@@ -963,7 +963,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     if (rdo_only) {
       int i;
       int j;
-      od_coeff dc_orig[32*32];
+      od_coeff dc_orig[(OD_BSIZE_MAX/4)*(OD_BSIZE_MAX/4)];
       tell = od_ec_enc_tell_frac(&enc->ec);
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) c_orig[n*i + j] = ctx->c[bo + i*w + j];
@@ -971,8 +971,9 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) mc_orig[n*i + j] = ctx->mc[bo + i*w + j];
       }
-      for (i = 0; i < n; i++) {
-        for (j = 0; j < n; j++) dc_orig[n*i + j] = ctx->d[pli][bo + i*w + j];
+      /* Save only the DCs from the transform coeffs. */
+      for (i = 0; i < n/4; i++) {
+        for (j = 0; j < n/4; j++) dc_orig[n/4*i + j] = ctx->d[pli][bo + 4*i*w + 4*j];
       }
       od_encode_checkpoint(enc, &pre_encode_buf);
       skip_nosplit = od_block_encode(enc, ctx, d, pli, bx, by, rdo_only);
@@ -985,8 +986,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) ctx->c[bo + i*w + j] = c_orig[n*i + j];
       }
-      for (i = 0; i < n; i++) {
-        for (j = 0; j < n; j++) ctx->d[pli][bo + i*w + j] = dc_orig[n*i + j];
+      for (i = 0; i < n/4; i++) {
+        for (j = 0; j < n/4; j++) ctx->d[pli][bo + 4*i*w + 4*j] = dc_orig[n/4*i + j];
       }
     }
     f = OD_FILT_SIZE(d - 1, xdec);
