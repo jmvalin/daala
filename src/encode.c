@@ -739,6 +739,72 @@ static void od_quantize_haar_dc_sb(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
 }
 #endif
 
+void od_quantize_haar_dc_level(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
+  int pli, int bx, int by, int l, int xdec, od_coeff *hgrad,
+  od_coeff *vgrad) {
+  od_coeff x[4];
+  int l2;
+  int ac_quant[2];
+  int i;
+  int dc_quant;
+  int w;
+  w = enc->state.frame_width >> xdec;
+  if (enc->quantizer[pli] == 0) dc_quant = 1;
+  else {
+    dc_quant = OD_MAXI(1, enc->quantizer[pli]*OD_DC_RES[pli] >> 4);
+  }
+  if (enc->quantizer[pli] == 0) ac_quant[0] = ac_quant[1] = 1;
+  else {
+    /* Not rounding because it seems to slightly hurt. */
+    ac_quant[0] = dc_quant*OD_DC_QM[xdec][l - xdec][0] >> 4;
+    ac_quant[1] = dc_quant*OD_DC_QM[xdec][l - xdec][1] >> 4;
+  }
+  l2 = l - xdec + 2;
+  x[0] = ctx->d[pli][(by << l2)*w + (bx << l2)];
+  x[1] = ctx->d[pli][(by << l2)*w + ((bx + 1) << l2)];
+  x[2] = ctx->d[pli][((by + 1) << l2)*w + (bx << l2)];
+  x[3] = ctx->d[pli][((by + 1) << l2)*w + ((bx + 1) << l2)];
+  x[1] -= *hgrad/5;
+  x[2] -= *vgrad/5;
+  for (i = 1; i < 4; i++) {
+    int quant;
+    int sign;
+    double cost;
+    int q;
+    q = ac_quant[i == 3];
+    sign = x[i] < 0;
+    x[i] = abs(x[i]);
+#if 1 /* Set to zero to disable RDO. */
+    quant = x[i]/q;
+    cost = generic_encode_cost(&enc->state.adapt.model_dc[pli], quant + 1,
+     -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
+    cost -= generic_encode_cost(&enc->state.adapt.model_dc[pli], quant,
+     -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
+    /* Count cost of sign bit. */
+    if (quant == 0) cost += 1;
+    if (q*q - 2*q*(x[i] - quant*q) + q*q*OD_PVQ_LAMBDA*cost < 0) quant++;
+#else
+    quant = OD_DIV_R0(x[i], q);
+#endif
+    generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli], quant, -1,
+     &enc->state.adapt.ex_dc[pli][l][i-1], 2);
+    if (quant) od_ec_enc_bits(&enc->ec, sign, 1);
+    x[i] = quant*ac_quant[i == 3];
+    if (sign) x[i] = -x[i];
+  }
+  /* Gives best results for subset1, more conservative than the
+     theoretical /4 of a pure gradient. */
+  x[1] += *hgrad/5;
+  x[2] += *vgrad/5;
+  *hgrad = x[1];
+  *vgrad = x[2];
+  OD_HAAR_KERNEL(x[0], x[1], x[2], x[3]);
+  ctx->d[pli][(by << l2)*w + (bx << l2)] = x[0];
+  ctx->d[pli][(by << l2)*w + ((bx + 1) << l2)] = x[1];
+  ctx->d[pli][((by + 1) << l2)*w + (bx << l2)] = x[2];
+  ctx->d[pli][((by + 1) << l2)*w + ((bx + 1) << l2)] = x[3];
+}
+
 static int od_compute_var_4x4(od_coeff *x, int stride) {
   int sum;
   int s2;
@@ -936,65 +1002,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
        enc->state.adapt.skip_increment);
     }
     if (ctx->is_keyframe) {
-      od_coeff x[4];
-      int l2;
-      int ac_quant[2];
-      int i;
-      int dc_quant;
-      if (enc->quantizer[pli] == 0) dc_quant = 1;
-      else {
-        dc_quant = OD_MAXI(1, enc->quantizer[pli]*OD_DC_RES[pli] >> 4);
-      }
-      if (enc->quantizer[pli] == 0) ac_quant[0] = ac_quant[1] = 1;
-      else {
-        /* Not rounding because it seems to slightly hurt. */
-        ac_quant[0] = dc_quant*OD_DC_QM[xdec][l - xdec][0] >> 4;
-        ac_quant[1] = dc_quant*OD_DC_QM[xdec][l - xdec][1] >> 4;
-      }
-      l2 = l - xdec + 2;
-      x[0] = ctx->d[pli][(by << l2)*w + (bx << l2)];
-      x[1] = ctx->d[pli][(by << l2)*w + ((bx + 1) << l2)];
-      x[2] = ctx->d[pli][((by + 1) << l2)*w + (bx << l2)];
-      x[3] = ctx->d[pli][((by + 1) << l2)*w + ((bx + 1) << l2)];
-      x[1] -= hgrad/5;
-      x[2] -= vgrad/5;
-      for (i = 1; i < 4; i++) {
-        int quant;
-        int sign;
-        double cost;
-        int q;
-        q = ac_quant[i == 3];
-        sign = x[i] < 0;
-        x[i] = abs(x[i]);
-  #if 1 /* Set to zero to disable RDO. */
-        quant = x[i]/q;
-        cost = generic_encode_cost(&enc->state.adapt.model_dc[pli], quant + 1,
-         -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
-        cost -= generic_encode_cost(&enc->state.adapt.model_dc[pli], quant,
-         -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
-        /* Count cost of sign bit. */
-        if (quant == 0) cost += 1;
-        if (q*q - 2*q*(x[i] - quant*q) + q*q*OD_PVQ_LAMBDA*cost < 0) quant++;
-  #else
-        quant = OD_DIV_R0(x[i], q);
-  #endif
-        generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli], quant, -1,
-         &enc->state.adapt.ex_dc[pli][l][i-1], 2);
-        if (quant) od_ec_enc_bits(&enc->ec, sign, 1);
-        x[i] = quant*ac_quant[i == 3];
-        if (sign) x[i] = -x[i];
-      }
-      /* Gives best results for subset1, more conservative than the
-         theoretical /4 of a pure gradient. */
-      x[1] += hgrad/5;
-      x[2] += vgrad/5;
-      hgrad = x[1];
-      vgrad = x[2];
-      OD_HAAR_KERNEL(x[0], x[1], x[2], x[3]);
-      ctx->d[pli][bo] = x[0];
-      ctx->d[pli][bo + (1 << (l - xdec + 2))] = x[1];
-      ctx->d[pli][bo + (1 << (l - xdec + 2))*w] = x[2];
-      ctx->d[pli][bo + (1 << (l - xdec + 2))*(w + 1)] = x[3];
+      od_quantize_haar_dc_level(enc, ctx, pli, bx, by, l, xdec, &hgrad,
+       &vgrad);
     }
     skip_split &= od_encode_recursive(enc, ctx, pli, bx + 0, by + 0, l, xdec,
      ydec, rdo_only, hgrad, vgrad);
