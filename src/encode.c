@@ -1075,7 +1075,7 @@ if (1) {
         q = ac_quant[i == 3];
         sign = x[i] < 0;
         x[i] = abs(x[i]);
-  #if 0 /* Set to zero to disable RDO. */
+  #if 1 /* Set to zero to disable RDO. */
         quant = x[i]/q;
         cost = generic_encode_cost(&enc->state.adapt.model_dc[pli], quant + 1,
          -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
@@ -1907,7 +1907,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration) {
     od_split_superblocks(enc, 1);
 #endif
   }
-  if (mbctx.is_keyframe) od_encode_block_sizes(enc);
+  /*if (mbctx.is_keyframe) od_encode_block_sizes(enc);*/
   od_encode_residual(enc, &mbctx, OD_ENCODE_REAL);
 #if defined(OD_DUMP_IMAGES) || defined(OD_DUMP_RECONS)
   /*Dump YUV*/
