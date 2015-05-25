@@ -518,7 +518,11 @@ static void pvq_encode_partition(od_ec_enc *ec,
   int id;
   noref = (theta == -1);
   id = (qg > 0) + 2*OD_MINI(theta + 1,3) + 8*code_skip*skip_rest;
-  if (!is_keyframe) {
+  if (is_keyframe) {
+    OD_ASSERT(id != 8);
+    if (id >= 8) id--;
+  }
+  else {
     OD_ASSERT(id != 10);
     if (id >= 10) id--;
   }

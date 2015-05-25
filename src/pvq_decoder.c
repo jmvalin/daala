@@ -197,6 +197,7 @@ static void pvq_decode_partition(od_ec_dec *ec,
     id = od_decode_cdf_adapt(ec, &adapt->pvq_gaintheta_cdf[cdf_ctx][0],
      8 + (8 - !is_keyframe)*has_skip, adapt->pvq_gaintheta_increment);
     if (!is_keyframe && id >= 10) id++;
+    if (is_keyframe && id >= 8) id++;
     if (id >= 8) {
       id -= 8;
       skip_rest[0] = skip_rest[1] = skip_rest[2] = 1;
