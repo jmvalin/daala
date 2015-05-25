@@ -407,8 +407,53 @@ static void od_decode_haar_dc_sb(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli
 }
 #endif
 
+void od_decode_haar_dc_level(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
+  int bx, int by, int l, int xdec, od_coeff *hgrad, od_coeff *vgrad) {
+  int i;
+  od_coeff x[4];
+  int l2;
+  int ac_quant[2];
+  int dc_quant;
+  int w;
+  w = dec->state.frame_width >> xdec;
+  if (dec->quantizer[pli] == 0) dc_quant = 1;
+  else {
+    dc_quant = OD_MAXI(1, dec->quantizer[pli]*OD_DC_RES[pli] >> 4);
+  }
+  if (dec->quantizer[pli] == 0) ac_quant[0] = ac_quant[1] = 1;
+  else {
+    ac_quant[0] = dc_quant*OD_DC_QM[xdec][l - xdec][0] >> 4;
+    ac_quant[1] = dc_quant*OD_DC_QM[xdec][l - xdec][1] >> 4;
+  }
+  l2 = l - xdec + 2;
+  x[0] = ctx->d[pli][(by << l2)*w + (bx << l2)];
+  x[1] = ctx->d[pli][(by << l2)*w + ((bx + 1) << l2)];
+  x[2] = ctx->d[pli][((by + 1) << l2)*w + (bx << l2)];
+  x[3] = ctx->d[pli][((by + 1) << l2)*w + ((bx + 1) << l2)];
+  for (i = 1; i < 4; i++) {
+    int quant;
+    quant = generic_decode(&dec->ec, &dec->state.adapt.model_dc[pli], -1,
+     &dec->state.adapt.ex_dc[pli][l][i-1], 2);
+    if (quant) {
+      if (od_ec_dec_bits(&dec->ec, 1)) quant = -quant;
+    }
+    x[i] = quant*ac_quant[i == 3];
+  }
+  /* Gives best results for subset1, more conservative than the
+     theoretical /4 of a pure gradient. */
+  x[1] += *hgrad/5;
+  x[2] += *vgrad/5;
+  *hgrad = x[1];
+  *vgrad = x[2];
+  OD_HAAR_KERNEL(x[0], x[1], x[2], x[3]);
+  ctx->d[pli][(by << l2)*w + (bx << l2)] = x[0];
+  ctx->d[pli][(by << l2)*w + ((bx + 1) << l2)] = x[1];
+  ctx->d[pli][((by + 1) << l2)*w + (bx << l2)] = x[2];
+  ctx->d[pli][((by + 1) << l2)*w + ((bx + 1) << l2)] = x[3];
+}
+
 static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
- int bx, int by, int l, int xdec, int ydec, int hgrad, int vgrad) {
+ int bx, int by, int l, int xdec, int ydec, od_coeff hgrad, od_coeff vgrad) {
   int od;
   int d;
   int w;
@@ -476,45 +521,7 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
     bx <<= 1;
     by <<= 1;
     if (ctx->is_keyframe) {
-      int i;
-      od_coeff x[4];
-      int l2;
-      int ac_quant[2];
-      int dc_quant;
-      if (dec->quantizer[pli] == 0) dc_quant = 1;
-      else {
-        dc_quant = OD_MAXI(1, dec->quantizer[pli]*OD_DC_RES[pli] >> 4);
-      }
-      if (dec->quantizer[pli] == 0) ac_quant[0] = ac_quant[1] = 1;
-      else {
-        ac_quant[0] = dc_quant*OD_DC_QM[xdec][l - xdec][0] >> 4;
-        ac_quant[1] = dc_quant*OD_DC_QM[xdec][l - xdec][1] >> 4;
-      }
-      l2 = l - xdec + 2;
-      x[0] = ctx->d[pli][(by << l2)*w + (bx << l2)];
-      x[1] = ctx->d[pli][(by << l2)*w + ((bx + 1) << l2)];
-      x[2] = ctx->d[pli][((by + 1) << l2)*w + (bx << l2)];
-      x[3] = ctx->d[pli][((by + 1) << l2)*w + ((bx + 1) << l2)];
-      for (i = 1; i < 4; i++) {
-        int quant;
-        quant = generic_decode(&dec->ec, &dec->state.adapt.model_dc[pli], -1,
-         &dec->state.adapt.ex_dc[pli][l][i-1], 2);
-        if (quant) {
-          if (od_ec_dec_bits(&dec->ec, 1)) quant = -quant;
-        }
-        x[i] = quant*ac_quant[i == 3];
-      }
-      /* Gives best results for subset1, more conservative than the
-         theoretical /4 of a pure gradient. */
-      x[1] += hgrad/5;
-      x[2] += vgrad/5;
-      hgrad = x[1];
-      vgrad = x[2];
-      OD_HAAR_KERNEL(x[0], x[1], x[2], x[3]);
-      ctx->d[pli][(by << l2)*w + (bx << l2)] = x[0];
-      ctx->d[pli][(by << l2)*w + ((bx + 1) << l2)] = x[1];
-      ctx->d[pli][((by + 1) << l2)*w + (bx << l2)] = x[2];
-      ctx->d[pli][((by + 1) << l2)*w + ((bx + 1) << l2)] = x[3];
+      od_decode_haar_dc_level(dec, ctx, pli, bx, by, l, xdec, &hgrad, &vgrad);
     }
     od_decode_recursive(dec, ctx, pli, bx + 0, by + 0, l, xdec, ydec, hgrad, vgrad);
     od_decode_recursive(dec, ctx, pli, bx + 1, by + 0, l, xdec, ydec, hgrad, vgrad);
@@ -702,8 +709,8 @@ static void od_decode_residual(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
   for (sby = 0; sby < nvsb; sby++) {
     for (sbx = 0; sbx < nhsb; sbx++) {
       for (pli = 0; pli < nplanes; pli++) {
-        int hgrad;
-        int vgrad;
+        od_coeff hgrad;
+        od_coeff vgrad;
         hgrad = vgrad = 0;
         mbctx->c = state->ctmp[pli];
         mbctx->d = state->dtmp;

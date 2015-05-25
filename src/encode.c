@@ -910,7 +910,8 @@ static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
 
 /* Returns 1 if the block is skipped, zero otherwise. */
 static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
- int pli, int bx, int by, int l, int xdec, int ydec, int rdo_only, int hgrad, int vgrad) {
+ int pli, int bx, int by, int l, int xdec, int ydec, int rdo_only,
+ od_coeff hgrad, od_coeff vgrad) {
   int od;
   int d;
   int frame_width;
@@ -1435,8 +1436,8 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         int i;
         int j;
         od_rollback_buffer buf;
-        int hgrad;
-        int vgrad;
+        od_coeff hgrad;
+        od_coeff vgrad;
         hgrad = vgrad = 0;
         c_orig = enc->c_orig[0];
         OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_PLANE, OD_ACCT_PLANE_LUMA + pli);
