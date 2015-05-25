@@ -348,15 +348,20 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
 }
 
 #if !OD_DISABLE_HAAR_DC
-static void od_decode_haar_dc(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
- int bx, int by, int l, int xdec, int ydec, od_coeff hgrad, od_coeff vgrad,
+static void od_decode_haar_dc_sb(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
+ int bx, int by, int l, int xdec, int ydec,
  int has_ur, od_coeff *ohgrad, od_coeff *ovgrad) {
   int od;
   int d;
   int w;
-  int i;
   int dc_quant;
   od_coeff *c;
+  int nhsb;
+  int quant;
+  int l2;
+  od_coeff sb_dc_pred;
+  od_coeff sb_dc_curr;
+  od_coeff *sb_dc_mem;
   c = ctx->d[pli];
   w = dec->state.frame_width >> xdec;
   /*This code assumes 4:4:4 or 4:2:0 input.*/
@@ -369,92 +374,36 @@ static void od_decode_haar_dc(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
   else {
     dc_quant = OD_MAXI(1, dec->quantizer[pli]*OD_DC_RES[pli] >> 4);
   }
-  if (l == 3) {
-    int nhsb;
-    int quant;
-    int l2;
-    od_coeff sb_dc_pred;
-    od_coeff sb_dc_curr;
-    od_coeff *sb_dc_mem;
-    nhsb = dec->state.nhsb;
-    sb_dc_mem = dec->state.sb_dc_mem[pli];
-    l2 = l - xdec + 2;
-    if (by > 0 && bx > 0) {
-      /* These coeffs were LS-optimized on subset 1. */
-      if (has_ur) {
-        sb_dc_pred = (22*sb_dc_mem[by*nhsb + bx - 1]
-         - 9*sb_dc_mem[(by - 1)*nhsb + bx - 1]
-         + 15*sb_dc_mem[(by - 1)*nhsb + bx]
-         + 4*sb_dc_mem[(by - 1)*nhsb + bx + 1] + 16) >> 5;
-      }
-      else {
-        sb_dc_pred = (23*sb_dc_mem[by*nhsb + bx - 1]
-         - 10*sb_dc_mem[(by - 1)*nhsb + bx - 1]
-         + 19*sb_dc_mem[(by - 1)*nhsb + bx] + 16) >> 5;
-      }
+  nhsb = dec->state.nhsb;
+  sb_dc_mem = dec->state.sb_dc_mem[pli];
+  l2 = l - xdec + 2;
+  if (by > 0 && bx > 0) {
+    /* These coeffs were LS-optimized on subset 1. */
+    if (has_ur) {
+      sb_dc_pred = (22*sb_dc_mem[by*nhsb + bx - 1]
+       - 9*sb_dc_mem[(by - 1)*nhsb + bx - 1]
+       + 15*sb_dc_mem[(by - 1)*nhsb + bx]
+       + 4*sb_dc_mem[(by - 1)*nhsb + bx + 1] + 16) >> 5;
     }
-    else if (by > 0) sb_dc_pred = sb_dc_mem[(by - 1)*nhsb + bx];
-    else if (bx > 0) sb_dc_pred = sb_dc_mem[by*nhsb + bx - 1];
-    else sb_dc_pred = 0;
-    quant = generic_decode(&dec->ec, &dec->state.adapt.model_dc[pli], -1,
-     &dec->state.adapt.ex_sb_dc[pli], 2);
-    if (quant) {
-      if (od_ec_dec_bits(&dec->ec, 1)) quant = -quant;
-    }
-    sb_dc_curr = quant*dc_quant + sb_dc_pred;
-    c[(by << l2)*w + (bx << l2)] = sb_dc_curr;
-    sb_dc_mem[by*nhsb + bx] = sb_dc_curr;
-    if (by > 0) vgrad = sb_dc_mem[(by - 1)*nhsb + bx] - sb_dc_curr;
-    if (bx > 0) hgrad = sb_dc_mem[by*nhsb + bx - 1] - sb_dc_curr;
-    *ohgrad = hgrad;
-    *ovgrad = vgrad;
-  }
-  if (0&&l > d) {
-    od_coeff x[4];
-    int l2;
-    int ac_quant[2];
-    if (dec->quantizer[pli] == 0) ac_quant[0] = ac_quant[1] = 1;
     else {
-      ac_quant[0] = dc_quant*OD_DC_QM[xdec][l - xdec - 1][0] >> 4;
-      ac_quant[1] = dc_quant*OD_DC_QM[xdec][l - xdec - 1][1] >> 4;
+      sb_dc_pred = (23*sb_dc_mem[by*nhsb + bx - 1]
+       - 10*sb_dc_mem[(by - 1)*nhsb + bx - 1]
+       + 19*sb_dc_mem[(by - 1)*nhsb + bx] + 16) >> 5;
     }
-    l--;
-    bx <<= 1;
-    by <<= 1;
-    l2 = l - xdec + 2;
-    x[0] = c[(by << l2)*w + (bx << l2)];
-    x[1] = c[(by << l2)*w + ((bx + 1) << l2)];
-    x[2] = c[((by + 1) << l2)*w + (bx << l2)];
-    x[3] = c[((by + 1) << l2)*w + ((bx + 1) << l2)];
-    for (i = 1; i < 4; i++) {
-      int quant;
-      quant = generic_decode(&dec->ec, &dec->state.adapt.model_dc[pli], -1,
-       &dec->state.adapt.ex_dc[pli][l][i-1], 2);
-      if (quant) {
-        if (od_ec_dec_bits(&dec->ec, 1)) quant = -quant;
-      }
-      x[i] = quant*ac_quant[i == 3];
-    }
-    /* Gives best results for subset1, more conservative than the
-       theoretical /4 of a pure gradient. */
-    x[1] += hgrad/5;
-    x[2] += vgrad/5;
-    hgrad = x[1];
-    vgrad = x[2];
-    OD_HAAR_KERNEL(x[0], x[1], x[2], x[3]);
-    c[(by << l2)*w + (bx << l2)] = x[0];
-    c[(by << l2)*w + ((bx + 1) << l2)] = x[1];
-    c[((by + 1) << l2)*w + (bx << l2)] = x[2];
-    c[((by + 1) << l2)*w + ((bx + 1) << l2)] = x[3];
-    od_decode_haar_dc(dec, ctx, pli, bx + 0, by + 0, l, xdec, ydec, hgrad,
-     vgrad, 0, ohgrad, ovgrad);
-    od_decode_haar_dc(dec, ctx, pli, bx + 1, by + 0, l, xdec, ydec, hgrad,
-     vgrad, 0, ohgrad, ovgrad);
-    od_decode_haar_dc(dec, ctx, pli, bx + 0, by + 1, l, xdec, ydec, hgrad,
-     vgrad, 0, ohgrad, ovgrad);
-    od_decode_haar_dc(dec, ctx, pli, bx + 1, by + 1, l, xdec, ydec, hgrad,
-     vgrad, 0, ohgrad, ovgrad);
   }
+  else if (by > 0) sb_dc_pred = sb_dc_mem[(by - 1)*nhsb + bx];
+  else if (bx > 0) sb_dc_pred = sb_dc_mem[by*nhsb + bx - 1];
+  else sb_dc_pred = 0;
+  quant = generic_decode(&dec->ec, &dec->state.adapt.model_dc[pli], -1,
+   &dec->state.adapt.ex_sb_dc[pli], 2);
+  if (quant) {
+    if (od_ec_dec_bits(&dec->ec, 1)) quant = -quant;
+  }
+  sb_dc_curr = quant*dc_quant + sb_dc_pred;
+  c[(by << l2)*w + (bx << l2)] = sb_dc_curr;
+  sb_dc_mem[by*nhsb + bx] = sb_dc_curr;
+  if (by > 0) *ovgrad = sb_dc_mem[(by - 1)*nhsb + bx] - sb_dc_curr;
+  if (bx > 0) *ohgrad = sb_dc_mem[by*nhsb + bx - 1] - sb_dc_curr;
 }
 #endif
 
@@ -526,7 +475,7 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
     l--;
     bx <<= 1;
     by <<= 1;
-    if (1) {
+    if (ctx->is_keyframe) {
       int i;
       od_coeff x[4];
       int l2;
@@ -764,7 +713,7 @@ static void od_decode_residual(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
         xdec = state->io_imgs[OD_FRAME_INPUT].planes[pli].xdec;
         ydec = state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec;
         if (!OD_DISABLE_HAAR_DC && mbctx->is_keyframe) {
-          od_decode_haar_dc(dec, mbctx, pli, sbx, sby, 3, xdec, ydec, 0, 0,
+          od_decode_haar_dc_sb(dec, mbctx, pli, sbx, sby, 3, xdec, ydec,
            sby > 0 && sbx < nhsb - 1, &hgrad, &vgrad);
         }
         od_decode_recursive(dec, mbctx, pli, sbx, sby, 3, xdec, ydec, hgrad, vgrad);

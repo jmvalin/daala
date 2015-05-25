@@ -698,9 +698,15 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   int od;
   int d;
   int w;
-  int i;
   int dc_quant;
   od_coeff *c;
+  int nhsb;
+  int quant;
+  int dc0;
+  int l2;
+  od_coeff sb_dc_pred;
+  od_coeff sb_dc_curr;
+  od_coeff *sb_dc_mem;
   c = ctx->d[pli];
   w = enc->state.frame_width >> xdec;
   /*This code assumes 4:4:4 or 4:2:0 input.*/
@@ -714,127 +720,40 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     dc_quant = OD_MAXI(1, enc->quantizer[pli]*OD_DC_RES[pli] >> 4);
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_DC_COEFF);
-  if (l == 3) {
-    int nhsb;
-    int quant;
-    int dc0;
-    int l2;
-    od_coeff sb_dc_pred;
-    od_coeff sb_dc_curr;
-    od_coeff *sb_dc_mem;
-    nhsb = enc->state.nhsb;
-    sb_dc_mem = enc->state.sb_dc_mem[pli];
-    l2 = l - xdec + 2;
-    if (by > 0 && bx > 0) {
-      /* These coeffs were LS-optimized on subset 1. */
-      if (has_ur) {
-        sb_dc_pred = (22*sb_dc_mem[by*nhsb + bx - 1]
-         - 9*sb_dc_mem[(by - 1)*nhsb + bx - 1]
-         + 15*sb_dc_mem[(by - 1)*nhsb + bx]
-         + 4*sb_dc_mem[(by - 1)*nhsb + bx + 1] + 16) >> 5;
-      }
-      else {
-        sb_dc_pred = (23*sb_dc_mem[by*nhsb + bx - 1]
-         - 10*sb_dc_mem[(by - 1)*nhsb + bx - 1]
-         + 19*sb_dc_mem[(by - 1)*nhsb + bx] + 16) >> 5;
-      }
+  nhsb = enc->state.nhsb;
+  sb_dc_mem = enc->state.sb_dc_mem[pli];
+  l2 = l - xdec + 2;
+  if (by > 0 && bx > 0) {
+    /* These coeffs were LS-optimized on subset 1. */
+    if (has_ur) {
+      sb_dc_pred = (22*sb_dc_mem[by*nhsb + bx - 1]
+       - 9*sb_dc_mem[(by - 1)*nhsb + bx - 1]
+       + 15*sb_dc_mem[(by - 1)*nhsb + bx]
+       + 4*sb_dc_mem[(by - 1)*nhsb + bx + 1] + 16) >> 5;
     }
-    else if (by > 0) sb_dc_pred = sb_dc_mem[(by - 1)*nhsb + bx];
-    else if (bx > 0) sb_dc_pred = sb_dc_mem[by*nhsb + bx - 1];
-    else sb_dc_pred = 0;
-    dc0 = c[(by << l2)*w + (bx << l2)] - sb_dc_pred;
-    quant = OD_DIV_R0(dc0, dc_quant);
-    generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli], abs(quant), -1,
-     &enc->state.adapt.ex_sb_dc[pli], 2);
-    if (quant) od_ec_enc_bits(&enc->ec, quant < 0, 1);
-    sb_dc_curr = quant*dc_quant + sb_dc_pred;
-    c[(by << l2)*w + (bx << l2)] = sb_dc_curr;
-    sb_dc_mem[by*nhsb + bx] = sb_dc_curr;
-    OD_ASSERT(ctx->dc_idx == 0);
-    if (rdo_only) ctx->dc[ctx->dc_idx++] = sb_dc_curr;
-    if (by > 0) vgrad = sb_dc_mem[(by - 1)*nhsb + bx] - sb_dc_curr;
-    if (bx > 0) hgrad = sb_dc_mem[by*nhsb + bx - 1]- sb_dc_curr;
-    *ohgrad = hgrad;
-    *ovgrad = vgrad;
-  }
-#if 0
-  if (l > d) {
-    od_coeff x[4];
-    int l2;
-    int tell;
-    int ac_quant[2];
-    if (enc->quantizer[pli] == 0) ac_quant[0] = ac_quant[1] = 1;
     else {
-      /* Not rounding because it seems to slightly hurt. */
-      ac_quant[0] = dc_quant*OD_DC_QM[xdec][l - xdec - 1][0] >> 4;
-      ac_quant[1] = dc_quant*OD_DC_QM[xdec][l - xdec - 1][1] >> 4;
+      sb_dc_pred = (23*sb_dc_mem[by*nhsb + bx - 1]
+       - 10*sb_dc_mem[(by - 1)*nhsb + bx - 1]
+       + 19*sb_dc_mem[(by - 1)*nhsb + bx] + 16) >> 5;
     }
-    l--;
-    bx <<= 1;
-    by <<= 1;
-    l2 = l - xdec + 2;
-    x[0] = c[(by << l2)*w + (bx << l2)];
-    x[1] = c[(by << l2)*w + ((bx + 1) << l2)];
-    x[2] = c[((by + 1) << l2)*w + (bx << l2)];
-    x[3] = c[((by + 1) << l2)*w + ((bx + 1) << l2)];
-    x[1] -= hgrad/5;
-    x[2] -= vgrad/5;
-    tell = od_ec_enc_tell_frac(&enc->ec);
-    for (i = 1; i < 4; i++) {
-      int quant;
-      int sign;
-      double cost;
-      int q;
-      q = ac_quant[i == 3];
-      sign = x[i] < 0;
-      x[i] = abs(x[i]);
-#if 0 /* Set to zero to disable RDO. */
-      quant = x[i]/q;
-      cost = generic_encode_cost(&enc->state.adapt.model_dc[pli], quant + 1,
-       -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
-      cost -= generic_encode_cost(&enc->state.adapt.model_dc[pli], quant,
-       -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
-      /* Count cost of sign bit. */
-      if (quant == 0) cost += 1;
-      if (q*q - 2*q*(x[i] - quant*q) + q*q*OD_PVQ_LAMBDA*cost < 0) quant++;
-#else
-      quant = OD_DIV_R0(x[i], q);
-#endif
-      generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli], quant, -1,
-       &enc->state.adapt.ex_dc[pli][l][i-1], 2);
-      if (quant) od_ec_enc_bits(&enc->ec, sign, 1);
-      x[i] = quant*ac_quant[i == 3];
-      if (sign) x[i] = -x[i];
-    }
-    if (rdo_only) {
-      OD_ASSERT(ctx->dc_rate_idx < OD_NB_SAVED_DC_RATES);
-      ctx->dc_rate[ctx->dc_rate_idx++] = od_ec_enc_tell_frac(&enc->ec) - tell;
-    }
-    /* Gives best results for subset1, more conservative than the
-       theoretical /4 of a pure gradient. */
-    x[1] += hgrad/5;
-    x[2] += vgrad/5;
-    hgrad = x[1];
-    vgrad = x[2];
-    c[(by << l2)*w + ((bx + 1) << l2)] = x[1];
-    c[((by + 1) << l2)*w + (bx << l2)] = x[2];
-    c[((by + 1) << l2)*w + ((bx + 1) << l2)] = x[3];
-    if (rdo_only) ctx->dc[ctx->dc_idx++] = x[0];
-    od_quantize_haar_dc(enc, ctx, pli, bx + 0, by + 0, l, xdec, ydec, hgrad,
-     vgrad, 0, rdo_only, 0, 0);
-    if (rdo_only) ctx->dc[ctx->dc_idx++] = x[1];
-    od_quantize_haar_dc(enc, ctx, pli, bx + 1, by + 0, l, xdec, ydec, hgrad,
-     vgrad, 0, rdo_only, 0, 0);
-    if (rdo_only) ctx->dc[ctx->dc_idx++] = x[2];
-    od_quantize_haar_dc(enc, ctx, pli, bx + 0, by + 1, l, xdec, ydec, hgrad,
-     vgrad, 0, rdo_only, 0, 0);
-    if (rdo_only) ctx->dc[ctx->dc_idx++] = x[3];
-    od_quantize_haar_dc(enc, ctx, pli, bx + 1, by + 1, l, xdec, ydec, hgrad,
-     vgrad, 0, rdo_only, 0, 0);
-    OD_ASSERT(ctx->dc_idx <= OD_NB_SAVED_DCS);
   }
-  OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_UNKNOWN);
-#endif
+  else if (by > 0) sb_dc_pred = sb_dc_mem[(by - 1)*nhsb + bx];
+  else if (bx > 0) sb_dc_pred = sb_dc_mem[by*nhsb + bx - 1];
+  else sb_dc_pred = 0;
+  dc0 = c[(by << l2)*w + (bx << l2)] - sb_dc_pred;
+  quant = OD_DIV_R0(dc0, dc_quant);
+  generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli], abs(quant), -1,
+   &enc->state.adapt.ex_sb_dc[pli], 2);
+  if (quant) od_ec_enc_bits(&enc->ec, quant < 0, 1);
+  sb_dc_curr = quant*dc_quant + sb_dc_pred;
+  c[(by << l2)*w + (bx << l2)] = sb_dc_curr;
+  sb_dc_mem[by*nhsb + bx] = sb_dc_curr;
+  OD_ASSERT(ctx->dc_idx == 0);
+  if (rdo_only) ctx->dc[ctx->dc_idx++] = sb_dc_curr;
+  if (by > 0) vgrad = sb_dc_mem[(by - 1)*nhsb + bx] - sb_dc_curr;
+  if (bx > 0) hgrad = sb_dc_mem[by*nhsb + bx - 1]- sb_dc_curr;
+  *ohgrad = hgrad;
+  *ovgrad = vgrad;
 }
 #endif
 
