@@ -523,7 +523,10 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   lossless = (enc->quantizer[pli] == 0);
   /* Apply forward transform. */
   if (OD_DISABLE_HAAR_DC || rdo_only || !ctx->is_keyframe) {
+    int quantized_dc;
+    quantized_dc = d[bo];
     (*enc->state.opt_vtbl.fdct_2d[ln])(d + bo, w, c + bo, w);
+    d[bo] = quantized_dc;
     if (!lossless) od_apply_qm(d + bo, w, d + bo, w, ln, xdec, 0, qm);
   }
   if (!ctx->is_keyframe) {
@@ -587,7 +590,6 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int ln,
   else {
     scalar_out[0] = cblock[0];
     OD_ASSERT(ctx->dc_idx < OD_NB_SAVED_DCS);
-    if (rdo_only && ctx->is_keyframe) scalar_out[0] = ctx->dc[ctx->dc_idx++];
   }
   od_coding_order_to_raster(&d[bo], w, scalar_out, n, lossless);
   /*Apply the inverse transform.*/
@@ -692,7 +694,7 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
  */
 static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
  int pli, int bx, int by, int l, int xdec, int ydec, od_coeff hgrad,
- od_coeff vgrad, int has_ur, int rdo_only) {
+ od_coeff vgrad, int has_ur, int rdo_only, od_coeff *ohgrad, od_coeff *ovgrad) {
   int od;
   int d;
   int w;
@@ -752,7 +754,10 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     if (rdo_only) ctx->dc[ctx->dc_idx++] = sb_dc_curr;
     if (by > 0) vgrad = sb_dc_mem[(by - 1)*nhsb + bx] - sb_dc_curr;
     if (bx > 0) hgrad = sb_dc_mem[by*nhsb + bx - 1]- sb_dc_curr;
+    *ohgrad = hgrad;
+    *ovgrad = vgrad;
   }
+#if 0
   if (l > d) {
     od_coeff x[4];
     int l2;
@@ -783,7 +788,7 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       q = ac_quant[i == 3];
       sign = x[i] < 0;
       x[i] = abs(x[i]);
-#if 1 /* Set to zero to disable RDO. */
+#if 0 /* Set to zero to disable RDO. */
       quant = x[i]/q;
       cost = generic_encode_cost(&enc->state.adapt.model_dc[pli], quant + 1,
        -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
@@ -811,26 +816,25 @@ static void od_quantize_haar_dc(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     x[2] += vgrad/5;
     hgrad = x[1];
     vgrad = x[2];
-    OD_HAAR_KERNEL(x[0], x[1], x[2], x[3]);
-    c[(by << l2)*w + (bx << l2)] = x[0];
     c[(by << l2)*w + ((bx + 1) << l2)] = x[1];
     c[((by + 1) << l2)*w + (bx << l2)] = x[2];
     c[((by + 1) << l2)*w + ((bx + 1) << l2)] = x[3];
     if (rdo_only) ctx->dc[ctx->dc_idx++] = x[0];
     od_quantize_haar_dc(enc, ctx, pli, bx + 0, by + 0, l, xdec, ydec, hgrad,
-     vgrad, 0, rdo_only);
+     vgrad, 0, rdo_only, 0, 0);
     if (rdo_only) ctx->dc[ctx->dc_idx++] = x[1];
     od_quantize_haar_dc(enc, ctx, pli, bx + 1, by + 0, l, xdec, ydec, hgrad,
-     vgrad, 0, rdo_only);
+     vgrad, 0, rdo_only, 0, 0);
     if (rdo_only) ctx->dc[ctx->dc_idx++] = x[2];
     od_quantize_haar_dc(enc, ctx, pli, bx + 0, by + 1, l, xdec, ydec, hgrad,
-     vgrad, 0, rdo_only);
+     vgrad, 0, rdo_only, 0, 0);
     if (rdo_only) ctx->dc[ctx->dc_idx++] = x[3];
     od_quantize_haar_dc(enc, ctx, pli, bx + 1, by + 1, l, xdec, ydec, hgrad,
-     vgrad, 0, rdo_only);
+     vgrad, 0, rdo_only, 0, 0);
     OD_ASSERT(ctx->dc_idx <= OD_NB_SAVED_DCS);
   }
   OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_TECHNIQUE, OD_ACCT_TECH_UNKNOWN);
+#endif
 }
 #endif
 
@@ -939,7 +943,7 @@ static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
 
 /* Returns 1 if the block is skipped, zero otherwise. */
 static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
- int pli, int bx, int by, int l, int xdec, int ydec, int rdo_only) {
+ int pli, int bx, int by, int l, int xdec, int ydec, int rdo_only, int hgrad, int vgrad) {
   int od;
   int d;
   int frame_width;
@@ -991,12 +995,16 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     if (rdo_only) {
       int i;
       int j;
+      od_coeff dc_orig[32*32];
       tell = od_ec_enc_tell_frac(&enc->ec);
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) c_orig[n*i + j] = ctx->c[bo + i*w + j];
       }
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) mc_orig[n*i + j] = ctx->mc[bo + i*w + j];
+      }
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) dc_orig[n*i + j] = ctx->d[pli][bo + i*w + j];
       }
       od_encode_checkpoint(enc, &pre_encode_buf);
       skip_nosplit = od_block_encode(enc, ctx, d, pli, bx, by, rdo_only);
@@ -1009,7 +1017,10 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) ctx->c[bo + i*w + j] = c_orig[n*i + j];
       }
-      if (rdo_only && ctx->is_keyframe) {
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) ctx->d[pli][bo + i*w + j] = dc_orig[n*i + j];
+      }
+      if (0 && rdo_only && ctx->is_keyframe) {
         int bits;
         OD_ASSERT(ctx->dc_rate_idx < OD_NB_SAVED_DC_RATES);
         bits = (ctx->dc_rate[ctx->dc_rate_idx++] + 4)/8;
@@ -1032,14 +1043,84 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
        enc->state.adapt.skip_cdf[pli*OD_NBSIZES + l + 1], 5,
        enc->state.adapt.skip_increment);
     }
+    if (1) {
+      od_coeff x[4];
+      int l2;
+      int ac_quant[2];
+      int i;
+      int dc_quant;
+if (1) {
+      if (enc->quantizer[pli] == 0) dc_quant = 1;
+      else {
+        dc_quant = OD_MAXI(1, enc->quantizer[pli]*OD_DC_RES[pli] >> 4);
+      }
+      if (enc->quantizer[pli] == 0) ac_quant[0] = ac_quant[1] = 1;
+      else {
+        /* Not rounding because it seems to slightly hurt. */
+        ac_quant[0] = dc_quant*OD_DC_QM[xdec][l - xdec][0] >> 4;
+        ac_quant[1] = dc_quant*OD_DC_QM[xdec][l - xdec][1] >> 4;
+      }
+      l2 = l - xdec + 2;
+      x[0] = ctx->d[pli][(by << l2)*w + (bx << l2)];
+      x[1] = ctx->d[pli][(by << l2)*w + ((bx + 1) << l2)];
+      x[2] = ctx->d[pli][((by + 1) << l2)*w + (bx << l2)];
+      x[3] = ctx->d[pli][((by + 1) << l2)*w + ((bx + 1) << l2)];
+      x[1] -= hgrad/5;
+      x[2] -= vgrad/5;
+      for (i = 1; i < 4; i++) {
+        int quant;
+        int sign;
+        double cost;
+        int q;
+        q = ac_quant[i == 3];
+        sign = x[i] < 0;
+        x[i] = abs(x[i]);
+  #if 0 /* Set to zero to disable RDO. */
+        quant = x[i]/q;
+        cost = generic_encode_cost(&enc->state.adapt.model_dc[pli], quant + 1,
+         -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
+        cost -= generic_encode_cost(&enc->state.adapt.model_dc[pli], quant,
+         -1, &enc->state.adapt.ex_dc[pli][l][i-1]);
+        /* Count cost of sign bit. */
+        if (quant == 0) cost += 1;
+        if (q*q - 2*q*(x[i] - quant*q) + q*q*OD_PVQ_LAMBDA*cost < 0) quant++;
+  #else
+        quant = OD_DIV_R0(x[i], q);
+  #endif
+        generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli], quant, -1,
+         &enc->state.adapt.ex_dc[pli][l][i-1], 2);
+        if (quant) od_ec_enc_bits(&enc->ec, sign, 1);
+        x[i] = quant*ac_quant[i == 3];
+        if (sign) x[i] = -x[i];
+      }
+      /* Gives best results for subset1, more conservative than the
+         theoretical /4 of a pure gradient. */
+      x[1] += hgrad/5;
+      x[2] += vgrad/5;
+      hgrad = x[1];
+      vgrad = x[2];
+      ctx->d[pli][(by << l2)*w + ((bx + 1) << l2)] = x[1];
+      ctx->d[pli][((by + 1) << l2)*w + (bx << l2)] = x[2];
+      ctx->d[pli][((by + 1) << l2)*w + ((bx + 1) << l2)] = x[3];
+}
+      x[0] = ctx->d[pli][bo];
+      x[1] = ctx->d[pli][bo + (1 << (l - xdec + 2))];
+      x[2] = ctx->d[pli][bo + (1 << (l - xdec + 2))*w];
+      x[3] = ctx->d[pli][bo + (1 << (l - xdec + 2))*(w + 1)];
+      OD_HAAR_KERNEL(x[0], x[1], x[2], x[3]);
+      ctx->d[pli][bo] = x[0];
+      ctx->d[pli][bo + (1 << (l - xdec + 2))] = x[1];
+      ctx->d[pli][bo + (1 << (l - xdec + 2))*w] = x[2];
+      ctx->d[pli][bo + (1 << (l - xdec + 2))*(w + 1)] = x[3];
+    }
     skip_split &= od_encode_recursive(enc, ctx, pli, bx + 0, by + 0, l, xdec,
-     ydec, rdo_only);
+     ydec, rdo_only, hgrad, vgrad);
     skip_split &= od_encode_recursive(enc, ctx, pli, bx + 1, by + 0, l, xdec,
-     ydec, rdo_only);
+     ydec, rdo_only, hgrad, vgrad);
     skip_split &= od_encode_recursive(enc, ctx, pli, bx + 0, by + 1, l, xdec,
-     ydec, rdo_only);
+     ydec, rdo_only, hgrad, vgrad);
     skip_split &= od_encode_recursive(enc, ctx, pli, bx + 1, by + 1, l, xdec,
-     ydec, rdo_only);
+     ydec, rdo_only, hgrad, vgrad);
     skip_block = skip_split;
     od_postfilter_split(ctx->c + bo, w, d, f);
     if (rdo_only) {
@@ -1458,6 +1539,9 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         int i;
         int j;
         od_rollback_buffer buf;
+        int hgrad;
+        int vgrad;
+        hgrad = vgrad = 0;
         c_orig = enc->c_orig[0];
         mbctx->dc_idx = 0;
         mbctx->dc_rate_idx = 0;
@@ -1483,7 +1567,7 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           }
           od_compute_dcts(enc, mbctx, pli, sbx, sby, 3, xdec, ydec);
           od_quantize_haar_dc(enc, mbctx, pli, sbx, sby, 3, xdec, ydec, 0,
-           0, sby > 0 && sbx < nhsb - 1, rdo_only);
+           0, sby > 0 && sbx < nhsb - 1, rdo_only, &hgrad, &vgrad);
           if (rdo_only) {
             od_encode_rollback(enc, &buf);
             for (i = 0; i < OD_BSIZE_MAX; i++) {
@@ -1497,7 +1581,7 @@ static void od_encode_residual(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         mbctx->dc_idx = 0;
         mbctx->dc_rate_idx = 0;
         od_encode_recursive(enc, mbctx, pli, sbx, sby, 3, xdec, ydec,
-         rdo_only);
+         rdo_only, hgrad, vgrad);
       }
         OD_ENC_ACCT_UPDATE(enc, OD_ACCT_CAT_PLANE, OD_ACCT_PLANE_UNKNOWN);
     }
