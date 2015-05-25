@@ -351,8 +351,6 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
 static void od_decode_haar_dc_sb(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
  int bx, int by, int l, int xdec, int ydec,
  int has_ur, od_coeff *ohgrad, od_coeff *ovgrad) {
-  int od;
-  int d;
   int w;
   int dc_quant;
   od_coeff *c;
@@ -366,10 +364,6 @@ static void od_decode_haar_dc_sb(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli
   w = dec->state.frame_width >> xdec;
   /*This code assumes 4:4:4 or 4:2:0 input.*/
   OD_ASSERT(xdec == ydec);
-  od = OD_BLOCK_SIZE4x4(dec->state.bsize,
-   dec->state.bstride, bx << l, by << l);
-  d = OD_MAXI(od, xdec);
-  OD_ASSERT(d <= l);
   if (dec->quantizer[pli] == 0) dc_quant = 1;
   else {
     dc_quant = OD_MAXI(1, dec->quantizer[pli]*OD_DC_RES[pli] >> 4);
@@ -825,7 +819,6 @@ int daala_decode_packet_in(daala_dec_ctx *dec, od_img *img,
       od_img_copy(dec->user_mc_img, &dec->state.io_imgs[OD_FRAME_REC]);
     }
   }
-  if (mbctx.is_keyframe) od_decode_block_sizes(dec);
   od_decode_residual(dec, &mbctx);
   if (dec->user_bsize != NULL) {
     int j;
