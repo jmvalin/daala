@@ -57,8 +57,12 @@ const od_coeff OD_DC_QM[2][OD_NBSIZES - 1][2] = {
 };
 #endif
 
+/* Haar "quantization matrix" for each decomposition level (starting from LF).
+   */
 const int OD_HAAR_QM[2][5] = {
+  /* horizontal/vertical direction. */
   {16, 16, 16, 24, 32},
+  /* "diagonal" direction. */
   {16, 16, 24, 32, 48},
 };
 
