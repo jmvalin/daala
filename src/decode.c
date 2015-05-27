@@ -282,10 +282,10 @@ static int od_decode_coeff_split(daala_dec_ctx *dec, int sum, int ctx) {
   shift = OD_MAXI(0, OD_ILOG(sum) - 4);
   if (shift) {
     a = od_ec_dec_bits(&dec->ec, shift);
-    sum >>= shift;
   }
   a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_coeff_cdf[15*ctx
-   + sum - 1], sum + 1, dec->state.adapt.haar_coeff_increment) << shift;
+   + (sum >> shift) - 1], (sum >> shift) + 1,
+   dec->state.adapt.haar_coeff_increment) << shift;
   if (a > sum) {
     a = sum;
     dec->ec.error = 1;
@@ -301,10 +301,9 @@ static int od_decode_tree_split(daala_dec_ctx *dec, int sum, int ctx) {
   shift = OD_MAXI(0, OD_ILOG(sum) - 4);
   if (shift) {
     a = od_ec_dec_bits(&dec->ec, shift);
-    sum >>= shift;
   }
   a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_split_cdf[15*(2*ctx
-   + OD_MINI(shift, 1)) + sum - 1], sum + 1,
+   + OD_MINI(shift, 1)) + (sum >> shift) - 1], (sum >> shift) + 1,
    dec->state.adapt.haar_split_increment) << shift;
   if (a > sum) {
     a = sum;
@@ -652,7 +651,8 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
   /* Read the luma skip symbol. A value of 4 means "split the block", while < 4
      means that we code the block. In the latter case, we need to forward
      the skip value to the PVQ decoder. */
-  if (pli==0) {
+  if (ctx->use_haar_wavelet) od = l;
+  else if (pli==0) {
     skip = od_decode_cdf_adapt(&dec->ec,
      dec->state.adapt.skip_cdf[pli*OD_NBSIZES + l], 5,
      dec->state.adapt.skip_increment);
@@ -683,7 +683,7 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
        ctx->d[0] + (by << (2 + l))*frame_width + (bx << (2 + l)),
        frame_width, xdec, ydec, d, od);
     }
-    if (pli > 0) {
+    if (pli > 0 && !ctx->use_haar_wavelet) {
       /* Decode the skip for chroma. */
       skip = od_decode_cdf_adapt(&dec->ec,
        dec->state.adapt.skip_cdf[pli*OD_NBSIZES + l], 5,
