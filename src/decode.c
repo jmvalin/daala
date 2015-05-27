@@ -286,6 +286,10 @@ static int od_decode_coeff_split(daala_dec_ctx *dec, int sum, int ctx) {
   }
   a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_coeff_cdf[15*ctx
    + sum - 1], sum + 1, dec->state.adapt.haar_coeff_increment) << shift;
+  if (a > sum) {
+    a = sum;
+    dec->ec.error = 1;
+  }
   return a;
 }
 
@@ -302,12 +306,15 @@ static int od_decode_tree_split(daala_dec_ctx *dec, int sum, int ctx) {
   a += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_split_cdf[15*(2*ctx
    + OD_MINI(shift, 1)) + sum - 1], sum + 1,
    dec->state.adapt.haar_split_increment) << shift;
+  if (a > sum) {
+    a = sum;
+    dec->ec.error = 1;
+  }
   return a;
 }
 
 static void od_decode_sum_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
- od_coeff tree_sum, int x, int y, int dir,
- int pli) {
+ od_coeff tree_sum, int x, int y, int dir, int pli) {
   int n;
   int coeff_mag;
   od_coeff children_sum;
@@ -318,7 +325,7 @@ static void od_decode_sum_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
    + 3*(OD_ILOG(OD_MAXI(x,y)) - 1));
   c[y*n + x] = coeff_mag;
   children_sum = tree_sum - coeff_mag;
-  /* Encode max of each four children relative to tree. */
+  /* Decode sum of each four children relative to tree. */
   if (children_sum) {
     int sum1;
     if (dir == 0) {
@@ -335,7 +342,8 @@ static void od_decode_sum_tree(daala_dec_ctx *dec, od_coeff *c, int ln,
       children[0][1] = od_decode_tree_split(dec, children_sum - sum1, 2);
       children[1][1] = children_sum - sum1 - children[0][1];
     }
-  } else {
+  }
+  else {
     children[0][0] = children[0][1] = children[1][0] = children[1][1] = 0;
   }
   if (4*x < n && 4*y < n) {
@@ -358,7 +366,7 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
   int n;
   int i;
   int dir;
-  od_coeff tree_sum[2][2] = {{0}};
+  od_coeff tree_sum[2][2];
   n = 1 << ln;
   for (i = 0; i < n; i++) {
     int j;
