@@ -376,9 +376,18 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
     bits = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.haar_bits_cdf[pli],
      16, dec->state.adapt.haar_bits_increment);
     if (bits == 15) bits += od_ec_dec_unary(&dec->ec);
-    if (bits > 1) {
+    /* Theoretical maximum sum is around 2^7 * 2^OD_COEFF_SHIFT * 32x32,
+       so 2^21, but let's play safe. */
+    if (bits > 24) {
+      /* This can't happen, must be a bit-stream desync/corruption. */
+      dec->ec.error = 1;
+      return;
+    }
+    else if (bits > 1) {
       tree_sum[0][0] = (1 << (bits - 1)) | od_ec_dec_bits(&dec->ec, bits - 1);
-    } else tree_sum[0][0] = bits;
+    }
+    else tree_sum[0][0] = bits;
+    /* Handle diagonal first to make H/V symmetric. */
     tree_sum[1][1] = od_decode_tree_split(dec, tree_sum[0][0], 3);
     tree_sum[0][1] = od_decode_tree_split(dec, tree_sum[0][0] - tree_sum[1][1],
      4);
@@ -389,7 +398,7 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
   od_decode_sum_tree(dec, pred, ln, tree_sum[1][1], 1, 1, 2, pli);
   for (i = 0; i < n; i++) {
     int j;
-    for (j = 0; j < n; j++) if (i + j) {
+    for (j = (i == 0); j < n; j++) {
       int sign;
       od_coeff in;
       in = pred[i*n + j];
@@ -407,7 +416,7 @@ static void od_wavelet_unquantize(daala_dec_ctx *dec, int ln, od_coeff *pred,
       int q;
       bo = (((dir + 1) >> 1) << level)*n + (((dir + 1) & 1) << level);
       if (quant == 0) q = 1;
-      else q = quant*OD_HAAR_QM[dir==2][level] >> 4;
+      else q = quant*OD_HAAR_QM[dir == 2][level] >> 4;
       for (i = 0; i < 1 << level; i++) {
         int j;
         for (j = 0; j < 1 << level; j++)
@@ -475,7 +484,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int ln,
     }
   }
   else {
-  od_raster_to_coding_order(predt,  n, &pred[0], n, lossless);
+    od_raster_to_coding_order(predt,  n, &pred[0], n, lossless);
   }
   quant = OD_MAXI(1, dec->quantizer[pli]);
   if (lossless) dc_quant = 1;
