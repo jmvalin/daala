@@ -1953,72 +1953,6 @@ void od_bin_idct32(od_coeff *x, int xstride, const od_coeff y[32]) {
   x[31*xstride] = (od_coeff)tv;
 }
 
-/* (1-sqrt(.5))/sqrt(.5) = 0.41421 */
-#define OD_HAAR_CONST1_Q7 (53)
-/* sqrt(.5) = 0.70711 */
-#define OD_HAAR_CONST2_Q8 (181)
-
-#define OD_INV_HAAR_KERNEL_1D(x0, x1) \
-  do { \
-    (x0) -= OD_HAAR_CONST1_Q7*(x1) >> 7; \
-    (x1) += OD_HAAR_CONST2_Q8*(x0) >> 8; \
-    (x0) -= OD_HAAR_CONST1_Q7*(x1) >> 7; \
-  } \
-  while(0)
-
-#define OD_HAAR_KERNEL_1D(x0, x1) \
-  do { \
-    (x0) += OD_HAAR_CONST1_Q7*(x1) >> 7; \
-    (x1) -= OD_HAAR_CONST2_Q8*(x0) >> 8; \
-    (x0) += OD_HAAR_CONST1_Q7*(x1) >> 7; \
-  } \
-  while(0)
-
-void od_haar_1d(od_coeff *x, int stride, int ln) {
-  od_coeff t[OD_BSIZE_MAX];
-  int i;
-  int level;
-  int n;
-  n = 1 << ln;
-  for (i = 0; i < n; i++) t[i] = x[i*stride];
-  for (level = 0; level < ln; level++) {
-    int bound;
-    bound = n >> level >> 1;
-    for (i = 0; i < bound; i++) {
-      od_coeff x0;
-      od_coeff x1;
-      x0 = t[2*i];
-      x1 = t[2*i + 1];
-      OD_HAAR_KERNEL_1D(x0, x1);
-      t[i] = x0;
-      x[(i + bound)*stride] = x1;
-    }
-  }
-  x[0] = t[0];
-}
-
-void od_inv_haar_1d(od_coeff *x, int stride, int ln) {
-  od_coeff t[OD_BSIZE_MAX];
-  int i;
-  int level;
-  int n;
-  n = 1 << ln;
-  for (i = 0; i < n; i++) t[i] = x[i*stride];
-  for (level = ln - 1; level >= 0; level--) {
-    int bound;
-    bound = 1 << (ln - 1 - level);
-    for (i = bound - 1; i >= 0; i--) {
-      od_coeff x0;
-      od_coeff x1;
-      x0 = x[i*stride];
-      x1 = t[i + bound];
-      OD_INV_HAAR_KERNEL_1D(x0, x1);
-      x[2*i*stride] = x0;
-      x[(2*i + 1)*stride] = x1;
-    }
-  }
-}
-
 void od_haar(od_coeff *y, int ystride,
   const od_coeff *x, int xstride, int ln) {
   int i;
@@ -2035,10 +1969,10 @@ void od_haar(od_coeff *y, int ystride,
     }
   }
   for (level = 0; level < ln; level++) {
-    int bound;
-    bound = n >> level >> 1;
-    for (i = 0; i < bound; i++) {
-      for (j = 0; j < bound; j++) {
+    int npairs;
+    npairs = n >> level >> 1;
+    for (i = 0; i < npairs; i++) {
+      for (j = 0; j < npairs; j++) {
         od_coeff a;
         od_coeff b;
         od_coeff c;
@@ -2049,9 +1983,9 @@ void od_haar(od_coeff *y, int ystride,
         d = tmp[(2*i + 1)*tstride + 2*j + 1];
         OD_HAAR_KERNEL(a, b, c, d);
         tmp[i*tstride + j] = a;
-        y[i*ystride + j + bound] = b;
-        y[(i + bound)*ystride + j] = c;
-        y[(i + bound)*ystride + j + bound] = d;
+        y[i*ystride + j + npairs] = b;
+        y[(i + npairs)*ystride + j] = c;
+        y[(i + npairs)*ystride + j + npairs] = d;
       }
     }
   }
@@ -2065,17 +1999,18 @@ void od_haar_inv(od_coeff *x, int xstride,
   int level;
   x[0] = y[0];
   for (level = ln - 1; level >= 0; level--) {
-    int bound = 1 << (ln - 1 - level);
-    for (i = bound - 1; i >= 0; i--) {
-      for (j = bound - 1; j >= 0; j--) {
+    int npairs;
+    npairs = 1 << (ln - 1 - level);
+    for (i = npairs - 1; i >= 0; i--) {
+      for (j = npairs - 1; j >= 0; j--) {
         od_coeff a;
         od_coeff b;
         od_coeff c;
         od_coeff d;
         a = x[i*xstride + j];
-        b = y[i*ystride + j + bound];
-        c = y[(i + bound)*ystride + j];
-        d = y[(i + bound)*ystride + j + bound];
+        b = y[i*ystride + j + npairs];
+        c = y[(i + npairs)*ystride + j];
+        d = y[(i + npairs)*ystride + j + npairs];
         OD_HAAR_KERNEL(a, b, c, d);
         x[2*i*xstride + 2*j] = a;
         x[(2*i + 1)*xstride + 2*j] = b;
