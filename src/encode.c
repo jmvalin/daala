@@ -598,7 +598,7 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
 
 /* Returns 1 if the block is skipped, zero otherwise. */
 static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
- int pli, int bx, int by, int rdo_only) {
+ int pli, int bx, int by, int rdo_only, int mv_ctx) {
   int n;
   int xdec;
   int w;
@@ -705,7 +705,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   }
   else {
     skip = od_pvq_encode(enc, predt, cblock, scalar_out, quant, pli, bs,
-     OD_PVQ_BETA[use_masking][pli][bs], OD_ROBUST_STREAM, ctx->is_keyframe);
+     OD_PVQ_BETA[use_masking][pli][bs], OD_ROBUST_STREAM, ctx->is_keyframe, mv_ctx);
   }
   if (!ctx->is_keyframe) {
     int has_dc_skip;
@@ -1076,6 +1076,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   int bs;
   int frame_width;
   int w;
+  int mv_ctx;
   /*This code assumes 4:4:4 or 4:2:0 input.*/
   OD_ASSERT(xdec == ydec);
   obs = OD_BLOCK_SIZE4x4(enc->state.bsize,
@@ -1086,6 +1087,11 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   OD_ASSERT(bs <= bsi);
   if (bs == bsi) {
     bs -= xdec;
+    if (ctx->is_keyframe || pli != 0) mv_ctx = 0;
+    else {
+      mv_ctx = enc->state.mv_grid[(2*by + 1) << bsi >> 1]
+       [(2*bx + 1) << bsi >> 1].valid;
+    }
     /*Construct the luma predictors for chroma planes.*/
     if (ctx->l != NULL) {
       OD_ASSERT(pli > 0);
@@ -1093,7 +1099,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
        ctx->d[0] + (by << (2 + bsi))*frame_width + (bx << (2 + bsi)),
        frame_width, xdec, ydec, bs, obs);
     }
-    return od_block_encode(enc, ctx, bs, pli, bx, by, rdo_only);
+    return od_block_encode(enc, ctx, bs, pli, bx, by, rdo_only, 0);
   }
   else {
     int f;
@@ -1111,6 +1117,11 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     od_coeff *split;
     int rate_nosplit;
     int rate_split;
+    if (ctx->is_keyframe || pli != 0) mv_ctx = 0;
+    else {
+      mv_ctx = enc->state.mv_grid[(2*by + 1) << bsi >> 1]
+       [(2*bx + 1) << bsi >> 1].valid;
+    }
     c_orig = enc->c_orig[bsi - 1];
     mc_orig = enc->mc_orig[bsi - 1];
     nosplit = enc->nosplit[bsi - 1];
@@ -1138,7 +1149,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
         }
       }
       od_encode_checkpoint(enc, &pre_encode_buf);
-      skip_nosplit = od_block_encode(enc, ctx, bs, pli, bx, by, rdo_only);
+      skip_nosplit = od_block_encode(enc, ctx, bs, pli, bx, by, rdo_only, mv_ctx);
       rate_nosplit = od_ec_enc_tell_frac(&enc->ec) - tell;
       od_encode_checkpoint(enc, &post_nosplit_buf);
       od_encode_rollback(enc, &pre_encode_buf);
@@ -1164,7 +1175,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     if (pli == 0) {
       /* Code the "split this block" symbol (4). */
       od_encode_cdf_adapt(&enc->ec, 4,
-       enc->state.adapt.skip_cdf[pli*OD_NBSIZES + bsi + 1], 5,
+       enc->state.adapt.skip_cdf[2*(pli*OD_NBSIZES + bsi + 1) + mv_ctx], 5,
        enc->state.adapt.skip_increment);
     }
     if (ctx->is_keyframe) {

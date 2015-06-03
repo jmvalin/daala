@@ -591,7 +591,8 @@ int od_pvq_encode(daala_enc_ctx *enc,
                    int bs,
                    const double *beta,
                    int robust,
-                   int is_keyframe){
+                   int is_keyframe,
+                   int mv_ctx){
   int theta[PVQ_MAX_PARTITIONS];
   int max_theta[PVQ_MAX_PARTITIONS];
   int qg[PVQ_MAX_PARTITIONS];
@@ -619,7 +620,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   qm = &enc->state.pvq_qm_q4[pli][0];
   exg = &enc->state.adapt.pvq_exg[pli][bs][0];
   ext = enc->state.adapt.pvq_ext + bs*PVQ_MAX_PARTITIONS;
-  skip_cdf = enc->state.adapt.skip_cdf[pli*OD_NBSIZES + bs];
+  skip_cdf = enc->state.adapt.skip_cdf[2*(pli*OD_NBSIZES + bs) + mv_ctx];
   model = enc->state.adapt.pvq_param_model;
   nb_bands = OD_BAND_OFFSETS[bs][0];
   off = &OD_BAND_OFFSETS[bs][1];
