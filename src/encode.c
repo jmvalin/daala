@@ -1090,6 +1090,11 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   w = frame_width >> xdec;
   bs = OD_MAXI(obs, xdec);
   OD_ASSERT(bs <= bsi);
+  if (ctx->is_keyframe || pli != 0) mv_ctx = 0;
+  else {
+    mv_ctx = enc->state.mv_grid[(2*by + 1) << bsi >> 1]
+     [(2*bx + 1) << bsi >> 1].valid;
+  }
   if (bs == bsi) {
     bs -= xdec;
     if (ctx->is_keyframe || pli != 0) mv_ctx = 0;
@@ -1104,7 +1109,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
        ctx->d[0] + (by << (2 + bsi))*frame_width + (bx << (2 + bsi)),
        frame_width, xdec, ydec, bs, obs);
     }
-    return od_block_encode(enc, ctx, bs, pli, bx, by, rdo_only, 0);
+    return od_block_encode(enc, ctx, bs, pli, bx, by, rdo_only, mv_ctx);
   }
   else {
     int f;
@@ -1122,11 +1127,6 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     od_coeff *split;
     int rate_nosplit;
     int rate_split;
-    if (ctx->is_keyframe || pli != 0) mv_ctx = 0;
-    else {
-      mv_ctx = enc->state.mv_grid[(2*by + 1) << bsi >> 1]
-       [(2*bx + 1) << bsi >> 1].valid;
-    }
     c_orig = enc->c_orig[bsi - 1];
     mc_orig = enc->mc_orig[bsi - 1];
     nosplit = enc->nosplit[bsi - 1];
