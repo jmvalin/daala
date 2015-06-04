@@ -615,6 +615,8 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
   int w;
   int skip;
   int frame_width;
+  int mv_ctx;
+  ogg_uint16_t *skip_cdf;
   /*This code assumes 4:4:4 or 4:2:0 input.*/
   OD_ASSERT(xdec == ydec);
   obs = OD_BLOCK_SIZE4x4(dec->state.bsize,
@@ -622,13 +624,19 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
   frame_width = dec->state.frame_width;
   w = frame_width >> xdec;
   skip = 0;
+  if (ctx->is_keyframe || pli != 0) mv_ctx = 0;
+  else {
+    mv_ctx = dec->state.mv_grid[(2*by + 1) << bsi >> 1]
+     [(2*bx + 1) << bsi >> 1].valid;
+  }
+  skip_cdf = dec->state.adapt.skip_cdf[2*((pli != 0)*OD_NBSIZES + bsi) + mv_ctx];
   /* Read the luma skip symbol. A value of 4 means "split the block", while < 4
      means that we code the block. In the latter case, we need to forward
      the skip value to the PVQ decoder. */
   if (ctx->use_haar_wavelet) obs = bsi;
   else if (pli == 0) {
     skip = od_decode_cdf_adapt(&dec->ec,
-     dec->state.adapt.skip_cdf[pli*OD_NBSIZES + bsi], 5,
+     skip_cdf, 5,
      dec->state.adapt.skip_increment);
     if (skip < 4) obs = bsi;
     else obs = -1;
@@ -660,7 +668,7 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
     if (pli > 0 && !ctx->use_haar_wavelet) {
       /* Decode the skip for chroma. */
       skip = od_decode_cdf_adapt(&dec->ec,
-       dec->state.adapt.skip_cdf[pli*OD_NBSIZES + bsi], 5,
+        skip_cdf, 5,
        dec->state.adapt.skip_increment);
     }
     od_block_decode(dec, ctx, bs, pli, bx, by, skip);
