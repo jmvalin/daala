@@ -629,7 +629,7 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
     mv_ctx = dec->state.mv_grid[(2*by + 1) << bsi >> 1]
      [(2*bx + 1) << bsi >> 1].valid;
   }
-  skip_cdf = dec->state.adapt.skip_cdf[2*((pli != 0)*OD_NBSIZES + bsi) + mv_ctx];
+  skip_cdf = dec->state.adapt.skip_cdf[2*((pli)*OD_NBSIZES + bsi) + mv_ctx];
   /* Read the luma skip symbol. A value of 4 means "split the block", while < 4
      means that we code the block. In the latter case, we need to forward
      the skip value to the PVQ decoder. */

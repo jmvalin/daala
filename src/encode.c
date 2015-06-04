@@ -1175,7 +1175,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     if (pli == 0) {
       /* Code the "split this block" symbol (4). */
       od_encode_cdf_adapt(&enc->ec, 4,
-       enc->state.adapt.skip_cdf[2*((pli!=0)*OD_NBSIZES + bsi + 1) + mv_ctx], 5,
+       enc->state.adapt.skip_cdf[2*((pli)*OD_NBSIZES + bsi + 1) + mv_ctx], 5,
        enc->state.adapt.skip_increment);
     }
     if (ctx->is_keyframe) {
