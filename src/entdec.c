@@ -157,7 +157,7 @@ void od_ec_dec_init(od_ec_dec *dec,
   ft: The total probability.
       This must be at least 16384 and no more than 32768.
   Return: The value decoded (0 or 1).*/
-int od_ec_decode_bool(od_ec_dec *dec, unsigned fz, unsigned ft) {
+int od_ec_decode_bool_(od_ec_dec *dec, unsigned fz, unsigned ft OD_ACC_STR) {
   od_ec_window dif;
   od_ec_window vw;
   unsigned r;
@@ -187,7 +187,7 @@ int od_ec_decode_bool(od_ec_dec *dec, unsigned fz, unsigned ft) {
 /*Equivalent to od_ec_decode_bool() with ft == 32768.
   fz: The probability that the bit is zero, scaled by 32768.
   Return: The value decoded (0 or 1).*/
-int od_ec_decode_bool_q15(od_ec_dec *dec, unsigned fz) {
+int od_ec_decode_bool_q15_(od_ec_dec *dec, unsigned fz OD_ACC_STR) {
   od_ec_window dif;
   od_ec_window vw;
   unsigned r;
@@ -215,7 +215,7 @@ int od_ec_decode_bool_q15(od_ec_dec *dec, unsigned fz) {
   nsyms: The number of symbols in the alphabet.
          This should be at most 16.
   Return: The decoded symbol s.*/
-int od_ec_decode_cdf(od_ec_dec *dec, const ogg_uint16_t *cdf, int nsyms) {
+int od_ec_decode_cdf_(od_ec_dec *dec, const ogg_uint16_t *cdf, int nsyms OD_ACC_STR) {
   od_ec_window dif;
   unsigned r;
   unsigned d;
@@ -263,7 +263,7 @@ int od_ec_decode_cdf(od_ec_dec *dec, const ogg_uint16_t *cdf, int nsyms) {
   nsyms: The number of symbols in the alphabet.
          This should be at most 16.
   Return: The decoded symbol s.*/
-int od_ec_decode_cdf_q15(od_ec_dec *dec, const ogg_uint16_t *cdf, int nsyms) {
+int od_ec_decode_cdf_q15_(od_ec_dec *dec, const ogg_uint16_t *cdf, int nsyms OD_ACC_STR) {
   od_ec_window dif;
   unsigned r;
   unsigned d;
@@ -304,8 +304,8 @@ int od_ec_decode_cdf_q15(od_ec_dec *dec, const ogg_uint16_t *cdf, int nsyms) {
   nsyms: The number of symbols in the alphabet.
          This should be at most 16.
   Return: The decoded symbol s.*/
-int od_ec_decode_cdf_unscaled(od_ec_dec *dec,
- const ogg_uint16_t *cdf, int nsyms) {
+int od_ec_decode_cdf_unscaled_(od_ec_dec *dec,
+ const ogg_uint16_t *cdf, int nsyms OD_ACC_STR) {
   od_ec_window dif;
   unsigned r;
   unsigned d;
@@ -359,8 +359,8 @@ int od_ec_decode_cdf_unscaled(od_ec_dec *dec,
   ftb: The number of bits of precision in the cumulative distribution.
        This must be no more than 15.
   Return: The decoded symbol s.*/
-int od_ec_decode_cdf_unscaled_dyadic(od_ec_dec *dec,
- const ogg_uint16_t *cdf, int nsyms, unsigned ftb) {
+int od_ec_decode_cdf_unscaled_dyadic_(od_ec_dec *dec,
+ const ogg_uint16_t *cdf, int nsyms, unsigned ftb OD_ACC_STR) {
   od_ec_window dif;
   unsigned r;
   unsigned d;
@@ -402,7 +402,7 @@ int od_ec_decode_cdf_unscaled_dyadic(od_ec_dec *dec,
   ft: The number of integers that can be decoded (one more than the max).
       This must be at least 2, and no more than 2**29.
   Return: The decoded bits.*/
-ogg_uint32_t od_ec_dec_uint(od_ec_dec *dec, ogg_uint32_t ft) {
+ogg_uint32_t od_ec_dec_uint_(od_ec_dec *dec, ogg_uint32_t ft OD_ACC_STR) {
   OD_ASSERT(ft >= 2);
   OD_ASSERT(ft <= (ogg_uint32_t)1 << (25 + OD_EC_UINT_BITS));
   if (ft > 1U << OD_EC_UINT_BITS) {
@@ -412,13 +412,13 @@ ogg_uint32_t od_ec_dec_uint(od_ec_dec *dec, ogg_uint32_t ft) {
     ft--;
     ftb = OD_ILOG_NZ(ft) - OD_EC_UINT_BITS;
     ft1 = (int)(ft >> ftb) + 1;
-    t = od_ec_decode_cdf_q15(dec, OD_UNIFORM_CDF_Q15(ft1), ft1);
-    t = t << ftb | od_ec_dec_bits(dec, ftb);
+    t = od_ec_decode_cdf_q15(dec, OD_UNIFORM_CDF_Q15(ft1), ft1, acc_str);
+    t = t << ftb | od_ec_dec_bits(dec, ftb, acc_str);
     if (t <= ft) return t;
     dec->error = 1;
     return ft;
   }
-  return od_ec_decode_cdf_q15(dec, OD_UNIFORM_CDF_Q15(ft), (int)ft);
+  return od_ec_decode_cdf_q15(dec, OD_UNIFORM_CDF_Q15(ft), (int)ft, acc_str);
 }
 
 /*Extracts a sequence of raw bits from the stream.
@@ -426,7 +426,7 @@ ogg_uint32_t od_ec_dec_uint(od_ec_dec *dec, ogg_uint32_t ft) {
   ftb: The number of bits to extract.
        This must be between 0 and 25, inclusive.
   Return: The decoded bits.*/
-ogg_uint32_t od_ec_dec_bits(od_ec_dec *dec, unsigned ftb) {
+ogg_uint32_t od_ec_dec_bits_(od_ec_dec *dec, unsigned ftb OD_ACC_STR) {
   od_ec_window window;
   int available;
   ogg_uint32_t ret;

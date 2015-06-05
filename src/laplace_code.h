@@ -38,9 +38,10 @@ void laplace_encode(od_ec_enc *enc, int x, int ex_q8, int k);
 void laplace_encode_vector(od_ec_enc *enc, const od_coeff *y, int n, int k,
                                   ogg_int32_t *curr, const ogg_int32_t *means);
 
-int laplace_decode_special(od_ec_dec *dec, unsigned decay, int max);
-int laplace_decode(od_ec_dec *dec, int ex_q8, int k);
+int laplace_decode_special(od_ec_dec *dec, unsigned decay, int max OD_ACC_STR);
+int laplace_decode(od_ec_dec *dec, int ex_q8, int k OD_ACC_STR);
 void laplace_decode_vector(od_ec_dec *dec, od_coeff *y, int n, int k,
-                                  ogg_int32_t *curr, const ogg_int32_t *means);
+                                  ogg_int32_t *curr, const ogg_int32_t *means
+                                  OD_ACC_STR);
 
 #endif
