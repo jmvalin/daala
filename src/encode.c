@@ -522,17 +522,61 @@ static void od_encode_sum_tree(daala_enc_ctx *enc, const od_coeff *c, int ln,
   }
 }
 
+static od_coeff compute_median(od_coeff *x0, int stride, int n) {
+  int i;
+  int j;
+  od_coeff med;
+  int count;
+  od_coeff x[OD_BSIZE_MAX];
+  for (i = 0; i < n; i++) x[i] = x0[i*stride];
+  stride = 1;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n - 1; j++) {
+      if (x[j*stride] > x[(j + 1)*stride]) {
+        od_coeff tmp;
+        tmp = x[j*stride];
+        x[j*stride] = x[(j + 1)*stride];
+        x[(j + 1)*stride] = tmp;
+      }
+    }
+  }
+  med = x[(n/2)*stride];
+  count = 0;
+  for (i = 0; i < n; i++) count += (x[i] == med);
+  if (count < n/2 + 1) med = 0;
+  return med;
+}
+
 static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
- od_coeff *out, const od_coeff *cblock, const od_coeff *predt,
+ od_coeff *out, od_coeff *cblock, const od_coeff *predt,
  int quant, int pli) {
   int n;
   int i, j;
   int dir;
+  int level;
+  od_coeff horiz[OD_BSIZE_MAX];
+  od_coeff vert[OD_BSIZE_MAX];
   od_coeff tree_sum[OD_BSIZE_MAX][OD_BSIZE_MAX];
   n = 1 << ln;
-  /* Quantize everything but DC. */
-  for (dir = 0; dir < 3; dir++) {
-    int level;
+  for (i = 0; i < n*n; i++) out[i] = cblock[i];
+#if 1
+  for (level = 1; level < ln; level++) {
+    int nc;
+    nc = 1 << level;
+    for (i = 0; i < nc; i++) {
+      horiz[nc + i] = compute_median(&out[(nc + i)*n], 1, nc);
+      vert[nc + i] = compute_median(&out[nc + i], n, nc);
+      for (j = 0; j < nc; j++) {
+        out[(nc + i)*n + j] -= horiz[nc + i];
+        out[nc + i + j*n] -= vert[nc + i];
+      }
+      if (pli==0)printf("%d %d ", horiz[nc + i], vert[nc + i]);
+    }
+  }
+  printf("\n");
+#endif
+#if 0
+  for (dir = 2; dir < 3; dir++) {
     for (level = 0; level < ln; level++) {
       int bo;
       int q;
@@ -541,7 +585,24 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
       else q = quant*OD_HAAR_QM[dir == 2][level] >> 4;
       for (i = 0; i < 1 << level; i++) {
         for (j = 0; j < 1 << level; j++) {
-          out[bo + i*n + j] = OD_DIV_R0(cblock[bo + i*n + j]
+          out[bo + i*n + j] = 0;
+        }
+      }
+    }
+  }
+#endif
+#if 1
+  /* Quantize everything but DC. */
+  for (dir = 0; dir < 3; dir++) {
+    for (level = 0; level < ln; level++) {
+      int bo;
+      int q;
+      bo = (((dir + 1) >> 1) << level)*n + (((dir + 1) & 1) << level);
+      if (quant == 0) q = 1;
+      else q = quant*OD_HAAR_QM[dir == 2][level] >> 4;
+      for (i = 0; i < 1 << level; i++) {
+        for (j = 0; j < 1 << level; j++) {
+          out[bo + i*n + j] = OD_DIV_R0(out[bo + i*n + j]
            - predt[bo + i*n + j], q);
         }
       }
@@ -585,7 +646,6 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     }
   }
   for (dir = 0; dir < 3; dir++) {
-    int level;
     for (level = 0; level < ln; level++) {
       int bo;
       int q;
@@ -598,6 +658,19 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
       }
     }
   }
+#endif
+#if 1
+  for (level = 1; level < ln; level++) {
+    int nc;
+    nc = 1 << level;
+    for (i = 0; i < nc; i++) {
+      for (j = 0; j < nc; j++) {
+        out[(nc + i)*n + j] += horiz[nc + i];
+        out[nc + i + j*n] += vert[nc + i];
+      }
+    }
+  }
+#endif
   return 0;
 }
 

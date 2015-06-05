@@ -1983,8 +1983,8 @@ void od_haar(od_coeff *y, int ystride,
         d = tmp[(2*i + 1)*tstride + 2*j + 1];
         OD_HAAR_KERNEL(a, b, c, d);
         tmp[i*tstride + j] = a;
-        y[i*ystride + j + npairs] = b;
-        y[(i + npairs)*ystride + j] = c;
+        y[i*ystride + j + npairs] = c;
+        y[(i + npairs)*ystride + j] = b;
         y[(i + npairs)*ystride + j + npairs] = d;
       }
     }
@@ -2008,8 +2008,8 @@ void od_haar_inv(od_coeff *x, int xstride,
         od_coeff c;
         od_coeff d;
         a = x[i*xstride + j];
-        b = y[i*ystride + j + npairs];
-        c = y[(i + npairs)*ystride + j];
+        c = y[i*ystride + j + npairs];
+        b = y[(i + npairs)*ystride + j];
         d = y[(i + npairs)*ystride + j + npairs];
         OD_HAAR_KERNEL(a, b, c, d);
         x[2*i*xstride + 2*j] = a;
