@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
  *
  * @retval decoded variable x
  */
-int laplace_decode_special(od_ec_dec *dec, unsigned decay, int max OD_ACC_STR) {
+int laplace_decode_special_(od_ec_dec *dec, unsigned decay, int max OD_ACC_STR) {
   int pos;
   int shift;
   int xs;
@@ -101,7 +101,7 @@ int laplace_decode_special(od_ec_dec *dec, unsigned decay, int max OD_ACC_STR) {
  *
  * @retval decoded variable (including sign)
  */
-int laplace_decode(od_ec_dec *dec, int ex_q8, int k OD_ACC_STR) {
+int laplace_decode_(od_ec_dec *dec, int ex_q8, int k OD_ACC_STR) {
   int j;
   int shift;
   ogg_uint16_t cdf[16];
@@ -137,7 +137,13 @@ int laplace_decode(od_ec_dec *dec, int ex_q8, int k OD_ACC_STR) {
   return (sym << shift) + lsb;
 }
 
-static void laplace_decode_vector_delta(od_ec_dec *dec, od_coeff *y, int n, int k,
+#if OD_ACCOUNTING
+# define laplace_decode_vector_delta(dec, y, n, k, curr, means, str) laplace_decode_vector_delta_(dec, y, n, k, curr, means, str)
+#else
+# define laplace_decode_vector_delta(dec, y, n, k, curr, means, str) laplace_decode_vector_delta_(dec, y, n, k, curr, means)
+#endif
+
+static void laplace_decode_vector_delta_(od_ec_dec *dec, od_coeff *y, int n, int k,
                                         ogg_int32_t *curr, const ogg_int32_t *means
                                         OD_ACC_STR) {
   int i;
@@ -210,7 +216,7 @@ static void laplace_decode_vector_delta(od_ec_dec *dec, od_coeff *y, int n, int 
  * @param [out]    curr  Adaptation context output, may alias means.
  * @param [in]     means Adaptation context input.
  */
-void laplace_decode_vector(od_ec_dec *dec, od_coeff *y, int n, int k,
+void laplace_decode_vector_(od_ec_dec *dec, od_coeff *y, int n, int k,
                            ogg_int32_t *curr, const ogg_int32_t *means OD_ACC_STR) {
   int i;
   int sum_ex;
