@@ -83,6 +83,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
    URL="http://researchcommons.waikato.ac.nz/bitstream/handle/10289/78/content.pdf"
   }*/
 
+#if OD_ACCOUNTING
+# define OD_PROCESS_ACCOUNTING(dec, str) od_process_accounting(dec, str)
+# define od_ec_dec_normalize(dec, dif, rng, ret, str) od_ec_dec_normalize_(dec, dif, rng, ret, str)
+static void od_process_accounting(od_ec_dec *dec, char *str) {
+  ogg_uint32_t tell;
+  tell = od_ec_dec_tell_frac(dec);
+  printf("%s = %d\n", str, tell - dec->last_tell);
+  dec->last_tell = tell;
+}
+#else
+# define OD_PROCESS_ACCOUNTING(dec, str) do {} while(0)
+# define od_ec_dec_normalize(dec, dif, rng, ret, str) od_ec_dec_normalize_(dec, dif, rng, ret)
+#endif
+
 /*This is meant to be a large, positive constant that can still be efficiently
    loaded as an immediate (on platforms like ARM, for example).
   Even relatively modest values like 100 would work fine.*/
@@ -121,8 +135,8 @@ static void od_ec_dec_refill(od_ec_dec *dec) {
   ret: The value to return.
   Return: ret.
           This allows the compiler to jump to this function via a tail-call.*/
-static int od_ec_dec_normalize(od_ec_dec *dec,
- od_ec_window dif, unsigned rng, int ret) {
+static int od_ec_dec_normalize_(od_ec_dec *dec,
+ od_ec_window dif, unsigned rng, int ret OD_ACC_STR) {
   int d;
   OD_ASSERT(rng <= 65535U);
   d = 16 - OD_ILOG_NZ(rng);
@@ -130,6 +144,7 @@ static int od_ec_dec_normalize(od_ec_dec *dec,
   dec->dif = dif << d;
   dec->rng = rng << d;
   if (dec->cnt < 0) od_ec_dec_refill(dec);
+  OD_PROCESS_ACCOUNTING(dec, acc_str);
   return ret;
 }
 
@@ -181,7 +196,7 @@ int od_ec_decode_bool_(od_ec_dec *dec, unsigned fz, unsigned ft OD_ACC_STR) {
   ret = dif >= vw;
   if (ret) dif -= vw;
   r = ret ? r - v : v;
-  return od_ec_dec_normalize(dec, dif, r, ret);
+  return od_ec_dec_normalize(dec, dif, r, ret, acc_str);
 }
 
 /*Equivalent to od_ec_decode_bool() with ft == 32768.
@@ -204,7 +219,7 @@ int od_ec_decode_bool_q15_(od_ec_dec *dec, unsigned fz OD_ACC_STR) {
   ret = dif >= vw;
   if (ret) dif -= vw;
   r = ret ? r - v : v;
-  return od_ec_dec_normalize(dec, dif, r, ret);
+  return od_ec_dec_normalize(dec, dif, r, ret, acc_str);
 }
 
 /*Decodes a symbol given a cumulative distribution function (CDF) table.
@@ -252,7 +267,7 @@ int od_ec_decode_cdf_(od_ec_dec *dec, const ogg_uint16_t *cdf, int nsyms OD_ACC_
   v = fh + OD_MINI(fh, d);
   r = v - u;
   dif -= (od_ec_window)u << (OD_EC_WINDOW_SIZE - 16);
-  return od_ec_dec_normalize(dec, dif, r, ret);
+  return od_ec_dec_normalize(dec, dif, r, ret, acc_str);
 }
 
 /*Decodes a symbol given a cumulative distribution function (CDF) table.
@@ -293,7 +308,7 @@ int od_ec_decode_cdf_q15_(od_ec_dec *dec, const ogg_uint16_t *cdf, int nsyms OD_
   v = fh + OD_MINI(fh, d);
   r = v - u;
   dif -= (od_ec_window)u << (OD_EC_WINDOW_SIZE - 16);
-  return od_ec_dec_normalize(dec, dif, r, ret);
+  return od_ec_dec_normalize(dec, dif, r, ret, acc_str);
 }
 
 /*Decodes a symbol given a cumulative distribution function (CDF) table.
@@ -346,7 +361,7 @@ int od_ec_decode_cdf_unscaled_(od_ec_dec *dec,
   v = fh + OD_MINI(fh, d);
   r = v - u;
   dif -= (od_ec_window)u << (OD_EC_WINDOW_SIZE - 16);
-  return od_ec_dec_normalize(dec, dif, r, ret);
+  return od_ec_dec_normalize(dec, dif, r, ret, acc_str);
 }
 
 /*Decodes a symbol given a cumulative distribution function (CDF) table.
@@ -394,7 +409,7 @@ int od_ec_decode_cdf_unscaled_dyadic_(od_ec_dec *dec,
   v = fh + OD_MINI(fh, d);
   r = v - u;
   dif -= (od_ec_window)u << (OD_EC_WINDOW_SIZE - 16);
-  return od_ec_dec_normalize(dec, dif, r, ret);
+  return od_ec_dec_normalize(dec, dif, r, ret, acc_str);
 }
 
 /*Extracts a raw unsigned integer with a non-power-of-2 range from the stream.
@@ -456,6 +471,7 @@ ogg_uint32_t od_ec_dec_bits_(od_ec_dec *dec, unsigned ftb OD_ACC_STR) {
   available -= ftb;
   dec->end_window = window;
   dec->nend_bits = available;
+  OD_PROCESS_ACCOUNTING(dec, acc_str);
   return ret;
 }
 

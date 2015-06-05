@@ -79,6 +79,9 @@ struct od_ec_dec {
   ogg_int16_t cnt;
   /*Nonzero if an error occurred.*/
   int error;
+#if OD_ACCOUNTING
+  ogg_uint32_t last_tell;
+#endif
 };
 
 /*See entdec.c for further documentation.*/
