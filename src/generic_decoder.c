@@ -44,8 +44,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
  *
  * @retval decoded variable
  */
-int od_decode_cdf_adapt_(od_ec_dec *ec, ogg_uint16_t *cdf, int n,
- int increment OD_ACC_STR) {
+int od_decode_cdf_adapt(od_ec_dec *ec, ogg_uint16_t *cdf, int n,
+ int increment, char *acc_str) {
   int i;
   int val;
   val = od_ec_decode_cdf_unscaled(ec, cdf, n, acc_str);
@@ -72,8 +72,8 @@ int od_decode_cdf_adapt_(od_ec_dec *ec, ogg_uint16_t *cdf, int n,
  *
  * @retval decoded variable x
  */
-int generic_decode_(od_ec_dec *dec, generic_encoder *model, int max,
- int *ex_q16, int integration OD_ACC_STR) {
+int generic_decode(od_ec_dec *dec, generic_encoder *model, int max,
+ int *ex_q16, int integration, char *acc_str) {
   int lg_q1;
   int shift;
   int id;

@@ -238,24 +238,14 @@ static void od_decode_compute_pred(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, od_co
   }
 }
 
-#if OD_ACCOUNTING
-# define od_ec_dec_unary(ec, str) od_ec_dec_unary_(ec, str)
-# define od_decode_coeff_split(dec, sum, ctx, str) od_decode_coeff_split_(dec, sum, ctx, str)
-# define od_decode_tree_split(dec, sum, ctx, str) od_decode_tree_split_(dec, sum, ctx, str)
-#else
-# define od_ec_dec_unary(ec, str) od_ec_dec_unary_(ec)
-# define od_decode_coeff_split(dec, sum, ctx, str) od_decode_coeff_split_(dec, sum, ctx)
-# define od_decode_tree_split(dec, sum, ctx, str) od_decode_tree_split_(dec, sum, ctx)
-#endif
-
-static int od_ec_dec_unary_(od_ec_dec *ec OD_ACC_STR) {
+static int od_ec_dec_unary(od_ec_dec *ec, char *acc_str) {
   int ret;
   ret = 0;
   while (od_ec_dec_bits(ec, 1, acc_str) == 0) ret++;
   return ret;
 }
 
-static int od_decode_coeff_split_(daala_dec_ctx *dec, int sum, int ctx OD_ACC_STR) {
+static int od_decode_coeff_split(daala_dec_ctx *dec, int sum, int ctx, char *acc_str) {
   int shift;
   int a;
   a = 0;
@@ -274,7 +264,7 @@ static int od_decode_coeff_split_(daala_dec_ctx *dec, int sum, int ctx OD_ACC_ST
   return a;
 }
 
-static int od_decode_tree_split_(daala_dec_ctx *dec, int sum, int ctx OD_ACC_STR) {
+static int od_decode_tree_split(daala_dec_ctx *dec, int sum, int ctx, char *acc_str) {
   int shift;
   int a;
   a = 0;
