@@ -1094,14 +1094,19 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   else {
     mv_ctx = enc->state.mv_grid[(2*by + 1) << bsi >> 1]
      [(2*bx + 1) << bsi >> 1].valid;
+    if (!mv_ctx && bsi == 3) {
+      int *v0, *v1, *v2, *v3;
+      v0 = enc->state.mv_grid[(2*by) << bsi >> 1][(2*bx) << bsi >> 1].mv;
+      v1 = enc->state.mv_grid[(2*by) << bsi >> 1][(2*bx + 2) << bsi >> 1].mv;
+      v2 = enc->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx) << bsi >> 1].mv;
+      v3 = enc->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx + 2) << bsi >> 1].mv;
+      mv_ctx = mv_ctx || (v0[0] != v1[0]) || (v0[1] != v1[1])
+       || (v0[0] != v2[0]) || (v0[1] != v2[1])
+       || (v0[0] != v3[0]) || (v0[1] != v3[1]);
+    }
   }
   if (bs == bsi) {
     bs -= xdec;
-    if (ctx->is_keyframe || pli != 0) mv_ctx = 0;
-    else {
-      mv_ctx = enc->state.mv_grid[(2*by + 1) << bsi >> 1]
-       [(2*bx + 1) << bsi >> 1].valid;
-    }
     /*Construct the luma predictors for chroma planes.*/
     if (ctx->l != NULL) {
       OD_ASSERT(pli > 0);
