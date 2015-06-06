@@ -629,17 +629,28 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
   else {
     mv_ctx = dec->state.mv_grid[(2*by + 1) << bsi >> 1]
      [(2*bx + 1) << bsi >> 1].valid;
-    if (!mv_ctx && bsi == 3) {
-      int *v0, *v1, *v2, *v3;
-      v0 = dec->state.mv_grid[(2*by) << bsi >> 1][(2*bx) << bsi >> 1].mv;
-      v1 = dec->state.mv_grid[(2*by) << bsi >> 1][(2*bx + 2) << bsi >> 1].mv;
-      v2 = dec->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx) << bsi >> 1].mv;
-      v3 = dec->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx + 2) << bsi >> 1].mv;
-      mv_ctx = mv_ctx || (v0[0] != v1[0]) || (v0[1] != v1[1])
-       || (v0[0] != v2[0]) || (v0[1] != v2[1])
-       || (v0[0] != v3[0]) || (v0[1] != v3[1]);
+    if (!mv_ctx) {
+      if (bsi == 3) {
+        int *v0, *v1, *v2, *v3;
+        v0 = dec->state.mv_grid[(2*by) << bsi >> 1][(2*bx) << bsi >> 1].mv;
+        v1 = dec->state.mv_grid[(2*by) << bsi >> 1][(2*bx + 2) << bsi >> 1].mv;
+        v2 = dec->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx) << bsi >> 1].mv;
+        v3 = dec->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx + 2) << bsi >> 1].mv;
+        mv_ctx = mv_ctx || (v0[0] != v1[0]) || (v0[1] != v1[1])
+         || (v0[0] != v2[0]) || (v0[1] != v2[1])
+         || (v0[0] != v3[0]) || (v0[1] != v3[1]);
+      }
+      else {
+        od_mv_grid_pt *v0, *v1, *v2, *v3;
+        int count;
+        v0 = &dec->state.mv_grid[(2*by) << bsi >> 1][(2*bx) << bsi >> 1];
+        v1 = &dec->state.mv_grid[(2*by) << bsi >> 1][(2*bx + 2) << bsi >> 1];
+        v2 = &dec->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx) << bsi >> 1];
+        v3 = &dec->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx + 2) << bsi >> 1];
+        count = v0->valid + v1->valid + v2->valid + v3->valid;
+        if (count >= 2) mv_ctx = 1;
+      }
     }
-    printf("%d\n", mv_ctx);
   }
   skip_cdf = dec->state.adapt.skip_cdf[2*((pli != 0)*OD_NBSIZES + bsi) + mv_ctx];
   /* Read the luma skip symbol. A value of 4 means "split the block", while < 4

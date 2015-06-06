@@ -1094,15 +1094,27 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   else {
     mv_ctx = enc->state.mv_grid[(2*by + 1) << bsi >> 1]
      [(2*bx + 1) << bsi >> 1].valid;
-    if (!mv_ctx && bsi == 3) {
-      int *v0, *v1, *v2, *v3;
-      v0 = enc->state.mv_grid[(2*by) << bsi >> 1][(2*bx) << bsi >> 1].mv;
-      v1 = enc->state.mv_grid[(2*by) << bsi >> 1][(2*bx + 2) << bsi >> 1].mv;
-      v2 = enc->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx) << bsi >> 1].mv;
-      v3 = enc->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx + 2) << bsi >> 1].mv;
-      mv_ctx = mv_ctx || (v0[0] != v1[0]) || (v0[1] != v1[1])
-       || (v0[0] != v2[0]) || (v0[1] != v2[1])
-       || (v0[0] != v3[0]) || (v0[1] != v3[1]);
+    if (!mv_ctx) {
+      if (bsi == 3) {
+        int *v0, *v1, *v2, *v3;
+        v0 = enc->state.mv_grid[(2*by) << bsi >> 1][(2*bx) << bsi >> 1].mv;
+        v1 = enc->state.mv_grid[(2*by) << bsi >> 1][(2*bx + 2) << bsi >> 1].mv;
+        v2 = enc->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx) << bsi >> 1].mv;
+        v3 = enc->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx + 2) << bsi >> 1].mv;
+        mv_ctx = mv_ctx || (v0[0] != v1[0]) || (v0[1] != v1[1])
+         || (v0[0] != v2[0]) || (v0[1] != v2[1])
+         || (v0[0] != v3[0]) || (v0[1] != v3[1]);
+      }
+      else {
+        od_mv_grid_pt *v0, *v1, *v2, *v3;
+        int count;
+        v0 = &enc->state.mv_grid[(2*by) << bsi >> 1][(2*bx) << bsi >> 1];
+        v1 = &enc->state.mv_grid[(2*by) << bsi >> 1][(2*bx + 2) << bsi >> 1];
+        v2 = &enc->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx) << bsi >> 1];
+        v3 = &enc->state.mv_grid[(2*by + 2) << bsi >> 1][(2*bx + 2) << bsi >> 1];
+        count = v0->valid + v1->valid + v2->valid + v3->valid;
+        if (count >= 2) mv_ctx = 1;
+      }
     }
   }
   if (bs == bsi) {
