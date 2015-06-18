@@ -1009,7 +1009,7 @@ static int od_compute_var_4x4(od_coeff *x, int stride) {
 }
 
 static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
- int stride) {
+ int stride, int apply_basis) {
   od_coeff e[8*8];
   od_coeff et[8*8];
   double sum;
@@ -1059,6 +1059,7 @@ static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
     for (j = 0; j < 8; j++) {
       double mag;
       mag = 16./OD_QM8_Q4_QM_HVS[i*8 + j];
+      if (apply_basis) mag *= OD_BASIS_MAG[0][1][i]*OD_BASIS_MAG[0][1][j];
       mag *= mag;
       sum += et[8*i + j]*(double)et[8*i + j]*mag;
     }
@@ -1082,7 +1083,7 @@ static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
     for (i = 0; i < n; i += 8) {
       int j;
       for (j = 0; j < n; j += 8) {
-        sum += od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], n);
+        sum += od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], n, n == 8);
       }
     }
   }
