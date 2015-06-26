@@ -282,7 +282,7 @@ static int mode_select8b(const unsigned char *img, int n, int stride) {
     }
     for (j = 0; j < n/2 - 1; j++) {
       cost[i] += partial[i][j]*partial[i][j]/(2*j+2);
-      cost[i] += partial[i][3*n/2 - j]*partial[i][3*n/2 - j]/(2*j+2);
+      cost[i] += partial[i][3*n/2 - j - 2]*partial[i][3*n/2 - j - 2]/(2*j+2);
     }
   }
   cost[8] = (partial[8][0]/n)*(partial[8][0]/n) + 2*n*n;
