@@ -554,11 +554,13 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   int i, j;
   int dir;
   int level;
+  int med_quant;
   od_coeff horiz[OD_BSIZE_MAX];
   od_coeff vert[OD_BSIZE_MAX];
   od_coeff tree_sum[OD_BSIZE_MAX][OD_BSIZE_MAX];
   n = 1 << ln;
   for (i = 0; i < n*n; i++) out[i] = cblock[i];
+  med_quant = quant >> ln/2;
 #if 1
   for (level = 1; level < ln; level++) {
     int nc;
@@ -566,9 +568,11 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     for (i = 0; i < nc; i++) {
       horiz[nc + i] = compute_median(&out[(nc + i)*n], 1, nc);
       vert[nc + i] = compute_median(&out[nc + i], n, nc);
+      horiz[nc + i] = OD_DIV_R0(horiz[nc + i], med_quant);
+      vert[nc + i] = OD_DIV_R0(vert[nc + i], med_quant);
       for (j = 0; j < nc; j++) {
-        out[(nc + i)*n + j] -= horiz[nc + i];
-        out[nc + i + j*n] -= vert[nc + i];
+        out[(nc + i)*n + j] -= horiz[nc + i]*med_quant;
+        out[nc + i + j*n] -= vert[nc + i]*med_quant;
       }
       if (pli==0)printf("%d %d ", horiz[nc + i], vert[nc + i]);
     }
@@ -665,8 +669,8 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
     nc = 1 << level;
     for (i = 0; i < nc; i++) {
       for (j = 0; j < nc; j++) {
-        out[(nc + i)*n + j] += horiz[nc + i];
-        out[nc + i + j*n] += vert[nc + i];
+        out[(nc + i)*n + j] += horiz[nc + i]*med_quant;
+        out[nc + i + j*n] += vert[nc + i]*med_quant;
       }
     }
   }
