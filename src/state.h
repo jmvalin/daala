@@ -39,7 +39,7 @@ typedef struct od_adapt_ctx      od_adapt_ctx;
 # include "generic_code.h"
 #include "intra.h"
 
-#define OD_BS_RDO_LAMBDA (.08)
+#define OD_BS_RDO_LAMBDA (.1)
 
 extern const od_coeff OD_DC_RES[3];
 
