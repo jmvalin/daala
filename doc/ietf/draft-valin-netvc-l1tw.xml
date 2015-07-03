@@ -113,13 +113,27 @@
       </t>
     </section>
 
-    <section title="Metrics">
-      <t>
+    <section title="Results">
+      <t>The coded images obtained with the Haar transform and L1TW have far better
+      visual quality than those obtained with the lapped DCT or with JPEG, and of
+      comparable quality to those obtained with x264 and x265. An example image at
+      around 0.35 bit/pixel is provided at
+      <eref target="http://jmvalin.ca/video/haar_example/"/>.</t>
+
+      <t>While the technique
+      presented were works relatively well on the example above, there are still
+      cases where it performs significantly worse than x265. These include gradients,
+      such as those in toolbars and window titlebars, and long horizontal and vertical
+      lines such as those found in spreadsheets. These cases should improve once we
+      implement the ability to dynamically switch between the lapped DCT and the Haar
+      transform. Other ways of improving performance on long lines and edges would be
+      to extend to use a different 2D wavelet decomposition, or use an overcomplete
+      basis.
       </t>
     </section>
 
-    <section title="Results">
-      <t>Visually, the images obtained
+    <section title="Metrics">
+      <t>
       </t>
     </section>
 
