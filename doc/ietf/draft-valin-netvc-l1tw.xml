@@ -56,7 +56,6 @@
         different colours, another property we would like to exploit in a video codec.</t>
         <t>A very common motion pattern in screensharing content is the displacement of
         windows. This typically involve rectangular boundaries.</t>
-        <t></t>
       </list>
       The technique described in this document only deal with still images for now and
       focuses on the problem of efficiently coding anti-aliased text. 
@@ -71,18 +70,28 @@
       transform (DCT). 
       </t>
 
+      <t>In 1-D, a single level of the Haar transform is expressed as:
+<figure align="center">
+<artwork align="center"><![CDATA[
+[ y0 ]     / 1  [  1 1 ] [ x0 ]
+[    ] =  / --- [      ] [    ]
+[ y1 ]   v   2  [ -1 1 ] [ x1 ]
+]]></artwork>
+</figure>
+      </t>
+
       <t>The 2-D Haar transform is implemented from a 2x2 lifting Haar kernel:
 <figure align="center">
 <artwork align="center"><![CDATA[
-  inputs: x0, x1, x2, x3
-  x0 <= x0 + x2
-  x3 <= x3 - x1
-  tmp <= (x0 - x3) >> 1
-  x1 <= tmp - x1
-  x2 <= tmp - x2
-  x0 <= x0 - x1
-  x3 <= x3 + x2
-  outputs: x0, x1, x2, x3
+inputs: x0, x1, x2, x3
+x0 <= x0 + x2
+x3 <= x3 - x1
+tmp <= (x0 - x3) >> 1
+x1 <= tmp - x1
+x2 <= tmp - x2
+x0 <= x0 - x1
+x3 <= x3 + x2
+outputs: x0, x1, x2, x3
 ]]></artwork>
 </figure>
       This kernel has perfect reconstruction, making it also useful for lossless compression. 
@@ -94,8 +103,8 @@
       frequency to high frequency):
 <figure align="center">
 <artwork align="center"><![CDATA[
-  horizontal/vertical: [1.0, 1.0, 1.0, 1.5, 2.0]
-  diagonal:            [1.0, 1.0, 1.5, 2.0, 3.0]
+horizontal/vertical: [1.0, 1.0, 1.0, 1.5, 2.0]
+diagonal:            [1.0, 1.0, 1.5, 2.0, 3.0]
 ]]></artwork>
 </figure>
 
@@ -112,8 +121,8 @@
       of the tree rooted in (i,j) is defined recursively as:
 <figure align="center">
 <artwork align="center"><![CDATA[
-  S(i,j) = |x(i,j)| + S(2*i,2*j) + S(2*i,2*j+1)
-         + S(2*i+1,2*j) + S(2*i+1,2*j+1),
+S(i,j) = |x(i,j)| + S(2*i,2*j) + S(2*i,2*j+1)
+       + S(2*i+1,2*j) + S(2*i+1,2*j+1),
 ]]></artwork>
 </figure>
       with S(i,j)=0 for i or j >= N. C(i,j) is defined as S(i,j) - |x(i,j)|.
