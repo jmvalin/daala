@@ -13,7 +13,7 @@
 <rfc category="std" docName="draft-valin-netvc-l1tw-00"
      ipr="noDerivativesTrust200902">
   <front>
-    <title abbrev="Screencasting L1TW">Screencasting and L1-Tree Wavelet Coding</title>
+    <title abbrev="Screencasting and L1TW">Screencasting Considerations and L1-Tree Wavelet Coding</title>
 
  <author initials="JM." surname="Valin" fullname="Jean-Marc Valin">
    <organization>Mozilla</organization>
@@ -41,7 +41,25 @@
   <middle>
     <section title="Introduction">
       <t>Screensharing is an important application for an Internet video codec.
-      For now, we only evaluate still images. 
+      Screensharing content differs from photographic images in many ways, including:
+      <list style="symbols">
+        <t>Text: screenshots often contain anti-aliased text on a perfectly flat background.
+        This makes ringing artefacts highly perceptible. Also, typical DCT-based
+        codecs designed for photographic content cannot take advantage of the
+        fact that the background often has a constant colour.</t>
+        <t>Lines and edges. Screenshots often contain perfectly straight horizontal and/or
+        vertical lines. They appear in window frames, toolbars, widgets, spreadsheets, etc.
+        DCT-based codecs can represent those lines and edges, but not as compactly as
+        codecs like PNG.</t>
+        <t>Reduced number of colours: Screenshots are much less "noisy" than photographic
+        images. It is common for a certain region of an image to only contain a handful of
+        different colours, another property we would like to exploit in a video codec.</t>
+        <t>A very common motion pattern in screensharing content is the displacement of
+        windows. This typically involve rectangular boundaries.</t>
+        <t></t>
+      </list>
+      The technique described in this document only deal with still images for now and
+      focuses on the problem of efficiently coding anti-aliased text. 
       </t>
     </section>
 
@@ -132,8 +150,11 @@
       </t>
     </section>
 
-    <section title="Metrics">
-      <t>
+    <section title="Objective Evaluation">
+      <t>As a first step for evaluating screensharing quality, we have added a small
+        collection of screenshot images to the "Are We Compressed Yet?"
+        <eref target="https://arewecompressedyet.com/"/> website, under the
+        "screenshots" set name. 
       </t>
     </section>
 
