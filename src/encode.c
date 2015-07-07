@@ -1589,6 +1589,45 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
             od_bilinear_smooth(&state->ctmp[pli][(sby << ln)*w + (sbx << ln)],
              ln, w, enc->quantizer[pli], pli);
           }
+          if (pli == 0) {
+            int foo[OD_BSIZE_MAX][OD_BSIZE_MAX];
+            int i;
+            int j;
+            int ln;
+            int ystride;
+            unsigned char *img;
+            od_coeff *x0;
+            od_coeff *x;
+            double E0;
+            double E1;
+            int coeff_shift;
+            coeff_shift = enc->quantizer[pli] == 0 ? 0 : OD_COEFF_SHIFT;
+            E0 = E1 = 0;
+            ln = OD_LOG_BSIZE_MAX - xdec;
+            ystride = state->io_imgs[OD_FRAME_INPUT].planes[pli].ystride;
+            img = &state->io_imgs[OD_FRAME_INPUT].planes[pli].data[ystride*(sby << ln) + (sbx << ln)];
+            x0 = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
+            for (i = 0; i < OD_BSIZE_MAX; i++) {
+              for (j = 0; j < OD_BSIZE_MAX; j++) {
+                int r;
+                x = &x0[i*w + j];
+                foo[i][j] = (x[1] + x[-1] + x[w] + x[-w] - 4*x[0] + 2) >> 2;
+                foo[i][j] = OD_MAXI(-16, OD_MINI(16, foo[i][j]));
+                r = ((img[ystride*i + j]-128) << coeff_shift);
+                E0 += (r - x[0])*(double)(r - x[0]);
+                E1 += (r - (x[0] + foo[i][j]))*(double)(r - (x[0] + foo[i][j]));
+              }
+            }
+            if (E1 < E0) {
+              for (i = 0; i < OD_BSIZE_MAX; i++) {
+                for (j = 0; j < OD_BSIZE_MAX; j++) {
+                  x0[i*w + j] += foo[i][j];
+                  /*x0[i*w + j] = (img[ystride*i + j]-128 << coeff_shift);*/
+                }
+              }
+            }
+            /*printf("%f %f\n", E0, E1);*/
+          }
         }
       }
     }
