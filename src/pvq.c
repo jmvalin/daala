@@ -220,7 +220,7 @@ static const unsigned char OD_LUMA_QM_Q4[2][OD_QM_SIZE] = {
    Masking enabled: */
  {
   27, 16,
-  23, 18, 28, 32,
+  23, 16, 26, 30,
   19, 14, 20, 20, 28, 32,
   17, 11, 16, 14, 16, 16, 23, 28
  }
