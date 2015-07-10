@@ -39,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
    for 1/8 pel precision, apply corresponding filter.
   For this, we need 8 kinds of 1D filter, each corresponds to
    one of eight fractional positions.*/
-# if 1
+# if 0
   /*6-tap filter #1 :
     Windowed-sinc 6-tap for 1/2 pel, and bilinear for 1/4 and 1/8 pel.
      (Same design as adopted in frame level upsampling function,
