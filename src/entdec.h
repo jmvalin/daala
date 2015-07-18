@@ -26,6 +26,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # define _entdec_H (1)
 # include <limits.h>
 # include "entcode.h"
+# include "accounting.h"
 
 typedef struct od_ec_dec od_ec_dec;
 
@@ -81,6 +82,7 @@ struct od_ec_dec {
   int error;
 #if OD_ACCOUNTING
   uint32_t last_tell;
+  od_accounting acct;
 #endif
 };
 

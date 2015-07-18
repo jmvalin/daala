@@ -68,3 +68,30 @@ void od_accounting_clear(od_accounting *acct) {
   }
 }
 
+void od_accounting_set_location(od_accounting *acct, int x, int y, int level,
+ int plane) {
+  acct->curr_x = x;
+  acct->curr_y = y;
+  acct->curr_level = level;
+  acct->curr_plane = plane;
+
+}
+
+void od_accounting_record(od_accounting *acct, char *str, int bits_q3) {
+  od_acct_symbol curr;
+  int id;
+  OD_ASSERT(acct->curr_x >= 0);
+  curr.x = acct->curr_x;
+  curr.y = acct->curr_y;
+  curr.level = acct->curr_level;
+  curr.plane = acct->curr_plane;
+  curr.bits_q3 = bits_q3;
+  id = od_accounting_dict_lookup(&acct->dict, str);
+  curr.id = id;
+  if (acct->nb_syms == acct->nb_syms_alloc) {
+    acct->nb_syms_alloc *= 2;
+    acct->syms = realloc(acct->syms, sizeof(acct->syms[0])*acct->nb_syms_alloc);
+    OD_ASSERT(acct->syms != NULL);
+  }
+  acct->syms[acct->nb_syms++] = curr;
+}

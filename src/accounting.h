@@ -34,13 +34,13 @@ typedef struct {
   short y;
   short level;
   short id;
-  short bits8;
+  short bits_q3;
 } od_acct_symbol;
 
 #define MAX_SYMBOL_TYPES (1000)
 
 typedef struct {
-  const char *(str[MAX_SYMBOL_TYPES]);
+  char *(str[MAX_SYMBOL_TYPES]);
   int nb_str;
 } od_accounting_dict;
 
@@ -56,5 +56,17 @@ typedef struct {
   int last_bits;
 } od_accounting;
 
+int od_accounting_dict_lookup(od_accounting_dict *dict, const char *str);
+
+void od_accounting_init(od_accounting *acct);
+
+void od_accounting_reset(od_accounting *acct);
+
+void od_accounting_clear(od_accounting *acct);
+
+void od_accounting_set_location(od_accounting *acct, int x, int y, int level,
+ int plane);
+
+void od_accounting_record(od_accounting *acct, char *str, int bits_q3);
 
 #endif

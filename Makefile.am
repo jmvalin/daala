@@ -104,6 +104,7 @@ src_libdaaladec_la_LDFLAGS = -no-undefined \
  -version-info @OD_LT_CURRENT@:@OD_LT_REVISION@:@OD_LT_AGE@
 src_libdaaladec_la_SOURCES = \
 	src/decode.c \
+	src/accounting.c \
 	src/infodec.c
 
 src_libdaalaenc_la_CFLAGS = $(OGG_CFLAGS)
@@ -121,7 +122,6 @@ src_libdaalaenc_la_SOURCES = \
 	src/infoenc.c \
 	src/laplace_encoder.c \
 	src/mcenc.c \
-	src/accounting.c \
 	src/pvq_encoder.c
 if ENABLE_X86ASM
 src_libdaalaenc_la_SOURCES += \
