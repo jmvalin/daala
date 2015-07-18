@@ -27,6 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #endif
 
 #include "entdec.h"
+#include "accounting.h"
 
 /*A range decoder.
   This is an entropy decoder based upon \cite{Mar79}, which is itself a
@@ -96,8 +97,8 @@ static void od_process_accounting(od_ec_dec *dec, char *str) {
   uint32_t tell;
   int i;
   tell = od_ec_dec_tell_frac(dec);
-  if (tell < dec->last_tell) {
-    dec->last_tell = 0;
+  if (tell < dec->acct.last_tell) {
+    dec->acct.last_tell = 0;
     printf("frame dump\n");
     for (i=0;i<nb_fields;i++) {
       printf("%s %f\n", od_acct[i].name, od_acct[i].count/8.);
@@ -105,6 +106,7 @@ static void od_process_accounting(od_ec_dec *dec, char *str) {
     printf("\n");
     nb_fields = 0;
   }
+  od_accounting_record(&dec->acct, str, tell - dec->acct.last_tell);
   for (i=0;i<nb_fields;i++) {
     if (strcmp(od_acct[i].name, str) == 0) break;
   }
@@ -113,9 +115,9 @@ static void od_process_accounting(od_ec_dec *dec, char *str) {
     od_acct[i].count = 0;
     nb_fields++;
   }
-  od_acct[i].count += tell - dec->last_tell;
-  /*printf("%s = %d\n", str, tell - dec->last_tell);*/
-  dec->last_tell = tell;
+  od_acct[i].count += tell - dec->acct.last_tell;
+  /*printf("%s = %d\n", str, tell - dec->acct.last_tell);*/
+  dec->acct.last_tell = tell;
 }
 #else
 # define OD_PROCESS_ACCOUNTING(dec, str) do {} while(0)
@@ -190,6 +192,7 @@ void od_ec_dec_init(od_ec_dec *dec,
   dec->cnt = -15;
   dec->error = 0;
   od_ec_dec_refill(dec);
+  od_accounting_init(&dec->acct);
 }
 
 /*Decode a bit that has an fz/ft probability of being a zero.

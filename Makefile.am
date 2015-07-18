@@ -66,6 +66,7 @@ src_libdaalabase_la_LDFLAGS = -no-undefined \
  -version-info @OD_LT_CURRENT@:@OD_LT_REVISION@:@OD_LT_AGE@
 src_libdaalabase_la_LDFLAGS += 
 src_libdaalabase_la_SOURCES = \
+	src/accounting.c \
 	src/adapt.c \
 	src/entcode.c \
 	src/entdec.c \
@@ -104,7 +105,6 @@ src_libdaaladec_la_LDFLAGS = -no-undefined \
  -version-info @OD_LT_CURRENT@:@OD_LT_REVISION@:@OD_LT_AGE@
 src_libdaaladec_la_SOURCES = \
 	src/decode.c \
-	src/accounting.c \
 	src/infodec.c
 
 src_libdaalaenc_la_CFLAGS = $(OGG_CFLAGS)
