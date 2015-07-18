@@ -39,6 +39,9 @@ typedef struct {
 
 #define MAX_SYMBOL_TYPES (1000)
 
+#define OD_ACCT_FRAME (10)
+#define OD_ACCT_MV (11)
+
 typedef struct {
   char *(str[MAX_SYMBOL_TYPES]);
   int nb_str;
@@ -53,7 +56,7 @@ typedef struct {
   int curr_y;
   int curr_level;
   int curr_plane;
-  int last_bits;
+  uint32_t last_tell;
 } od_accounting;
 
 int od_accounting_dict_lookup(od_accounting_dict *dict, const char *str);
@@ -68,5 +71,12 @@ void od_accounting_set_location(od_accounting *acct, int x, int y, int level,
  int plane);
 
 void od_accounting_record(od_accounting *acct, char *str, int bits_q3);
+
+# if OD_ACCOUNTING
+#  define OD_ACCOUNTING_SET_LOCATION(dec, x, y, level, plane) \
+  od_accounting_set_location(&(dec)->ec.acct, x, y, level, plane)
+# else
+#  define OD_ACCOUNTING_SET_LOCATION(dec, x, y, level, plane)
+# endif
 
 #endif

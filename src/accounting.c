@@ -50,14 +50,14 @@ void od_accounting_init(od_accounting *acct) {
   acct->nb_syms_alloc = 1000;
   acct->syms = malloc(sizeof(acct->syms[0])*acct->nb_syms_alloc);
   acct->curr_x = acct->curr_y = acct->curr_level = acct->curr_plane = -1;
-  acct->last_bits = 0;
+  acct->last_tell = 0;
   acct->dict.nb_str = 0;
 }
 
 void od_accounting_reset(od_accounting *acct) {
   acct->nb_syms = 0;
   acct->curr_x = acct->curr_y = acct->curr_level = acct->curr_plane = -1;
-  acct->last_bits = 0;
+  acct->last_tell = 0;
 }
 
 void od_accounting_clear(od_accounting *acct) {
