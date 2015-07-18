@@ -28,93 +28,33 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include <stdio.h>
 # include "internal.h"
 
-enum od_acct_category {
-  OD_ACCT_CAT_TECHNIQUE = 0,
-  OD_ACCT_CAT_PLANE = 1,
-  OD_ACCT_NCATS
-};
+typedef struct {
+  short plane;
+  short x;
+  short y;
+  short level;
+  short id;
+  short bits8;
+} od_acct_symbol;
 
-typedef enum od_acct_category od_acct_category;
+#define MAX_SYMBOL_TYPES (1000)
 
-enum od_acct_technique {
-  OD_ACCT_TECH_UNKNOWN = 0,
-  OD_ACCT_TECH_FRAME = 1,
-  OD_ACCT_TECH_BLOCK_SIZE = 2,
-  OD_ACCT_TECH_INTRA_MODE = 3,
-  OD_ACCT_TECH_DC_COEFF = 4,
-  OD_ACCT_TECH_AC_COEFFS = 5,
-  OD_ACCT_TECH_MOTION_VECTORS = 6,
-  OD_ACCT_NTECHS
-};
+typedef struct {
+  const char *(str[MAX_SYMBOL_TYPES]);
+  int nb_str;
+} od_accounting_dict;
 
-typedef enum od_acct_technique od_acct_technique;
+typedef struct {
+  od_acct_symbol *syms;
+  int nb_syms_alloc;
+  int nb_syms;
+  od_accounting_dict dict;
+  int curr_x;
+  int curr_y;
+  int curr_level;
+  int curr_plane;
+  int last_bits;
+} od_accounting;
 
-enum od_acct_plane {
-  OD_ACCT_PLANE_UNKNOWN = 0,
-  OD_ACCT_PLANE_FRAME = 1,
-  OD_ACCT_PLANE_LUMA = 2,
-  OD_ACCT_PLANE_CB = 3,
-  OD_ACCT_PLANE_CR = 4,
-  OD_ACCT_PLANE_ALPHA = 5,
-  OD_ACCT_NPLANES
-};
-
-typedef enum od_acct_plane od_acct_plane;
-
-/*typedef enum od_acct_band od_acct_band;*/
-
-#if defined(OD_ACCOUNTING)
-# define OD_ACCT_UPDATE(acct, frac_bits, cat, value) \
- od_acct_update(acct, frac_bits, cat, value)
-#else
-# define OD_ACCT_UPDATE(acct, frac_bits, cat, value)
-#endif
-
-#define OD_ACCT_SIZE (OD_ACCT_NTECHS*OD_ACCT_NPLANES)
-
-typedef struct od_acct od_acct;
-
-struct od_acct {
-  FILE *fp;
-  uint32_t last_frac_bits;
-  unsigned int state[OD_ACCT_NCATS];
-  uint32_t frac_bits[OD_ACCT_SIZE];
-};
-
-void od_acct_init(od_acct *acct);
-void od_acct_clear(od_acct *acct);
-void od_acct_reset(od_acct *acct);
-void od_acct_update_frac_bits(od_acct *acct, uint32_t frac_bits);
-void od_acct_set_category(od_acct *acct, od_acct_category cat,
- unsigned int value);
-void od_acct_update(od_acct *acct, uint32_t frac_bits,
- od_acct_category cat, unsigned int value);
-void od_acct_print(od_acct *acct, FILE *_fp);
-void od_acct_write(od_acct *acct, int64_t cur_time);
-
-typedef struct od_ec_acct_data od_ec_acct_data;
-
-struct od_ec_acct_data {
-  const char *label;
-  int capacity;
-  int used;
-  int **values;
-  od_ec_acct_data *next;
-};
-
-typedef struct od_ec_acct od_ec_acct;
-
-struct od_ec_acct {
-  FILE *fp;
-  od_ec_acct_data *data;
-};
-
-void od_ec_acct_init(od_ec_acct *acct);
-void od_ec_acct_clear(od_ec_acct *acct);
-void od_ec_acct_reset(od_ec_acct *acct);
-void od_ec_acct_add_label(od_ec_acct *acct, const char *label);
-void od_ec_acct_record(od_ec_acct *acct, const char *label, int val, int n,
- int context);
-void od_ec_acct_write(od_ec_acct *acct);
 
 #endif

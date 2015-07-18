@@ -144,7 +144,7 @@ int laplace_decode_(od_ec_dec *dec, int ex_q8, int k OD_ACC_STR) {
 #endif
 
 static void laplace_decode_vector_delta_(od_ec_dec *dec, od_coeff *y, int n, int k,
-                                        ogg_int32_t *curr, const ogg_int32_t *means
+                                        int32_t *curr, const int32_t *means
                                         OD_ACC_STR) {
   int i;
   int prev;
