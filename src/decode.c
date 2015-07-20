@@ -126,7 +126,11 @@ int daala_decode_ctl(daala_dec_ctx *dec, int req, void *buf, size_t buf_sz) {
     case OD_DECCTL_GET_ACCOUNTING : {
       if (dec == NULL || buf == NULL) return OD_EFAULT;
       if (buf_sz != sizeof(od_accounting *)) return OD_EINVAL;
+#if OD_ACCOUNTING
       *(od_accounting **)buf = &dec->ec.acct;
+#else
+      *(od_accounting **)buf = NULL;
+#endif
       return 0;
     }
     default: return OD_EIMPL;

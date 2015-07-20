@@ -192,7 +192,9 @@ void od_ec_dec_init(od_ec_dec *dec,
   dec->cnt = -15;
   dec->error = 0;
   od_ec_dec_refill(dec);
+#if OD_ACCOUNTING
   od_accounting_init(&dec->acct);
+#endif
 }
 
 /*Decode a bit that has an fz/ft probability of being a zero.
