@@ -28,34 +28,52 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include <stdio.h>
 # include "internal.h"
 
-typedef struct {
-  short plane;
-  short x;
-  short y;
-  short level;
-  short id;
-  short bits_q3;
-} od_acct_symbol;
-
-#define MAX_SYMBOL_TYPES (1000)
-
 #define OD_ACCT_FRAME (10)
 #define OD_ACCT_MV (11)
 
+typedef struct {
+  /** plane number (0..3) or one of OD_ACCT_FRAME and OD_ACCT_MV. */
+  short plane;
+  /** x position in units of 4x4 luma blocks for planes 0-3, or vx for
+     OD_ACCT_MV. Has no meaning for OD_ACCT_FRAME.*/
+  short x;
+  /** y position in units of 4x4 luma blocks for planes 0-3, or vy for
+     OD_ACCT_MV. Has no meaning for OD_ACCT_FRAME.*/
+  short y;
+  /** For planes 0-3, 0 means 4x4, 1, means 8x8, and so on. For OD_ACCT_MV,
+     it is the motion vector level. Has no meaning for OD_ACCT_FRAME. */
+  short level;
+  /** Integer id in the dictionary. */
+  short id;
+  /** Number of bits in units of 1/8 bit. */
+  short bits_q3;
+} od_acct_symbol;
+
+/* Max number of entries for symbol types in the dictionary (increase as
+   necessary). */
+#define MAX_SYMBOL_TYPES (1000)
+
+/** Dictionary for translating strings into id. */
 typedef struct {
   char *(str[MAX_SYMBOL_TYPES]);
   int nb_str;
 } od_accounting_dict;
 
 typedef struct {
+  /** All recorded symbols decoded. */
   od_acct_symbol *syms;
+  /** Size allocated for syms (not all may be used). */
   int nb_syms_alloc;
+  /** Number of symbols actually recorded. */
   int nb_syms;
+  /** Dictionary for translating strings into id. */
   od_accounting_dict dict;
+  /* Current location (x, y, level, plane) where we are recording. */
   int curr_x;
   int curr_y;
   int curr_level;
   int curr_plane;
+  /* Last value returned from od_ec_dec_tell_frac(). */
   uint32_t last_tell;
 } od_accounting;
 

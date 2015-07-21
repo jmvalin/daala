@@ -31,6 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "logging.h"
 #include "accounting.h"
 
+/* Simple linear-time lookup in the dictionary. This could be made much
+   faster, but it's fine for now. */
 int od_accounting_dict_lookup(od_accounting_dict *dict, const char *str) {
   int i;
   for (i = 0; i < dict->nb_str; i++) {
