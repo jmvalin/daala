@@ -28,93 +28,73 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include <stdio.h>
 # include "internal.h"
 
-enum od_acct_category {
-  OD_ACCT_CAT_TECHNIQUE = 0,
-  OD_ACCT_CAT_PLANE = 1,
-  OD_ACCT_NCATS
-};
+#define OD_ACCT_FRAME (10)
+#define OD_ACCT_MV (11)
 
-typedef enum od_acct_category od_acct_category;
+typedef struct {
+  /** plane number (0..3) or one of OD_ACCT_FRAME and OD_ACCT_MV. */
+  short plane;
+  /** x position in units of 4x4 luma blocks for planes 0-3, or vx for
+     OD_ACCT_MV. Has no meaning for OD_ACCT_FRAME.*/
+  short x;
+  /** y position in units of 4x4 luma blocks for planes 0-3, or vy for
+     OD_ACCT_MV. Has no meaning for OD_ACCT_FRAME.*/
+  short y;
+  /** For planes 0-3, 0 means 4x4, 1, means 8x8, and so on. For OD_ACCT_MV,
+     it is the motion vector level. Has no meaning for OD_ACCT_FRAME. */
+  short level;
+  /** Integer id in the dictionary. */
+  short id;
+  /** Number of bits in units of 1/8 bit. */
+  short bits_q3;
+} od_acct_symbol;
 
-enum od_acct_technique {
-  OD_ACCT_TECH_UNKNOWN = 0,
-  OD_ACCT_TECH_FRAME = 1,
-  OD_ACCT_TECH_BLOCK_SIZE = 2,
-  OD_ACCT_TECH_INTRA_MODE = 3,
-  OD_ACCT_TECH_DC_COEFF = 4,
-  OD_ACCT_TECH_AC_COEFFS = 5,
-  OD_ACCT_TECH_MOTION_VECTORS = 6,
-  OD_ACCT_NTECHS
-};
+/* Max number of entries for symbol types in the dictionary (increase as
+   necessary). */
+#define MAX_SYMBOL_TYPES (1000)
 
-typedef enum od_acct_technique od_acct_technique;
+/** Dictionary for translating strings into id. */
+typedef struct {
+  char *(str[MAX_SYMBOL_TYPES]);
+  int nb_str;
+} od_accounting_dict;
 
-enum od_acct_plane {
-  OD_ACCT_PLANE_UNKNOWN = 0,
-  OD_ACCT_PLANE_FRAME = 1,
-  OD_ACCT_PLANE_LUMA = 2,
-  OD_ACCT_PLANE_CB = 3,
-  OD_ACCT_PLANE_CR = 4,
-  OD_ACCT_PLANE_ALPHA = 5,
-  OD_ACCT_NPLANES
-};
+typedef struct {
+  /** All recorded symbols decoded. */
+  od_acct_symbol *syms;
+  /** Size allocated for syms (not all may be used). */
+  int nb_syms_alloc;
+  /** Number of symbols actually recorded. */
+  int nb_syms;
+  /** Dictionary for translating strings into id. */
+  od_accounting_dict dict;
+  /* Current location (x, y, level, plane) where we are recording. */
+  int curr_x;
+  int curr_y;
+  int curr_level;
+  int curr_plane;
+  /* Last value returned from od_ec_dec_tell_frac(). */
+  uint32_t last_tell;
+} od_accounting;
 
-typedef enum od_acct_plane od_acct_plane;
+int od_accounting_dict_lookup(od_accounting_dict *dict, const char *str);
 
-/*typedef enum od_acct_band od_acct_band;*/
+void od_accounting_init(od_accounting *acct);
 
-#if defined(OD_ACCOUNTING)
-# define OD_ACCT_UPDATE(acct, frac_bits, cat, value) \
- od_acct_update(acct, frac_bits, cat, value)
-#else
-# define OD_ACCT_UPDATE(acct, frac_bits, cat, value)
-#endif
+void od_accounting_reset(od_accounting *acct);
 
-#define OD_ACCT_SIZE (OD_ACCT_NTECHS*OD_ACCT_NPLANES)
+void od_accounting_clear(od_accounting *acct);
 
-typedef struct od_acct od_acct;
+void od_accounting_set_location(od_accounting *acct, int x, int y, int level,
+ int plane);
 
-struct od_acct {
-  FILE *fp;
-  uint32_t last_frac_bits;
-  unsigned int state[OD_ACCT_NCATS];
-  uint32_t frac_bits[OD_ACCT_SIZE];
-};
+void od_accounting_record(od_accounting *acct, char *str, int bits_q3);
 
-void od_acct_init(od_acct *acct);
-void od_acct_clear(od_acct *acct);
-void od_acct_reset(od_acct *acct);
-void od_acct_update_frac_bits(od_acct *acct, uint32_t frac_bits);
-void od_acct_set_category(od_acct *acct, od_acct_category cat,
- unsigned int value);
-void od_acct_update(od_acct *acct, uint32_t frac_bits,
- od_acct_category cat, unsigned int value);
-void od_acct_print(od_acct *acct, FILE *_fp);
-void od_acct_write(od_acct *acct, int64_t cur_time);
-
-typedef struct od_ec_acct_data od_ec_acct_data;
-
-struct od_ec_acct_data {
-  const char *label;
-  int capacity;
-  int used;
-  int **values;
-  od_ec_acct_data *next;
-};
-
-typedef struct od_ec_acct od_ec_acct;
-
-struct od_ec_acct {
-  FILE *fp;
-  od_ec_acct_data *data;
-};
-
-void od_ec_acct_init(od_ec_acct *acct);
-void od_ec_acct_clear(od_ec_acct *acct);
-void od_ec_acct_reset(od_ec_acct *acct);
-void od_ec_acct_add_label(od_ec_acct *acct, const char *label);
-void od_ec_acct_record(od_ec_acct *acct, const char *label, int val, int n,
- int context);
-void od_ec_acct_write(od_ec_acct *acct);
+# if OD_ACCOUNTING
+#  define OD_ACCOUNTING_SET_LOCATION(dec, x, y, level, plane) \
+  od_accounting_set_location(&(dec)->ec.acct, x, y, level, plane)
+# else
+#  define OD_ACCOUNTING_SET_LOCATION(dec, x, y, level, plane)
+# endif
 
 #endif

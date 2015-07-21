@@ -44,6 +44,7 @@ extern "C" {
  *              Image must be allocated by the caller, and must be the
  *              same format as the decoder output images. */
 #define OD_DECCTL_SET_MC_IMG       (7007)
+#define OD_DECCTL_GET_ACCOUNTING   (7009)
 
 /**\name Decoder state
    The following data structures are opaque, and their contents are not
