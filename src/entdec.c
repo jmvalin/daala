@@ -87,36 +87,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #if OD_ACCOUNTING
 # define OD_PROCESS_ACCOUNTING(dec, str) od_process_accounting(dec, str)
 # define od_ec_dec_normalize(dec, dif, rng, ret, str) od_ec_dec_normalize_(dec, dif, rng, ret, str)
-int nb_fields=0;
-typedef struct {
-  char name[100];
-  int count;
-} field;
-field od_acct[100];
 static void od_process_accounting(od_ec_dec *dec, char *str) {
   uint32_t tell;
-  int i;
   tell = od_ec_dec_tell_frac(dec);
-  if (tell < dec->acct.last_tell) {
-    dec->acct.last_tell = 0;
-    printf("frame dump\n");
-    for (i=0;i<nb_fields;i++) {
-      printf("%s %f\n", od_acct[i].name, od_acct[i].count/8.);
-    }
-    printf("\n");
-    nb_fields = 0;
-  }
+  OD_ASSERT(tell >= dec->acct.last_tell);
   od_accounting_record(&dec->acct, str, tell - dec->acct.last_tell);
-  for (i=0;i<nb_fields;i++) {
-    if (strcmp(od_acct[i].name, str) == 0) break;
-  }
-  if (i == nb_fields) {
-    strcpy(od_acct[i].name, str);
-    od_acct[i].count = 0;
-    nb_fields++;
-  }
-  od_acct[i].count += tell - dec->acct.last_tell;
-  /*printf("%s = %d\n", str, tell - dec->acct.last_tell);*/
   dec->acct.last_tell = tell;
 }
 #else
