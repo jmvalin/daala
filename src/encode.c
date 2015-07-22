@@ -1160,6 +1160,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     od_coeff *split;
     int rate_nosplit;
     int rate_split;
+    double lambda;
+    double dist_nosplit;
     c_orig = enc->c_orig[bsi - 1];
     mc_orig = enc->mc_orig[bsi - 1];
     nosplit = enc->nosplit[bsi - 1];
@@ -1173,6 +1175,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       int i;
       int j;
       od_coeff dc_orig[(OD_BSIZE_MAX/4)*(OD_BSIZE_MAX/4)];
+      lambda = OD_BS_RDO_LAMBDA*(1./(1 << OD_BITRES))*enc->quantizer[pli]*
+       enc->quantizer[pli];
       tell = od_ec_enc_tell_frac(&enc->ec);
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) c_orig[n*i + j] = ctx->c[bo + i*w + j];
@@ -1200,6 +1204,26 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       for (i = 0; i < n/4; i++) {
         for (j = 0; j < n/4; j++) {
           ctx->d[pli][bo + 4*i*w + 4*j] = dc_orig[n/4*i + j];
+        }
+      }
+      dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs);
+      if (!skip_nosplit && !ctx->is_keyframe) {
+        double dist_nosplitskip;
+        dist_nosplitskip = od_compute_dist(enc, c_orig, mc_orig, n, bs);
+        if (dist_nosplitskip + lambda*16 < dist_nosplit + lambda*rate_nosplit) {
+          for (i = 0; i < n; i++) {
+            for (j = 0; j < n; j++) ctx->c[bo + i*w + j] = mc_orig[n*i + j];
+          }
+          for (i = 0; i < n; i++) {
+            for (j = 0; j < n; j++) nosplit[n*i + j] = ctx->c[bo + i*w + j];
+          }
+          if (pli == 0) {
+            /* Code the "skip this block" symbol (2). */
+            od_encode_cdf_adapt(&enc->ec, 2,
+             enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 5,
+             enc->state.adapt.skip_increment);
+          }
+          skip_nosplit = 1;
         }
       }
     }
@@ -1233,17 +1257,12 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     if (rdo_only) {
       int i;
       int j;
-      double lambda;
       double dist_split;
-      double dist_nosplit;
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) split[n*i + j] = ctx->c[bo + i*w + j];
       }
       rate_split = od_ec_enc_tell_frac(&enc->ec) - tell;
       dist_split = od_compute_dist(enc, c_orig, split, n, bs);
-      dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs);
-      lambda = OD_BS_RDO_LAMBDA*(1./(1 << OD_BITRES))*enc->quantizer[pli]*
-       enc->quantizer[pli];
       if (skip_split || dist_nosplit + lambda*rate_nosplit < dist_split
        + lambda*rate_split) {
         /* This rollback call leaves the entropy coder in an inconsistent state
