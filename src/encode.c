@@ -1193,10 +1193,20 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
          enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 4 + (pli == 0 && bs > 0),
          enc->state.adapt.skip_increment);
         skip = 1;
-        for (i = 0; i < n/4; i++) {
-          for (j = 0; j < n/4; j++) {
-            ctx->d[pli][bo + 4*i*w + 4*j] = ctx->md[bo + 4*i*w + 4*j];
+        for (i = 0; i < n; i++) {
+          for (j = 0; j < n; j++) {
+            ctx->d[pli][bo + i*w + j] = ctx->md[bo + i*w + j];
           }
+        }
+        {
+          od_coeff *c;
+          od_coeff *d;
+          const int *qm;
+          c = ctx->c;
+          d = ctx->d[pli];
+          qm = ctx->qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT;
+          od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
+          (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
         }
       }
     }
