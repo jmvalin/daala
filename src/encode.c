@@ -1275,7 +1275,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
         }
       }
       dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs);
-      if (0&&!skip_nosplit && !ctx->is_keyframe) {
+      if (!skip_nosplit && !ctx->is_keyframe) {
         double dist_nosplitskip;
         dist_nosplitskip = od_compute_dist(enc, c_orig, mc_orig, n, bs);
         if (dist_nosplitskip + lambda*16 < dist_nosplit + lambda*rate_nosplit) {
