@@ -58,6 +58,8 @@ void od_cdf_init(uint16_t *cdf, int ncdfs, int nsyms, int val, int first);
 void od_encode_cdf_adapt(od_ec_enc *ec, int val, uint16_t *cdf, int n,
  int increment);
 
+double od_encode_cdf_adapt_cost(int val, const uint16_t *cdf, int n);
+
 int od_decode_cdf_adapt(od_ec_dec *ec, uint16_t *cdf, int n,
  int increment);
 

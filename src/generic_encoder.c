@@ -57,6 +57,19 @@ void od_encode_cdf_adapt(od_ec_enc *ec, int val, uint16_t *cdf, int n,
   for (i = val; i < n; i++) cdf[i] += increment;
 }
 
+/** Encodes a value from 0 to N-1 (with N up to 16) based on a cdf and adapts
+ * the cdf accordingly.
+ *
+ * @param [in]     val   variable being encoded
+ * @param [in]     cdf   CDF of the variable (Q15)
+ * @param [in]     n     number of values possible
+ * @return         number of bits for encoding val
+ */
+double od_encode_cdf_adapt_cost(int val, const uint16_t *cdf, int n) {
+  return -OD_LOG2((double)(cdf[val] - (val == 0 ? 0 : cdf[val - 1]))/
+   cdf[n - 1]);
+}
+
 /** Encodes a random variable using a "generic" model, assuming that the
  * distribution is one-sided (zero and up), has a single mode, and decays
  * exponentially past the model.

@@ -1145,7 +1145,6 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     od_coeff c_orig[OD_BSIZE_MAX*OD_BSIZE_MAX];
     od_coeff mc_orig[OD_BSIZE_MAX*OD_BSIZE_MAX];
     od_coeff nosplit[OD_BSIZE_MAX*OD_BSIZE_MAX];
-    od_coeff dc_orig[OD_BSIZE_MAX*OD_BSIZE_MAX/16];
     bs -= xdec;
     /*Construct the luma predictors for chroma planes.*/
     if (ctx->l != NULL) {
@@ -1162,12 +1161,6 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     for (i = 0; i < n; i++) {
       for (j = 0; j < n; j++) mc_orig[n*i + j] = ctx->mc[bo + i*w + j];
     }
-    /* Save only the DCs from the transform coeffs. */
-    for (i = 0; i < n/4; i++) {
-      for (j = 0; j < n/4; j++) {
-        dc_orig[n/4*i + j] = ctx->d[pli][bo + 4*i*w + 4*j];
-      }
-    }
     tell = od_ec_enc_tell_frac(&enc->ec);
     od_encode_checkpoint(enc, &pre_encode_buf);
     skip = od_block_encode(enc, ctx, bs, pli, bx, by, rdo_only);
@@ -1177,13 +1170,17 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     if (!skip && !ctx->is_keyframe && bs > 0) {
       double lambda;
       double dist_nosplitskip;
+      double rate_nosplitskip;
       int rate_nosplit;
       dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs);
       lambda = OD_BS_RDO_LAMBDA*(1./(1 << OD_BITRES))*enc->quantizer[pli]*
        enc->quantizer[pli];
       rate_nosplit = od_ec_enc_tell_frac(&enc->ec) - tell;
       dist_nosplitskip = od_compute_dist(enc, c_orig, mc_orig, n, bs);
-      if (dist_nosplitskip + lambda*16 < dist_nosplit + lambda*rate_nosplit) {
+      rate_nosplitskip = (1 << OD_BITRES)*od_encode_cdf_adapt_cost(2,
+       enc->state.adapt.skip_cdf[2*bs + (pli != 0)],
+       4 + (pli == 0 && bs > 0));
+      if (dist_nosplitskip + lambda*rate_nosplitskip < dist_nosplit + lambda*rate_nosplit) {
         for (i = 0; i < n; i++) {
           for (j = 0; j < n; j++) ctx->c[bo + i*w + j] = mc_orig[n*i + j];
         }
@@ -1277,8 +1274,12 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs);
       if (!skip_nosplit && !ctx->is_keyframe) {
         double dist_nosplitskip;
+        double rate_nosplitskip;
         dist_nosplitskip = od_compute_dist(enc, c_orig, mc_orig, n, bs);
-        if (dist_nosplitskip + lambda*16 < dist_nosplit + lambda*rate_nosplit) {
+        rate_nosplitskip = (1 << OD_BITRES)*od_encode_cdf_adapt_cost(2,
+         enc->state.adapt.skip_cdf[2*bs + (pli != 0)],
+         4 + (pli == 0 && bs > 0));
+        if (dist_nosplitskip + lambda*rate_nosplitskip < dist_nosplit + lambda*rate_nosplit) {
           for (i = 0; i < n; i++) {
             for (j = 0; j < n; j++) ctx->c[bo + i*w + j] = mc_orig[n*i + j];
           }
