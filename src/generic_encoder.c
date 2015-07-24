@@ -166,7 +166,13 @@ double generic_encode_cost(generic_encoder *model, int x, int max,
   }
 }
 
-/*Estimates the cost of encoding a value with a given CDF.*/
+/** Estimates the cost of encoding a value with a given CDF.
+ *
+ * @param [in]     val   variable being encoded
+ * @param [in]     cdf   CDF of the variable (Q15)
+ * @param [in]     n     number of values possible
+ * @return         number of bits for encoding val
+ */
 double od_encode_cdf_cost(int val, uint16_t *cdf, int n) {
   int total_prob;
   int prev_prob;
