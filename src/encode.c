@@ -795,6 +795,28 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   else {
     od_coding_order_to_raster(&d[bo], w, scalar_out, n);
   }
+  /*Apply the inverse transform.*/
+#if !defined(OD_OUTPUT_PRED)
+  if (ctx->use_haar_wavelet) {
+    od_haar_inv(c + bo, w, d + bo, w, bs + 2);
+  }
+  else {
+    od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
+    (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
+  }
+#else
+# if 0
+  /*Output the resampled luma plane.*/
+  if (pli != 0) {
+    for (y = 0; y < n; y++) {
+      for (x = 0; x < n; x++) {
+        preds[y*n + x] = l[((by << 2) + y)*w + (bx << 2) + x] >> xdec;
+      }
+    }
+  }
+# endif
+  (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, preds, n);
+#endif
   for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) nosplit[n*i + j] = ctx->c[bo + i*w + j];
   }
@@ -826,30 +848,10 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
           ctx->d[pli][bo + i*w + j] = ctx->md[bo + i*w + j];
         }
       }
+      od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
+      (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
     }
   }
-  /*Apply the inverse transform.*/
-#if !defined(OD_OUTPUT_PRED)
-  if (ctx->use_haar_wavelet) {
-    od_haar_inv(c + bo, w, d + bo, w, bs + 2);
-  }
-  else {
-    od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
-    (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
-  }
-#else
-# if 0
-  /*Output the resampled luma plane.*/
-  if (pli != 0) {
-    for (y = 0; y < n; y++) {
-      for (x = 0; x < n; x++) {
-        preds[y*n + x] = l[((by << 2) + y)*w + (bx << 2) + x] >> xdec;
-      }
-    }
-  }
-# endif
-  (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, preds, n);
-#endif
   return skip;
 }
 
