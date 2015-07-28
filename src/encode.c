@@ -664,14 +664,14 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   int lossless;
   int skip;
   const int *qm;
-  double dist_nosplit;
+  double dist_noskip;
   int tell;
   int i;
   int j;
   od_rollback_buffer pre_encode_buf;
   od_coeff c_orig[OD_BSIZE_MAX*OD_BSIZE_MAX];
   od_coeff mc_orig[OD_BSIZE_MAX*OD_BSIZE_MAX];
-  od_coeff nosplit[OD_BSIZE_MAX*OD_BSIZE_MAX];
+  od_coeff c_noskip[OD_BSIZE_MAX*OD_BSIZE_MAX];
   qm = ctx->qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT;
 #if defined(OD_OUTPUT_PRED)
   od_coeff preds[OD_BSIZE_MAX*OD_BSIZE_MAX];
@@ -817,23 +817,23 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
 # endif
   (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, preds, n);
 #endif
-  for (i = 0; i < n; i++) {
-    for (j = 0; j < n; j++) nosplit[n*i + j] = ctx->c[bo + i*w + j];
-  }
-  if (!skip && !ctx->is_keyframe && bs > 0) {
+  if (!skip && !ctx->is_keyframe && !ctx->use_haar_wavelet && bs > 0) {
     double lambda;
-    double dist_nosplitskip;
-    double rate_nosplitskip;
-    int rate_nosplit;
-    dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs);
+    double dist_skip;
+    double rate_skip;
+    int rate_noskip;
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) c_noskip[n*i + j] = ctx->c[bo + i*w + j];
+    }
+    dist_noskip = od_compute_dist(enc, c_orig, c_noskip, n, bs);
     lambda = OD_BS_RDO_LAMBDA*(1./(1 << OD_BITRES))*enc->quantizer[pli]*
      enc->quantizer[pli];
-    rate_nosplit = od_ec_enc_tell_frac(&enc->ec) - tell;
-    dist_nosplitskip = od_compute_dist(enc, c_orig, mc_orig, n, bs);
-    rate_nosplitskip = (1 << OD_BITRES)*od_encode_cdf_cost(2,
+    rate_noskip = od_ec_enc_tell_frac(&enc->ec) - tell;
+    dist_skip = od_compute_dist(enc, c_orig, mc_orig, n, bs);
+    rate_skip = (1 << OD_BITRES)*od_encode_cdf_cost(2,
      enc->state.adapt.skip_cdf[2*bs + (pli != 0)],
      4 + (pli == 0 && bs > 0));
-    if (dist_nosplitskip + lambda*rate_nosplitskip < dist_nosplit + lambda*rate_nosplit) {
+    if (dist_skip + lambda*rate_skip < dist_noskip + lambda*rate_noskip) {
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) ctx->c[bo + i*w + j] = mc_orig[n*i + j];
       }
