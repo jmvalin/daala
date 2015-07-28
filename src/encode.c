@@ -639,6 +639,9 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   return 0;
 }
 
+static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
+ int n, int bs);
+
 /* Returns 1 if the block is skipped, zero otherwise. */
 static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
  int pli, int bx, int by, int rdo_only) {
@@ -661,6 +664,14 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   int lossless;
   int skip;
   const int *qm;
+  double dist_noskip;
+  int tell;
+  int i;
+  int j;
+  od_rollback_buffer pre_encode_buf;
+  od_coeff *c_orig;
+  od_coeff *mc_orig;
+  od_coeff *c_noskip;
   qm = ctx->qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT;
 #if defined(OD_OUTPUT_PRED)
   od_coeff preds[OD_BSIZE_MAX*OD_BSIZE_MAX];
@@ -680,6 +691,17 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   md = ctx->md;
   mc = ctx->mc;
   lossless = (enc->quantizer[pli] == 0);
+  c_orig = enc->block_c_orig;
+  mc_orig = enc->block_mc_orig;
+  c_noskip = enc->block_c_noskip;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) c_orig[n*i + j] = ctx->c[bo + i*w + j];
+  }
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) mc_orig[n*i + j] = ctx->mc[bo + i*w + j];
+  }
+  tell = od_ec_enc_tell_frac(&enc->ec);
+  od_encode_checkpoint(enc, &pre_encode_buf);
   /* Apply forward transform. */
   if (ctx->use_haar_wavelet) {
     if (rdo_only || !ctx->is_keyframe) {
@@ -711,8 +733,6 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   for (zzi = 0; zzi < (n*n); zzi++) preds[zzi] = pred[zzi];
 #endif
   if (ctx->use_haar_wavelet) {
-    int i;
-    int j;
     for (i = 0; i < n; i++) {
       for (j = 0; j < n; j++) {
         dblock[i*n + j] = d[bo + i*w + j];
@@ -769,8 +789,6 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     scalar_out[0] = dblock[0];
   }
   if (ctx->use_haar_wavelet) {
-    int i;
-    int j;
     for (i = 0; i < n; i++) {
       for (j = 0; j < n; j++) {
         d[bo + i*w + j] = scalar_out[i*n + j];
@@ -802,6 +820,38 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
 # endif
   (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, preds, n);
 #endif
+  if (!skip && !ctx->is_keyframe && !ctx->use_haar_wavelet && bs > 0) {
+    double lambda;
+    double dist_skip;
+    double rate_skip;
+    int rate_noskip;
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) c_noskip[n*i + j] = ctx->c[bo + i*w + j];
+    }
+    dist_noskip = od_compute_dist(enc, c_orig, c_noskip, n, bs);
+    lambda = OD_BS_RDO_LAMBDA*(1./(1 << OD_BITRES))*enc->quantizer[pli]*
+     enc->quantizer[pli];
+    rate_noskip = od_ec_enc_tell_frac(&enc->ec) - tell;
+    dist_skip = od_compute_dist(enc, c_orig, mc_orig, n, bs);
+    rate_skip = (1 << OD_BITRES)*od_encode_cdf_cost(2,
+     enc->state.adapt.skip_cdf[2*bs + (pli != 0)],
+     4 + (pli == 0 && bs > 0));
+    if (dist_skip + lambda*rate_skip < dist_noskip + lambda*rate_noskip) {
+      od_encode_rollback(enc, &pre_encode_buf);
+      /* Code the "skip this block" symbol (2). */
+      od_encode_cdf_adapt(&enc->ec, 2,
+       enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 4 + (pli == 0 && bs > 0),
+       enc->state.adapt.skip_increment);
+      skip = 1;
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) {
+          ctx->d[pli][bo + i*w + j] = ctx->md[bo + i*w + j];
+        }
+      }
+      od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
+      (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
+    }
+  }
   return skip;
 }
 
