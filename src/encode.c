@@ -1674,6 +1674,9 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         int q2;
         double filtered_rate;
         double unfiltered_rate;
+        od_coeff orig[OD_BSIZE_MAX*OD_BSIZE_MAX];
+        od_coeff f0[OD_BSIZE_MAX*OD_BSIZE_MAX];
+        od_coeff f1[OD_BSIZE_MAX*OD_BSIZE_MAX];
         if (state->sb_skip_flags[sby*nhsb + sbx]) {
           state->clpf_flags[sby*nhsb + sbx] = 0;
           continue;
@@ -1702,7 +1705,14 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
             filtered_error += (r - p)*(double)(r - p);
             o = output[y*w + x];
             unfiltered_error += (r - o)*(double)(r - o);
+            orig[y*n+x] = r;
+            f0[y*n+x] = o;
+            f1[y*n+x] = p;
           }
+        }
+        if (1) {
+        unfiltered_error = od_compute_dist(enc, orig, f0, n, OD_NBSIZES - 1);
+        filtered_error = od_compute_dist(enc, orig, f1, n, OD_NBSIZES - 1);
         }
         up = 0;
         if (sby > 0) {
@@ -1718,6 +1728,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         q2 = enc->quantizer[0] * enc->quantizer[0];
         filtered = (filtered_error + 0.1*q2*filtered_rate) <
          (unfiltered_error + 0.1*q2*unfiltered_rate);
+        /*filtered = 0;*/
         state->clpf_flags[sby*nhsb + sbx] = filtered;
         od_encode_cdf_adapt(&enc->ec, filtered, state->adapt.clpf_cdf[c], 2,
          state->adapt.clpf_increment);
