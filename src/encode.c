@@ -697,6 +697,16 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   lossless = (enc->quantizer[pli] == 0);
   c_orig = enc->block_c_orig;
   mc_orig = enc->block_mc_orig;
+  if (ctx->is_keyframe) {
+    for (i = 0; i < n; i++) {
+      for (j = (i == 0); j < n; j++) {
+        md[bo + i*w + j] = 0;
+      }
+    }
+    md[bo] = d[bo];
+    od_apply_qm(md + bo, w, md + bo, w, bs, xdec, 1, qm);
+    (*enc->state.opt_vtbl.idct_2d[bs])(mc + bo, w, md + bo, w);
+  }
   for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) c_orig[n*i + j] = c[bo + i*w + j];
   }
@@ -825,7 +835,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
 #endif
   /* Allow skipping if it helps the RDO metric, even if the PVQ metric didn't
      skip. */
-  if (!skip && !ctx->is_keyframe && !ctx->use_haar_wavelet && bs > 0) {
+  if (!skip && !ctx->use_haar_wavelet && bs > 0) {
     double lambda;
     double dist_skip;
     double rate_skip;
