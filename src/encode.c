@@ -642,6 +642,11 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
 static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
  int n, int bs);
 
+/* Computes block size RDO lambda (for 1/8 bits) from the quantizer. */
+static double od_bs_rdo_lambda(int q) {
+  return OD_BS_RDO_LAMBDA*(1./(1 << OD_BITRES))*q*q;
+}
+
 /* Returns 1 if the block is skipped, zero otherwise. */
 static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
  int pli, int bx, int by, int rdo_only) {
@@ -671,7 +676,6 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   od_rollback_buffer pre_encode_buf;
   od_coeff *c_orig;
   od_coeff *mc_orig;
-  od_coeff *c_noskip;
   qm = ctx->qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT;
 #if defined(OD_OUTPUT_PRED)
   od_coeff preds[OD_BSIZE_MAX*OD_BSIZE_MAX];
@@ -693,12 +697,11 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   lossless = (enc->quantizer[pli] == 0);
   c_orig = enc->block_c_orig;
   mc_orig = enc->block_mc_orig;
-  c_noskip = enc->block_c_noskip;
   for (i = 0; i < n; i++) {
-    for (j = 0; j < n; j++) c_orig[n*i + j] = ctx->c[bo + i*w + j];
+    for (j = 0; j < n; j++) c_orig[n*i + j] = c[bo + i*w + j];
   }
   for (i = 0; i < n; i++) {
-    for (j = 0; j < n; j++) mc_orig[n*i + j] = ctx->mc[bo + i*w + j];
+    for (j = 0; j < n; j++) mc_orig[n*i + j] = mc[bo + i*w + j];
   }
   tell = od_ec_enc_tell_frac(&enc->ec);
   od_encode_checkpoint(enc, &pre_encode_buf);
@@ -820,17 +823,20 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
 # endif
   (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, preds, n);
 #endif
+  /* Allow skipping if it helps the RDO metric, even if the PVQ metric didn't
+     skip. */
   if (!skip && !ctx->is_keyframe && !ctx->use_haar_wavelet && bs > 0) {
     double lambda;
     double dist_skip;
     double rate_skip;
     int rate_noskip;
+    od_coeff *c_noskip;
+    c_noskip = enc->block_c_noskip;
     for (i = 0; i < n; i++) {
-      for (j = 0; j < n; j++) c_noskip[n*i + j] = ctx->c[bo + i*w + j];
+      for (j = 0; j < n; j++) c_noskip[n*i + j] = c[bo + i*w + j];
     }
     dist_noskip = od_compute_dist(enc, c_orig, c_noskip, n, bs);
-    lambda = OD_BS_RDO_LAMBDA*(1./(1 << OD_BITRES))*enc->quantizer[pli]*
-     enc->quantizer[pli];
+    lambda = od_bs_rdo_lambda(enc->quantizer[pli]);
     rate_noskip = od_ec_enc_tell_frac(&enc->ec) - tell;
     dist_skip = od_compute_dist(enc, c_orig, mc_orig, n, bs);
     rate_skip = (1 << OD_BITRES)*od_encode_cdf_cost(2,
@@ -845,7 +851,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
       skip = 1;
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) {
-          ctx->d[pli][bo + i*w + j] = ctx->md[bo + i*w + j];
+          d[bo + i*w + j] = md[bo + i*w + j];
         }
       }
       od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
@@ -1289,8 +1295,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       rate_split = od_ec_enc_tell_frac(&enc->ec) - tell;
       dist_split = od_compute_dist(enc, c_orig, split, n, bs);
       dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs);
-      lambda = OD_BS_RDO_LAMBDA*(1./(1 << OD_BITRES))*enc->quantizer[pli]*
-       enc->quantizer[pli];
+      lambda = od_bs_rdo_lambda(enc->quantizer[pli]);
       if (skip_split || dist_nosplit + lambda*rate_nosplit < dist_split
        + lambda*rate_split) {
         /* This rollback call leaves the entropy coder in an inconsistent state
