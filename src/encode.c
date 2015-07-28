@@ -669,9 +669,9 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   int i;
   int j;
   od_rollback_buffer pre_encode_buf;
-  od_coeff c_orig[OD_BSIZE_MAX*OD_BSIZE_MAX];
-  od_coeff mc_orig[OD_BSIZE_MAX*OD_BSIZE_MAX];
-  od_coeff c_noskip[OD_BSIZE_MAX*OD_BSIZE_MAX];
+  od_coeff *c_orig;
+  od_coeff *mc_orig;
+  od_coeff *c_noskip;
   qm = ctx->qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT;
 #if defined(OD_OUTPUT_PRED)
   od_coeff preds[OD_BSIZE_MAX*OD_BSIZE_MAX];
@@ -691,6 +691,9 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   md = ctx->md;
   mc = ctx->mc;
   lossless = (enc->quantizer[pli] == 0);
+  c_orig = enc->block_c_orig;
+  mc_orig = enc->block_mc_orig;
+  c_noskip = enc->block_c_noskip;
   for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) c_orig[n*i + j] = ctx->c[bo + i*w + j];
   }
