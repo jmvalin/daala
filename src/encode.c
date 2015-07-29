@@ -639,8 +639,113 @@ static int od_wavelet_quantize(daala_enc_ctx *enc, int ln,
   return 0;
 }
 
+static int od_compute_var_4x4(od_coeff *x, int stride) {
+  int sum;
+  int s2;
+  int i;
+  sum = 0;
+  s2 = 0;
+  for (i = 0; i < 4; i++) {
+    int j;
+    for (j = 0; j < 4; j++) {
+      int t;
+      /* Avoids overflow in the sum^2 below because the pre-filtered input
+         can be much larger than +/-128 << OD_COEFF_SHIFT. Shifting the sum
+         itself is a bad idea because it leads to large error on low
+         variance. */
+      t = x[i*stride + j] >> 2;
+      sum += t;
+      s2 += t*t;
+    }
+  }
+  return (s2 - (sum*sum >> 4));
+}
+
+static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
+ int stride, int bs) {
+  od_coeff e[8*8];
+  od_coeff et[8*8];
+  double sum;
+  int min_var;
+  double mean_var;
+  double var_stat;
+  double activity;
+  double calibration;
+  int i;
+  int j;
+  OD_ASSERT(enc->qm != OD_FLAT_QM);
+#if 1
+  min_var = INT_MAX;
+  mean_var = 0;
+  for (i = 0; i < 3; i++) {
+    for (j = 0; j < 3; j++) {
+      int var;
+      var = od_compute_var_4x4(x + 2*i*stride + 2*j, stride);
+      min_var = OD_MINI(min_var, var);
+      mean_var += 1./(1+var);
+    }
+  }
+  /* We use a different variance statistic depending on whether activity
+     masking is used, since the harmonic mean appeared slghtly worse with
+     masking off. The calibration constant just ensures that we preserve the
+     rate compared to activity=1. */
+  if (enc->use_activity_masking) {
+    calibration = 1.95;
+    var_stat = 9./mean_var;
+  }
+  else {
+    calibration = 1.62;
+    var_stat = min_var;
+  }
+  /* 1.62 is a calibration constant, 0.25 is a noise floor and 1/6 is the
+     activity masking constant. */
+  activity = calibration*pow(.25 + var_stat/(1 << 2*OD_COEFF_SHIFT), -1./6);
+#else
+  activity = 1;
+#endif
+  for (i = 0; i < 8; i++) {
+    for (j = 0; j < 8; j++) e[8*i + j] = x[i*stride + j] - y[i*stride + j];
+  }
+  (*enc->state.opt_vtbl.fdct_2d[OD_BLOCK_8X8])(&et[0], 8, &e[0], 8);
+  sum = 0;
+  for (i = 0; i < 8; i++) {
+    for (j = 0; j < 8; j++) {
+      double mag;
+      mag = 16./OD_QM8_Q4_HVS[i*8 + j];
+      /* We attempt to consider the basis magnitudes here, though that's not
+         perfect for block size 16x16 and above since only some edges are
+         filtered then. */
+      mag *= OD_BASIS_MAG[0][bs][i << (bs - 1)]*
+       OD_BASIS_MAG[0][bs][j << (bs - 1)];
+      mag *= mag;
+      sum += et[8*i + j]*(double)et[8*i + j]*mag;
+    }
+  }
+  return activity*activity*sum;
+}
+
 static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
- int n, int bs);
+ int n, int bs) {
+  int i;
+  double sum;
+  sum = 0;
+  if (enc->qm == OD_FLAT_QM) {
+    for (i = 0; i < n*n; i++) {
+      double tmp;
+      tmp = x[i] - y[i];
+      sum += tmp*tmp;
+    }
+  }
+  else {
+    for (i = 0; i < n; i += 8) {
+      int j;
+      for (j = 0; j < n; j += 8) {
+        sum += od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], n, bs);
+      }
+    }
+  }
+  return sum;
+}
 
 /* Computes block size RDO lambda (for 1/8 bits) from the quantizer. */
 static double od_bs_rdo_lambda(int q) {
@@ -1063,114 +1168,6 @@ static void od_quantize_haar_dc_level(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   ctx->d[pli][(by << ln)*w + ((bx + 1) << ln)] = x[1];
   ctx->d[pli][((by + 1) << ln)*w + (bx << ln)] = x[2];
   ctx->d[pli][((by + 1) << ln)*w + ((bx + 1) << ln)] = x[3];
-}
-
-static int od_compute_var_4x4(od_coeff *x, int stride) {
-  int sum;
-  int s2;
-  int i;
-  sum = 0;
-  s2 = 0;
-  for (i = 0; i < 4; i++) {
-    int j;
-    for (j = 0; j < 4; j++) {
-      int t;
-      /* Avoids overflow in the sum^2 below because the pre-filtered input
-         can be much larger than +/-128 << OD_COEFF_SHIFT. Shifting the sum
-         itself is a bad idea because it leads to large error on low
-         variance. */
-      t = x[i*stride + j] >> 2;
-      sum += t;
-      s2 += t*t;
-    }
-  }
-  return (s2 - (sum*sum >> 4));
-}
-
-static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
- int stride, int bs) {
-  od_coeff e[8*8];
-  od_coeff et[8*8];
-  double sum;
-  int min_var;
-  double mean_var;
-  double var_stat;
-  double activity;
-  double calibration;
-  int i;
-  int j;
-  OD_ASSERT(enc->qm != OD_FLAT_QM);
-#if 1
-  min_var = INT_MAX;
-  mean_var = 0;
-  for (i = 0; i < 3; i++) {
-    for (j = 0; j < 3; j++) {
-      int var;
-      var = od_compute_var_4x4(x + 2*i*stride + 2*j, stride);
-      min_var = OD_MINI(min_var, var);
-      mean_var += 1./(1+var);
-    }
-  }
-  /* We use a different variance statistic depending on whether activity
-     masking is used, since the harmonic mean appeared slghtly worse with
-     masking off. The calibration constant just ensures that we preserve the
-     rate compared to activity=1. */
-  if (enc->use_activity_masking) {
-    calibration = 1.95;
-    var_stat = 9./mean_var;
-  }
-  else {
-    calibration = 1.62;
-    var_stat = min_var;
-  }
-  /* 1.62 is a calibration constant, 0.25 is a noise floor and 1/6 is the
-     activity masking constant. */
-  activity = calibration*pow(.25 + var_stat/(1 << 2*OD_COEFF_SHIFT), -1./6);
-#else
-  activity = 1;
-#endif
-  for (i = 0; i < 8; i++) {
-    for (j = 0; j < 8; j++) e[8*i + j] = x[i*stride + j] - y[i*stride + j];
-  }
-  (*enc->state.opt_vtbl.fdct_2d[OD_BLOCK_8X8])(&et[0], 8, &e[0], 8);
-  sum = 0;
-  for (i = 0; i < 8; i++) {
-    for (j = 0; j < 8; j++) {
-      double mag;
-      mag = 16./OD_QM8_Q4_HVS[i*8 + j];
-      /* We attempt to consider the basis magnitudes here, though that's not
-         perfect for block size 16x16 and above since only some edges are
-         filtered then. */
-      mag *= OD_BASIS_MAG[0][bs][i << (bs - 1)]*
-       OD_BASIS_MAG[0][bs][j << (bs - 1)];
-      mag *= mag;
-      sum += et[8*i + j]*(double)et[8*i + j]*mag;
-    }
-  }
-  return activity*activity*sum;
-}
-
-static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
- int n, int bs) {
-  int i;
-  double sum;
-  sum = 0;
-  if (enc->qm == OD_FLAT_QM) {
-    for (i = 0; i < n*n; i++) {
-      double tmp;
-      tmp = x[i] - y[i];
-      sum += tmp*tmp;
-    }
-  }
-  else {
-    for (i = 0; i < n; i += 8) {
-      int j;
-      for (j = 0; j < n; j += 8) {
-        sum += od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], n, bs);
-      }
-    }
-  }
-  return sum;
 }
 
 /* Returns 1 if the block is skipped, zero otherwise. */
