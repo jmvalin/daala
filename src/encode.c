@@ -661,6 +661,30 @@ static int od_compute_var_4x4(od_coeff *x, int stride) {
   return (s2 - (sum*sum >> 4));
 }
 
+static double od_compute_var_block(od_coeff *x, int n) {
+  double sum;
+  double s2;
+  int i;
+  double n_2;
+  n_2 = 1./(n*n);
+  sum = 0;
+  s2 = 0;
+  for (i = 0; i < n; i++) {
+    int j;
+    for (j = 0; j < n; j++) {
+      int t;
+      /* Avoids overflow in the sum^2 below because the pre-filtered input
+         can be much larger than +/-128 << OD_COEFF_SHIFT. Shifting the sum
+         itself is a bad idea because it leads to large error on low
+         variance. */
+      t = x[i*n + j];
+      sum += t;
+      s2 += (double)t*t;
+    }
+  }
+  return (s2 - (sum*sum*n_2))*n_2;
+}
+
 static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
  int stride, int bs) {
   od_coeff e[8*8];
@@ -938,6 +962,8 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     double lambda;
     double dist_skip;
     double rate_skip;
+    double var_skip;
+    double var_noskip;
     int rate_noskip;
     od_coeff *c_noskip;
     c_noskip = enc->block_c_noskip;
@@ -951,7 +977,10 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     rate_skip = (1 << OD_BITRES)*od_encode_cdf_cost(2,
      enc->state.adapt.skip_cdf[2*bs + (pli != 0)],
      4 + (pli == 0 && bs > 0));
-    if (dist_skip + lambda*rate_skip < dist_noskip + lambda*rate_noskip) {
+    var_noskip = od_compute_var_block(c_noskip, n);
+    var_skip = od_compute_var_block(mc_orig, n);
+    if (dist_skip + lambda*rate_skip < dist_noskip + lambda*rate_noskip &&
+      var_skip > 2*var_noskip + n*n) {
       od_encode_rollback(enc, &pre_encode_buf);
       /* Code the "skip this block" symbol (2). */
       od_encode_cdf_adapt(&enc->ec, 2,
