@@ -661,6 +661,26 @@ static int od_compute_var_4x4(od_coeff *x, int stride) {
   return (s2 - (sum*sum >> 4));
 }
 
+static double od_compute_var_block(od_coeff *x, int n) {
+  double sum;
+  double s2;
+  int i;
+  double n_2;
+  n_2 = 1./(n*n);
+  sum = 0;
+  s2 = 0;
+  for (i = 0; i < n; i++) {
+    int j;
+    for (j = 0; j < n; j++) {
+      int t;
+      t = x[i*n + j];
+      sum += t;
+      s2 += (double)t*t;
+    }
+  }
+  return (s2 - (sum*sum*n_2))*n_2;
+}
+
 static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
  int stride, int bs) {
   od_coeff e[8*8];
@@ -938,6 +958,8 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     double lambda;
     double dist_skip;
     double rate_skip;
+    double var_skip;
+    double var_noskip;
     int rate_noskip;
     od_coeff *c_noskip;
     c_noskip = enc->block_c_noskip;
@@ -951,7 +973,12 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     rate_skip = (1 << OD_BITRES)*od_encode_cdf_cost(2,
      enc->state.adapt.skip_cdf[2*bs + (pli != 0)],
      4 + (pli == 0 && bs > 0));
-    if (dist_skip + lambda*rate_skip < dist_noskip + lambda*rate_noskip) {
+    var_noskip = od_compute_var_block(c_noskip, n);
+    var_skip = od_compute_var_block(mc_orig, n);
+    /* Late skip based on block size RDO cost, but only if we don't lose too
+       much contrast (half the variance, with noise floor). */
+    if (dist_skip + lambda*rate_skip < dist_noskip + lambda*rate_noskip &&
+     2*var_skip + (1 << 2*OD_COEFF_SHIFT) > var_noskip) {
       od_encode_rollback(enc, &pre_encode_buf);
       /* Code the "skip this block" symbol (2). */
       od_encode_cdf_adapt(&enc->ec, 2,
