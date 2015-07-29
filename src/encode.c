@@ -980,7 +980,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     var_noskip = od_compute_var_block(c_noskip, n);
     var_skip = od_compute_var_block(mc_orig, n);
     if (dist_skip + lambda*rate_skip < dist_noskip + lambda*rate_noskip &&
-      var_skip > 2*var_noskip + n*n) {
+      var_skip > 2*var_noskip + (4 << 2*OD_COEFF_SHIFT)) {
       od_encode_rollback(enc, &pre_encode_buf);
       /* Code the "skip this block" symbol (2). */
       od_encode_cdf_adapt(&enc->ec, 2,
