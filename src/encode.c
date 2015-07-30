@@ -666,23 +666,24 @@ static double od_compute_var_block(od_coeff *x, int n) {
   double s2;
   int i;
   double n_2;
-  n_2 = 1./(n*n);
+  n_2 = 4./(n*n);
   sum = 0;
   s2 = 0;
-  for (i = 0; i < n; i++) {
+  for (i = 0; i < n; i += 2) {
     int j;
-    for (j = 0; j < n; j++) {
+    for (j = 0; j < n; j += 2) {
       int t;
       /* Avoids overflow in the sum^2 below because the pre-filtered input
          can be much larger than +/-128 << OD_COEFF_SHIFT. Shifting the sum
          itself is a bad idea because it leads to large error on low
          variance. */
-      t = x[i*n + j];
+      t = x[i*n + j] + x[i*n + j + 1] + x[(i + 1)*n + j]
+       + x[(i + 1)*n + j + 1];
       sum += t;
       s2 += (double)t*t;
     }
   }
-  return (s2 - (sum*sum*n_2))*n_2;
+  return 0.062500*(s2 - (sum*sum*n_2))*n_2;
 }
 
 static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
@@ -980,7 +981,8 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     var_noskip = od_compute_var_block(c_noskip, n);
     var_skip = od_compute_var_block(mc_orig, n);
     if (dist_skip + lambda*rate_skip < dist_noskip + lambda*rate_noskip &&
-      2*var_skip  + (1 << 2*OD_COEFF_SHIFT) > var_noskip) {
+      2*var_skip + (1 << 2*OD_COEFF_SHIFT) > var_noskip &&
+      var_skip < 2*var_noskip + (1 << 2*OD_COEFF_SHIFT)) {
       od_encode_rollback(enc, &pre_encode_buf);
       /* Code the "skip this block" symbol (2). */
       od_encode_cdf_adapt(&enc->ec, 2,
