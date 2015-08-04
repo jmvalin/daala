@@ -59,7 +59,7 @@ static int od_dec_init(od_dec_ctx *dec, const daala_info *info,
   dec->user_mc_img = NULL;
 #if OD_ACCOUNTING
   od_accounting_init(&dec->acct);
-  dec->acct_enabled = 1;
+  dec->acct_enabled = 0;
 #endif
   return 0;
 }
@@ -128,7 +128,13 @@ int daala_decode_ctl(daala_dec_ctx *dec, int req, void *buf, size_t buf_sz) {
       return 0;
     }
 #if OD_ACCOUNTING
+    case OD_DECCTL_SET_ACCOUNTING_ENABLED: {
+      if(dec == NULL || buf == NULL || buf_sz != sizeof(int)) return OD_EFAULT;
+      dec->acct_enabled = *(int*)buf != 0;
+      return 0;
+    }
     case OD_DECCTL_GET_ACCOUNTING : {
+      if (!dec->acct_enabled) return OD_EINVAL;
       if (dec == NULL || buf == NULL) return OD_EFAULT;
       if (buf_sz != sizeof(od_accounting *)) return OD_EINVAL;
       *(od_accounting **)buf = &dec->acct;
