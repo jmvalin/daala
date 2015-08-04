@@ -85,16 +85,16 @@ void od_accounting_reset(od_accounting *acct);
 
 void od_accounting_clear(od_accounting *acct);
 
-void od_accounting_set_location(od_accounting *acct, int x, int y, int level,
- int plane);
+void od_accounting_set_location(od_accounting *acct, int plane, int level,
+ int x, int y);
 
 void od_accounting_record(od_accounting *acct, char *str, int bits_q3);
 
 # if OD_ACCOUNTING
-#  define OD_ACCOUNTING_SET_LOCATION(dec, x, y, level, plane) \
-  od_accounting_set_location(&(dec)->ec.acct, x, y, level, plane)
+#  define OD_ACCOUNTING_SET_LOCATION(dec, plane, level, x, y) \
+  od_accounting_set_location(&(dec)->ec.acct, plane, level, x, y)
 # else
-#  define OD_ACCOUNTING_SET_LOCATION(dec, x, y, level, plane)
+#  define OD_ACCOUNTING_SET_LOCATION(dec, plane, level, x, y)
 # endif
 
 #endif

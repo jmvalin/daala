@@ -70,8 +70,8 @@ void od_accounting_clear(od_accounting *acct) {
   }
 }
 
-void od_accounting_set_location(od_accounting *acct, int x, int y, int level,
- int plane) {
+void od_accounting_set_location(od_accounting *acct, int plane, int level,
+ int x, int y) {
   acct->curr_x = x;
   acct->curr_y = y;
   acct->curr_level = level;
@@ -83,6 +83,7 @@ void od_accounting_record(od_accounting *acct, char *str, int bits_q3) {
   od_acct_symbol curr;
   int id;
   OD_ASSERT(acct->curr_x >= 0);
+  OD_ASSERT(acct->curr_y >= 0);
   curr.x = acct->curr_x;
   curr.y = acct->curr_y;
   curr.level = acct->curr_level;

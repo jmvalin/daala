@@ -639,7 +639,7 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
   frame_width = dec->state.frame_width;
   w = frame_width >> xdec;
   skip = 0;
-  OD_ACCOUNTING_SET_LOCATION(dec, bx << bsi, by << bsi, bsi, pli);
+  OD_ACCOUNTING_SET_LOCATION(dec, pli, bsi, bx << bsi, by << bsi);
   /* Read the luma skip symbol. A value of 4 means "split the block", while < 4
      means that we code the block. In the latter case, we need to forward
      the skip value to the PVQ decoder. */
@@ -744,7 +744,7 @@ static void od_dec_mv_unpack(daala_dec_ctx *dec) {
     set all level 0 MVs valid.*/
   for (vy = 0; vy <= nvmvbs; vy += OD_MVB_DELTA0) {
     for (vx = 0; vx <= nhmvbs; vx += OD_MVB_DELTA0) {
-      OD_ACCOUNTING_SET_LOCATION(dec, vx, vy, 0, OD_ACCT_MV);
+      OD_ACCOUNTING_SET_LOCATION(dec, OD_ACCT_MV, 0, vx, vy);
       mvp = grid[vy] + vx;
       mvp->valid = 1;
       od_decode_mv(dec, mvp, vx, vy, 0, mv_res, width, height);
@@ -756,7 +756,7 @@ static void od_dec_mv_unpack(daala_dec_ctx *dec) {
     /*Odd levels.*/
     for (vy = mvb_sz; vy <= nvmvbs; vy += 2*mvb_sz) {
       for (vx = mvb_sz; vx <= nhmvbs; vx += 2*mvb_sz) {
-        OD_ACCOUNTING_SET_LOCATION(dec, vx, vy, level, OD_ACCT_MV);
+        OD_ACCOUNTING_SET_LOCATION(dec, OD_ACCT_MV, level, vx, vy);
         if (grid[vy - mvb_sz][vx - mvb_sz].valid
          && grid[vy - mvb_sz][vx + mvb_sz].valid
          && grid[vy + mvb_sz][vx + mvb_sz].valid
@@ -775,7 +775,7 @@ static void od_dec_mv_unpack(daala_dec_ctx *dec) {
     /*Even Levels.*/
     for (vy = 0; vy <= nvmvbs; vy += mvb_sz) {
       for (vx = mvb_sz*!(vy & mvb_sz); vx <= nhmvbs; vx += 2*mvb_sz) {
-        OD_ACCOUNTING_SET_LOCATION(dec, vx, vy, level, OD_ACCT_MV);
+        OD_ACCOUNTING_SET_LOCATION(dec, OD_ACCT_MV, level, vx, vy);
         if ((vy - mvb_sz < 0 || grid[vy - mvb_sz][vx].valid)
          && (vx - mvb_sz < 0 || grid[vy][vx - mvb_sz].valid)
          && (vy + mvb_sz > nvmvbs || grid[vy + mvb_sz][vx].valid)
@@ -988,7 +988,7 @@ int daala_decode_packet_in(daala_dec_ctx *dec, od_img *img,
   if (dec->packet_state != OD_PACKET_DATA) return OD_EINVAL;
   if (op->e_o_s) dec->packet_state = OD_PACKET_DONE;
   od_ec_dec_init(&dec->ec, op->packet, op->bytes);
-  OD_ACCOUNTING_SET_LOCATION(dec, 0, 0, 0, OD_ACCT_FRAME);
+  OD_ACCOUNTING_SET_LOCATION(dec, OD_ACCT_FRAME, 0, 0, 0);
   /*Read the packet type bit.*/
   if (od_ec_decode_bool_q15(&dec->ec, 16384, "flags")) return OD_EBADPACKET;
   mbctx.is_keyframe = od_ec_decode_bool_q15(&dec->ec, 16384, "flags");
