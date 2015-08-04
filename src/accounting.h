@@ -29,21 +29,31 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "internal.h"
 # include "../include/daala/daaladec.h"
 
-#define OD_ACCT_FRAME (10)
-#define OD_ACCT_MV (11)
+typedef struct {
+  od_accounting acct;
+  /** Size allocated for syms (not all may be used). */
+  int nb_syms_alloc;
+  /* Current location (x, y, level, layer) where we are recording. */
+  int curr_x;
+  int curr_y;
+  int curr_level;
+  int curr_layer;
+  /* Last value returned from od_ec_dec_tell_frac(). */
+  uint32_t last_tell;
+} od_accounting_internal;
 
 int od_accounting_dict_lookup(od_accounting_dict *dict, const char *str);
 
-void od_accounting_init(od_accounting *acct);
+void od_accounting_init(od_accounting_internal *acct);
 
-void od_accounting_reset(od_accounting *acct);
+void od_accounting_reset(od_accounting_internal *acct);
 
-void od_accounting_clear(od_accounting *acct);
+void od_accounting_clear(od_accounting_internal *acct);
 
-void od_accounting_set_location(od_accounting *acct, int layer, int level,
+void od_accounting_set_location(od_accounting_internal *acct, int layer, int level,
  int x, int y);
 
-void od_accounting_record(od_accounting *acct, char *str, int bits_q3);
+void od_accounting_record(od_accounting_internal *acct, char *str, int bits_q3);
 
 # if OD_ACCOUNTING
 #  define OD_ACCOUNTING_SET_LOCATION(dec, layer, level, x, y) \

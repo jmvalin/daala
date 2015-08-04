@@ -81,7 +81,7 @@ struct od_ec_dec {
   /*Nonzero if an error occurred.*/
   int error;
 #if OD_ACCOUNTING
-  od_accounting *acct;
+  od_accounting_internal *acct;
 #endif
 };
 

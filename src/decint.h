@@ -51,7 +51,7 @@ struct daala_dec_ctx {
   od_img *user_mc_img;
 #if OD_ACCOUNTING
   int acct_enabled;
-  od_accounting acct;
+  od_accounting_internal acct;
 #endif
 };
 

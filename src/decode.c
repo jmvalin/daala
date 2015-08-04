@@ -137,7 +137,7 @@ int daala_decode_ctl(daala_dec_ctx *dec, int req, void *buf, size_t buf_sz) {
       if (!dec->acct_enabled) return OD_EINVAL;
       if (dec == NULL || buf == NULL) return OD_EFAULT;
       if (buf_sz != sizeof(od_accounting *)) return OD_EINVAL;
-      *(od_accounting **)buf = &dec->acct;
+      *(od_accounting **)buf = &dec->acct.acct;
       return 0;
     }
 #endif

@@ -47,6 +47,10 @@ extern "C" {
 #define OD_DECCTL_GET_ACCOUNTING   (7009)
 #define OD_DECCTL_SET_ACCOUNTING_ENABLED (7011)
 
+
+#define OD_ACCT_FRAME (10)
+#define OD_ACCT_MV (11)
+
 typedef struct {
   /** x position in units of 4x4 luma blocks for layers 0-3, or vx for
      OD_ACCT_MV. Has no meaning for OD_ACCT_FRAME.*/
@@ -79,19 +83,10 @@ typedef struct {
 typedef struct {
   /** All recorded symbols decoded. */
   od_acct_symbol *syms;
-  /** Size allocated for syms (not all may be used). */
-  int nb_syms_alloc;
   /** Number of symbols actually recorded. */
   int nb_syms;
   /** Dictionary for translating strings into id. */
   od_accounting_dict dict;
-  /* Current location (x, y, level, layer) where we are recording. */
-  int curr_x;
-  int curr_y;
-  int curr_level;
-  int curr_layer;
-  /* Last value returned from od_ec_dec_tell_frac(). */
-  uint32_t last_tell;
 } od_accounting;
 
 

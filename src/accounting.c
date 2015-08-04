@@ -47,28 +47,28 @@ int od_accounting_dict_lookup(od_accounting_dict *dict, const char *str) {
   return i;
 }
 
-void od_accounting_init(od_accounting *acct) {
+void od_accounting_init(od_accounting_internal *acct) {
   acct->nb_syms_alloc = 1000;
-  acct->syms = malloc(sizeof(acct->syms[0])*acct->nb_syms_alloc);
-  acct->dict.nb_str = 0;
+  acct->acct.syms = malloc(sizeof(acct->acct.syms[0])*acct->nb_syms_alloc);
+  acct->acct.dict.nb_str = 0;
   od_accounting_reset(acct);
 }
 
-void od_accounting_reset(od_accounting *acct) {
-  acct->nb_syms = 0;
+void od_accounting_reset(od_accounting_internal *acct) {
+  acct->acct.nb_syms = 0;
   acct->curr_x = acct->curr_y = acct->curr_level = acct->curr_layer = -1;
   acct->last_tell = 0;
 }
 
-void od_accounting_clear(od_accounting *acct) {
+void od_accounting_clear(od_accounting_internal *acct) {
   int i;
-  free(acct->syms);
-  for (i = 0; i < acct->dict.nb_str; i++) {
-    free(acct->dict.str[i]);
+  free(acct->acct.syms);
+  for (i = 0; i < acct->acct.dict.nb_str; i++) {
+    free(acct->acct.dict.str[i]);
   }
 }
 
-void od_accounting_set_location(od_accounting *acct, int layer, int level,
+void od_accounting_set_location(od_accounting_internal *acct, int layer, int level,
  int x, int y) {
   acct->curr_x = x;
   acct->curr_y = y;
@@ -77,7 +77,7 @@ void od_accounting_set_location(od_accounting *acct, int layer, int level,
 
 }
 
-void od_accounting_record(od_accounting *acct, char *str, int bits_q3) {
+void od_accounting_record(od_accounting_internal *acct, char *str, int bits_q3) {
   od_acct_symbol curr;
   int id;
   OD_ASSERT(acct->curr_x >= 0);
@@ -88,13 +88,14 @@ void od_accounting_record(od_accounting *acct, char *str, int bits_q3) {
   curr.level = acct->curr_level;
   curr.layer = acct->curr_layer;
   curr.bits_q3 = bits_q3;
-  id = od_accounting_dict_lookup(&acct->dict, str);
+  id = od_accounting_dict_lookup(&acct->acct.dict, str);
   OD_ASSERT(id <= 255);
   curr.id = id;
-  if (acct->nb_syms == acct->nb_syms_alloc) {
+  if (acct->acct.nb_syms == acct->nb_syms_alloc) {
     acct->nb_syms_alloc *= 2;
-    acct->syms = realloc(acct->syms, sizeof(acct->syms[0])*acct->nb_syms_alloc);
-    OD_ASSERT(acct->syms != NULL);
+    acct->acct.syms = realloc(acct->acct.syms,
+     sizeof(acct->acct.syms[0])*acct->nb_syms_alloc);
+    OD_ASSERT(acct->acct.syms != NULL);
   }
-  acct->syms[acct->nb_syms++] = curr;
+  acct->acct.syms[acct->acct.nb_syms++] = curr;
 }
