@@ -32,15 +32,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #define OD_ACCT_MV (11)
 
 typedef struct {
-  /** plane number (0..3) or one of OD_ACCT_FRAME and OD_ACCT_MV. */
-  short plane;
-  /** x position in units of 4x4 luma blocks for planes 0-3, or vx for
+  /** layers (0..NPLANES) for color plane coefficients, or one of
+      OD_ACCT_FRAME and OD_ACCT_MV. */
+  short layer;
+  /** x position in units of 4x4 luma blocks for layers 0-3, or vx for
      OD_ACCT_MV. Has no meaning for OD_ACCT_FRAME.*/
   short x;
-  /** y position in units of 4x4 luma blocks for planes 0-3, or vy for
+  /** y position in units of 4x4 luma blocks for layers 0-3, or vy for
      OD_ACCT_MV. Has no meaning for OD_ACCT_FRAME.*/
   short y;
-  /** For planes 0-3, 0 means 4x4, 1, means 8x8, and so on. For OD_ACCT_MV,
+  /** For layers 0-3, 0 means 4x4, 1, means 8x8, and so on. For OD_ACCT_MV,
      it is the motion vector level. Has no meaning for OD_ACCT_FRAME. */
   short level;
   /** Integer id in the dictionary. */
@@ -68,11 +69,11 @@ typedef struct {
   int nb_syms;
   /** Dictionary for translating strings into id. */
   od_accounting_dict dict;
-  /* Current location (x, y, level, plane) where we are recording. */
+  /* Current location (x, y, level, layer) where we are recording. */
   int curr_x;
   int curr_y;
   int curr_level;
-  int curr_plane;
+  int curr_layer;
   /* Last value returned from od_ec_dec_tell_frac(). */
   uint32_t last_tell;
 } od_accounting;
@@ -85,16 +86,16 @@ void od_accounting_reset(od_accounting *acct);
 
 void od_accounting_clear(od_accounting *acct);
 
-void od_accounting_set_location(od_accounting *acct, int plane, int level,
+void od_accounting_set_location(od_accounting *acct, int layer, int level,
  int x, int y);
 
 void od_accounting_record(od_accounting *acct, char *str, int bits_q3);
 
 # if OD_ACCOUNTING
-#  define OD_ACCOUNTING_SET_LOCATION(dec, plane, level, x, y) \
-  od_accounting_set_location(&(dec)->ec.acct, plane, level, x, y)
+#  define OD_ACCOUNTING_SET_LOCATION(dec, layer, level, x, y) \
+  od_accounting_set_location(&(dec)->ec.acct, layer, level, x, y)
 # else
-#  define OD_ACCOUNTING_SET_LOCATION(dec, plane, level, x, y)
+#  define OD_ACCOUNTING_SET_LOCATION(dec, layer, level, x, y)
 # endif
 
 #endif

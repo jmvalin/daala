@@ -51,14 +51,14 @@ void od_accounting_init(od_accounting *acct) {
   acct->nb_syms = 0;
   acct->nb_syms_alloc = 1000;
   acct->syms = malloc(sizeof(acct->syms[0])*acct->nb_syms_alloc);
-  acct->curr_x = acct->curr_y = acct->curr_level = acct->curr_plane = -1;
+  acct->curr_x = acct->curr_y = acct->curr_level = acct->curr_layer = -1;
   acct->last_tell = 0;
   acct->dict.nb_str = 0;
 }
 
 void od_accounting_reset(od_accounting *acct) {
   acct->nb_syms = 0;
-  acct->curr_x = acct->curr_y = acct->curr_level = acct->curr_plane = -1;
+  acct->curr_x = acct->curr_y = acct->curr_level = acct->curr_layer = -1;
   acct->last_tell = 0;
 }
 
@@ -70,12 +70,12 @@ void od_accounting_clear(od_accounting *acct) {
   }
 }
 
-void od_accounting_set_location(od_accounting *acct, int plane, int level,
+void od_accounting_set_location(od_accounting *acct, int layer, int level,
  int x, int y) {
   acct->curr_x = x;
   acct->curr_y = y;
   acct->curr_level = level;
-  acct->curr_plane = plane;
+  acct->curr_layer = layer;
 
 }
 
@@ -87,7 +87,7 @@ void od_accounting_record(od_accounting *acct, char *str, int bits_q3) {
   curr.x = acct->curr_x;
   curr.y = acct->curr_y;
   curr.level = acct->curr_level;
-  curr.plane = acct->curr_plane;
+  curr.layer = acct->curr_layer;
   curr.bits_q3 = bits_q3;
   id = od_accounting_dict_lookup(&acct->dict, str);
   curr.id = id;
