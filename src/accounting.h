@@ -32,22 +32,22 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #define OD_ACCT_MV (11)
 
 typedef struct {
-  /** layers (0..NPLANES) for color plane coefficients, or one of
-      OD_ACCT_FRAME and OD_ACCT_MV. */
-  short layer;
   /** x position in units of 4x4 luma blocks for layers 0-3, or vx for
      OD_ACCT_MV. Has no meaning for OD_ACCT_FRAME.*/
   short x;
   /** y position in units of 4x4 luma blocks for layers 0-3, or vy for
      OD_ACCT_MV. Has no meaning for OD_ACCT_FRAME.*/
   short y;
+  /** layers (0..NPLANES) for color plane coefficients, or one of
+      OD_ACCT_FRAME and OD_ACCT_MV. */
+  unsigned char layer;
   /** For layers 0-3, 0 means 4x4, 1, means 8x8, and so on. For OD_ACCT_MV,
      it is the motion vector level. Has no meaning for OD_ACCT_FRAME. */
-  short level;
+  unsigned char level;
   /** Integer id in the dictionary. */
-  short id;
+  unsigned char id;
   /** Number of bits in units of 1/8 bit. */
-  short bits_q3;
+  unsigned char bits_q3;
 } od_acct_symbol;
 
 /* Max number of entries for symbol types in the dictionary (increase as

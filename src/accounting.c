@@ -84,12 +84,14 @@ void od_accounting_record(od_accounting *acct, char *str, int bits_q3) {
   int id;
   OD_ASSERT(acct->curr_x >= 0);
   OD_ASSERT(acct->curr_y >= 0);
+  OD_ASSERT(bits_q3 <= 255);
   curr.x = acct->curr_x;
   curr.y = acct->curr_y;
   curr.level = acct->curr_level;
   curr.layer = acct->curr_layer;
   curr.bits_q3 = bits_q3;
   id = od_accounting_dict_lookup(&acct->dict, str);
+  OD_ASSERT(id <= 255);
   curr.id = id;
   if (acct->nb_syms == acct->nb_syms_alloc) {
     acct->nb_syms_alloc *= 2;
