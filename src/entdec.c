@@ -88,11 +88,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # define OD_PROCESS_ACCOUNTING(dec, str) od_process_accounting(dec, str)
 # define od_ec_dec_normalize(dec, dif, rng, ret, str) od_ec_dec_normalize_(dec, dif, rng, ret, str)
 static void od_process_accounting(od_ec_dec *dec, char *str) {
-  uint32_t tell;
-  tell = od_ec_dec_tell_frac(dec);
-  OD_ASSERT(tell >= dec->acct.last_tell);
-  od_accounting_record(&dec->acct, str, tell - dec->acct.last_tell);
-  dec->acct.last_tell = tell;
+  if (dec->acct != NULL) {
+    uint32_t tell;
+    tell = od_ec_dec_tell_frac(dec);
+    OD_ASSERT(tell >= dec->acct->last_tell);
+    od_accounting_record(dec->acct, str, tell - dec->acct->last_tell);
+    dec->acct->last_tell = tell;
+  }
 }
 #else
 # define OD_PROCESS_ACCOUNTING(dec, str) do {} while(0)
@@ -168,7 +170,7 @@ void od_ec_dec_init(od_ec_dec *dec,
   dec->error = 0;
   od_ec_dec_refill(dec);
 #if OD_ACCOUNTING
-  od_accounting_init(&dec->acct);
+  dec->acct = NULL;
 #endif
 }
 

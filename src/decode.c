@@ -57,6 +57,10 @@ static int od_dec_init(od_dec_ctx *dec, const daala_info *info,
   dec->user_flags = NULL;
   dec->user_mv_grid = NULL;
   dec->user_mc_img = NULL;
+#if OD_ACCOUNTING
+  od_accounting_init(&dec->acct);
+  dec->acct_enabled = 1;
+#endif
   return 0;
 }
 
@@ -127,7 +131,7 @@ int daala_decode_ctl(daala_dec_ctx *dec, int req, void *buf, size_t buf_sz) {
     case OD_DECCTL_GET_ACCOUNTING : {
       if (dec == NULL || buf == NULL) return OD_EFAULT;
       if (buf_sz != sizeof(od_accounting *)) return OD_EINVAL;
-      *(od_accounting **)buf = &dec->ec.acct;
+      *(od_accounting **)buf = &dec->acct;
       return 0;
     }
 #endif
@@ -988,6 +992,13 @@ int daala_decode_packet_in(daala_dec_ctx *dec, od_img *img,
   if (dec->packet_state != OD_PACKET_DATA) return OD_EINVAL;
   if (op->e_o_s) dec->packet_state = OD_PACKET_DONE;
   od_ec_dec_init(&dec->ec, op->packet, op->bytes);
+#if OD_ACCOUNTING
+  if (dec->acct_enabled) {
+    od_accounting_reset(&dec->acct);
+    dec->ec.acct = &dec->acct;
+  }
+  else dec->ec.acct = NULL;
+#endif
   OD_ACCOUNTING_SET_LOCATION(dec, OD_ACCT_FRAME, 0, 0, 0);
   /*Read the packet type bit.*/
   if (od_ec_decode_bool_q15(&dec->ec, 16384, "flags")) return OD_EBADPACKET;

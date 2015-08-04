@@ -81,8 +81,7 @@ struct od_ec_dec {
   /*Nonzero if an error occurred.*/
   int error;
 #if OD_ACCOUNTING
-  uint32_t last_tell;
-  od_accounting acct;
+  od_accounting *acct;
 #endif
 };
 

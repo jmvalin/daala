@@ -48,12 +48,10 @@ int od_accounting_dict_lookup(od_accounting_dict *dict, const char *str) {
 }
 
 void od_accounting_init(od_accounting *acct) {
-  acct->nb_syms = 0;
   acct->nb_syms_alloc = 1000;
   acct->syms = malloc(sizeof(acct->syms[0])*acct->nb_syms_alloc);
-  acct->curr_x = acct->curr_y = acct->curr_level = acct->curr_layer = -1;
-  acct->last_tell = 0;
   acct->dict.nb_str = 0;
+  od_accounting_reset(acct);
 }
 
 void od_accounting_reset(od_accounting *acct) {

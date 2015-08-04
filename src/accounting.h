@@ -93,7 +93,7 @@ void od_accounting_record(od_accounting *acct, char *str, int bits_q3);
 
 # if OD_ACCOUNTING
 #  define OD_ACCOUNTING_SET_LOCATION(dec, layer, level, x, y) \
-  od_accounting_set_location(&(dec)->ec.acct, layer, level, x, y)
+  od_accounting_set_location(&(dec)->acct, layer, level, x, y)
 # else
 #  define OD_ACCOUNTING_SET_LOCATION(dec, layer, level, x, y)
 # endif
