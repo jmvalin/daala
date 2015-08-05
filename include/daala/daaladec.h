@@ -54,10 +54,10 @@ extern "C" {
 typedef struct {
   /** x position in units of 4x4 luma blocks for layers 0-3, or vx for
      OD_ACCT_MV. Has no meaning for OD_ACCT_FRAME.*/
-  short x;
+  int16_t x;
   /** y position in units of 4x4 luma blocks for layers 0-3, or vy for
      OD_ACCT_MV. Has no meaning for OD_ACCT_FRAME.*/
-  short y;
+  int16_t y;
   /** layers (0..NPLANES) for color plane coefficients, or one of
       OD_ACCT_FRAME and OD_ACCT_MV. */
   unsigned char layer;
