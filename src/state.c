@@ -46,18 +46,18 @@ const od_coeff OD_DC_RES[3] = {17, 24, 17};
 /* Scaling compensation for the Haar equivalent basis function. Left is
    for horizontal/vertical. Right is for diagonal. */
 #if OD_DISABLE_FILTER || OD_DEBLOCKING
-const od_coeff OD_DC_QM[OD_NBSIZES][2] = {
+const od_coeff OD_DC_QM[OD_NBSIZES - 1][2] = {
   {16, 16}, {16, 16}, {16, 16}, {16, 16}
 };
 #else
-const od_coeff OD_DC_QM[OD_NBSIZES][2] = {
+const od_coeff OD_DC_QM[OD_NBSIZES - 1][2] = {
   {21, 25}, {18, 20}, {17, 18}, {17, 17}
 };
 #endif
 
 /* Haar "quantization matrix" for each decomposition level (starting from LF).
    */
-const int OD_HAAR_QM[2][OD_LOG_BSIZE_MAX + 1] = {
+const int OD_HAAR_QM[2][OD_LOG_BSIZE_MAX] = {
   /* horizontal/vertical direction. */
   {16, 16, 16, 16, 24, 32},
   /* "diagonal" direction. */
@@ -285,13 +285,13 @@ static int od_state_init_impl(od_state *state, const daala_info *info) {
     state->bskip[pli] = (unsigned char *)malloc(sizeof(*state->bskip)*
      state->nhsb*state->nvsb<<(2*(OD_NBSIZES-1) - xdec - ydec));
   }
-  state->bsize = (unsigned char *)malloc(
-   sizeof(*state->bsize)*(state->nhsb + 2)*4*(state->nvsb + 2)*4);
+  state->bsize = (unsigned char *)malloc(sizeof(*state->bsize)*
+   (state->nhsb + 2)*OD_BSIZE_GRID*(state->nvsb + 2)*OD_BSIZE_GRID);
   if (OD_UNLIKELY(!state->bsize)) {
     return OD_EFAULT;
   }
-  state->bstride = (state->nhsb + 2)*4;
-  state->bsize += 4*state->bstride + 4;
+  state->bstride = (state->nhsb + 2)*OD_BSIZE_GRID;
+  state->bsize += OD_BSIZE_GRID*state->bstride + OD_BSIZE_GRID;
   state->skip_stride = state->nhsb << (OD_NBSIZES - 1);
 #if defined(OD_DUMP_IMAGES) || defined(OD_DUMP_RECONS)
   state->dump_tags = 0;
@@ -334,7 +334,7 @@ void od_state_clear(od_state *state) {
 #endif
   od_free_2d(state->mv_grid);
   od_aligned_free(state->ref_img_data);
-  state->bsize -= 4*state->bstride + 4;
+  state->bsize -= OD_BSIZE_GRID*state->bstride + OD_BSIZE_GRID;
   for (pli = 0; pli < state->info.nplanes; pli++) {
     free(state->sb_dc_mem[pli]);
     free(state->ltmp[pli]);
@@ -853,19 +853,19 @@ void od_state_init_border(od_state *state) {
   nvsb = state->nvsb;
   bsize = state->bsize;
   bstride = state->bstride;
-  for (i = -4; i < (nhsb+1)*4; i++) {
-    for (j = -4; j < 0; j++) {
+  for (i = -OD_BSIZE_GRID; i < (nhsb + 1)*OD_BSIZE_GRID; i++) {
+    for (j = -OD_BSIZE_GRID; j < 0; j++) {
       bsize[(j*bstride) + i] = OD_LIMIT_BSIZE_MAX;
     }
-    for (j = nvsb*4; j < (nvsb+1)*4; j++) {
+    for (j = nvsb*OD_BSIZE_GRID; j < (nvsb + 1)*OD_BSIZE_GRID; j++) {
       bsize[(j*bstride) + i] = OD_LIMIT_BSIZE_MAX;
     }
   }
-  for (j = -4; j < (nvsb+1)*4; j++) {
-    for (i = -4; i < 0; i++) {
+  for (j = -OD_BSIZE_GRID; j < (nvsb + 1)*OD_BSIZE_GRID; j++) {
+    for (i = -OD_BSIZE_GRID; i < 0; i++) {
       bsize[(j*bstride) + i] = OD_LIMIT_BSIZE_MAX;
     }
-    for (i = nhsb*4; i < (nhsb+1)*4; i++) {
+    for (i = nhsb*OD_BSIZE_GRID; i < (nhsb + 1)*OD_BSIZE_GRID; i++) {
       bsize[(j*bstride) + i] = OD_LIMIT_BSIZE_MAX;
     }
   }

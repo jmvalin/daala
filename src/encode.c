@@ -68,7 +68,8 @@ static const unsigned char OD_LUMA_QM_Q4[2][OD_QM_SIZE] = {
   27, 16,
   23, 16, 16, 16,
   19, 16, 16, 16, 16, 16,
-  17, 16, 16, 16, 16, 16, 16, 16
+  17, 16, 16, 16, 16, 16, 16, 16,
+  16, 16, 16, 16, 16, 16, 16, 16, 16, 16
  },
 /* The non-flat AC coefficients compensate for the non-linear scaling caused
    by activity masking. The values are currently hand-tuned so that the rate
@@ -79,7 +80,8 @@ static const unsigned char OD_LUMA_QM_Q4[2][OD_QM_SIZE] = {
   27, 16,
   23, 18, 28, 32,
   19, 14, 20, 20, 28, 32,
-  17, 11, 16, 14, 16, 16, 23, 28
+  17, 11, 16, 14, 16, 16, 23, 28,
+  17, 10, 14, 14, 14, 14, 16, 16, 20, 24
  }
 };
 
@@ -91,7 +93,8 @@ static const unsigned char OD_CHROMA_QM_Q4[2][OD_QM_SIZE] = {
   21, 16,
   18, 16, 16, 16,
   17, 16, 16, 16, 16, 16,
-  16, 16, 16, 16, 16, 16, 16, 16
+  16, 16, 16, 16, 16, 16, 16, 16,
+  16, 16, 16, 16, 16, 16, 16, 16, 16, 16
  },
 /* The AC part is flat for chroma because it has no activity masking.
    Masking enabled: */
@@ -99,7 +102,8 @@ static const unsigned char OD_CHROMA_QM_Q4[2][OD_QM_SIZE] = {
   21, 16,
   18, 16, 16, 16,
   17, 16, 16, 16, 16, 16,
-  16, 16, 16, 16, 16, 16, 16, 16
+  16, 16, 16, 16, 16, 16, 16, 16,
+  16, 16, 16, 16, 16, 16, 16, 16, 16, 16
  }
 };
 
@@ -2058,16 +2062,17 @@ static void od_split_superblocks(daala_enc_ctx *enc, int is_keyframe) {
     rimg = state->ref_imgs[state->ref_imgi[OD_FRAME_SELF]].planes[0].data
      + i*rstride*OD_BSIZE_MAX;
     for (j = 0; j < nhsb; j++) {
-      int bsize[4][4];
+      int bsize[OD_BSIZE_GRID][OD_BSIZE_GRID];
       unsigned char *state_bsize;
-      state_bsize = &state->bsize[i*4*state->bstride + j*4];
+      state_bsize =
+       &state->bsize[i*OD_BSIZE_GRID*state->bstride + j*OD_BSIZE_GRID];
       od_split_superblock(enc->bs, bimg + j*OD_BSIZE_MAX, istride,
        is_keyframe ? NULL : rimg + j*OD_BSIZE_MAX, rstride, bsize,
        enc->quantizer[0]);
       /* Grab the 4x4 information returned from `od_split_superblock` in bsize
          and store it in the od_state bsize. */
-      for (k = 0; k < 4; k++) {
-        for (m = 0; m < 4; m++) {
+      for (k = 0; k < OD_BSIZE_GRID; k++) {
+        for (m = 0; m < OD_BSIZE_GRID; m++) {
           if (OD_LIMIT_BSIZE_MIN != OD_LIMIT_BSIZE_MAX) {
             state_bsize[k*bstride + m] =
              OD_MAXI(OD_MINI(bsize[k][m], OD_LIMIT_BSIZE_MAX),
@@ -2607,10 +2612,10 @@ static void od_split_superblocks_rdo(daala_enc_ctx *enc,
   nhsb = state->nhsb;
   nvsb = state->nvsb;
   od_encode_checkpoint(enc, &rbuf);
-  for (i = 0; i < 4*nvsb; i++) {
-    for (j = 0; j < 4*nhsb; j++) {
+  for (i = 0; i < OD_BSIZE_GRID*nvsb; i++) {
+    for (j = 0; j < OD_BSIZE_GRID*nhsb; j++) {
       state->bsize[i*state->bstride + j] = mbctx->use_haar_wavelet ?
-       OD_BLOCK_32X32 :  OD_LIMIT_BSIZE_MIN;
+       OD_BLOCK_64X64 : OD_LIMIT_BSIZE_MIN;
     }
   }
   od_encode_coefficients(enc, mbctx, OD_ENCODE_RDO);

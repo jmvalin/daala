@@ -29,16 +29,25 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "../include/daala/daala_integer.h"
 # include "entenc.h"
 
-# define OD_BLOCK_SIZE4x4(bsize, bstride, bx, by)\
-   ((bsize)[((by)>>1)*(bstride) + ((bx)>>1)])
-# define OD_BLOCK_SIZE8x8(bsize, bstride, bx, by)\
+# define OD_BLOCK_SIZE4x4(bsize, bstride, bx, by) \
+   OD_BLOCK_SIZE8x8(bsize, bstride, (bx) >> 1, (by) >> 1)
+# define OD_BLOCK_SIZE8x8(bsize, bstride, bx, by) \
    ((bsize)[(by)*(bstride) + (bx)])
+
+/*The superblock resolution of the block size array.  Because four 4x4 blocks
+ and one 8x8 can be resolved with a single entry, this is the maximum number of
+ 8x8 blocks that can lie along a superblock edge.*/
+# define OD_BSIZE_GRID (1 << (OD_MAX_SB_SPLITS - 1))
+
+/*The number of 4x4 blocks that lie along a superblock edge.*/
+# define OD_FLAGS_GRID (1 << OD_MAX_SB_SPLITS)
 
 /*Possible block sizes, note that OD_BLOCK_NXN = log2(N) - 2.*/
 #define OD_BLOCK_4X4 (0)
 #define OD_BLOCK_8X8 (1)
 #define OD_BLOCK_16X16 (2)
 #define OD_BLOCK_32X32 (3)
-#define OD_BLOCK_SIZES (OD_BLOCK_32X32+1)
+#define OD_BLOCK_64X64 (4)
+#define OD_BLOCK_SIZES (OD_BLOCK_64X64 + 1)
 
 #endif

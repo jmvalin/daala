@@ -38,10 +38,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 /*Smallest blocks are 4x4*/
 # define OD_LOG_BSIZE0 (2)
-/*There are 4 block sizes total (4x4, 8x8, 16x16, 32x32).*/
-# define OD_NBSIZES    (4)
+/*There are 4 block sizes total (4x4, 8x8, 16x16, 32x32 and 64x64).*/
+# define OD_NBSIZES    (5)
 /*The maximum length of the side of a block.*/
 # define OD_BSIZE_MAX  (1 << OD_LOG_BSIZE0 + OD_NBSIZES - 1)
+/*The maximum number of quad tree levels when splitting a super block.*/
+# define OD_MAX_SB_SPLITS (OD_NBSIZES - 1)
 
 # define OD_MAXI(a, b) ((a) ^ (((a) ^ (b)) & -((b) > (a))))
 # define OD_MINI(a, b) ((a) ^ (((b) ^ (a)) & -((b) < (a))))
@@ -53,6 +55,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 # define OD_BLOCK_SIZE4x4(bsize, bstride, bx, by) \
  ((bsize)[((by) >> 1)*(bstride) + ((bx) >> 1)])
+
+/*The superblock resolution of the block size array.  Because four 4x4 blocks
+ and one 8x8 can be resolved with a single entry, this is the maximum number of
+ 8x8 blocks that can lie along a superblock edge.*/
+# define OD_BSIZE_GRID (1 << (OD_MAX_SB_SPLITS - 1))
+
+/*The number of 4x4 blocks that lie along a superblock edge.*/
+# define OD_FLAGS_GRID (1 << OD_MAX_SB_SPLITS)
 
 class DaalaDecoder {
 private:
@@ -470,19 +480,19 @@ bool TestPanel::open(const wxString &path) {
   }
   int nhsb = dd.getFrameWidth() >> OD_LOG_BSIZE0 + OD_NBSIZES - 1;
   int nvsb = dd.getFrameHeight() >> OD_LOG_BSIZE0 + OD_NBSIZES - 1;
-  bsize_len = sizeof(*bsize)*nhsb*4*nvsb*4;
+  bsize_len = sizeof(*bsize)*nhsb*OD_BSIZE_GRID*nvsb*OD_BSIZE_GRID;
   bsize = (unsigned char *)malloc(bsize_len);
   if (bsize == NULL) {
     bsize_len = 0;
     close();
     return false;
   }
-  bstride = nhsb*4;
+  bstride = nhsb*OD_BSIZE_GRID;
   if (!dd.setBlockSizeBuffer(bsize, bsize_len)) {
     close();
     return false;
   }
-  flags_len = sizeof(*flags)*nhsb*8*nvsb*8;
+  flags_len = sizeof(*flags)*nhsb*OD_FLAGS_GRID*nvsb*OD_FLAGS_GRID;
   flags = (unsigned int *)malloc(flags_len);
   if (flags == NULL) {
     flags_len = 0;
@@ -490,7 +500,7 @@ bool TestPanel::open(const wxString &path) {
     close();
     return false;
   }
-  fstride = nhsb*8;
+  fstride = nhsb*OD_FLAGS_GRID;
   if (!dd.setBandFlagsBuffer(flags, flags_len)) {
     fprintf(stderr,"Could not set flags buffer\n");
     close();
@@ -564,7 +574,10 @@ int TestPanel::getBand(int x, int y) const {
   if (x < 16 && y < 16) return 6;
   if (x < 32 && y < 8) return 7;
   if (x < 8 && y < 32) return 8;
-  return 9;
+  if (x < 32 && y < 32) return 9;
+  if (x < 64 && y < 16) return 10;
+  if (x < 16 && y < 64) return 11;
+  return 12;
 }
 
 ogg_int64_t block_edge_luma(ogg_int64_t yval) {

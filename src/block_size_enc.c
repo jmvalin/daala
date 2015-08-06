@@ -330,7 +330,8 @@ static float od_psy_var8x8(od_superblock_stats *psy_stats,
  */
 void od_split_superblock(od_block_size_comp *bs,
  const unsigned char *psy_img, int stride,
- const unsigned char *pred, int pred_stride, int bsize[4][4], int q) {
+ const unsigned char *pred, int pred_stride,
+  int bsize[OD_BSIZE_GRID][OD_BSIZE_GRID], int q) {
   int i;
   int j;
   /* Tuning parameter for block decision (higher values results in smaller
@@ -355,7 +356,7 @@ void od_split_superblock(od_block_size_comp *bs,
   if (psy_img == pred || pred == NULL) {
     OD_COPY(&bs->img_stats, &bs->psy_stats, 1);
   }
-  else {
+ else {
     const unsigned char *p0;
     cg4 -= .01*OD_MAXI((q >> OD_COEFF_SHIFT) - 40, 0);
     cg8 -= .005*OD_MAXI(((q >> OD_COEFF_SHIFT) - 40), 0);
