@@ -42,9 +42,9 @@ typedef struct od_pvq_codeword_ctx od_pvq_codeword_ctx;
 
 extern const od_coeff OD_DC_RES[3];
 
-extern const od_coeff OD_DC_QM[OD_NBSIZES - 1][2];
+extern const od_coeff OD_DC_QM[OD_NBSIZES][2];
 
-extern const int OD_HAAR_QM[2][OD_LOG_BSIZE_MAX];
+extern const int OD_HAAR_QM[2][OD_LOG_BSIZE_MAX + 1];
 
 /*Adaptation speed of scalar Laplace encoding.*/
 # define OD_SCALAR_ADAPT_SPEED (4)

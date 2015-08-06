@@ -46,22 +46,22 @@ const od_coeff OD_DC_RES[3] = {17, 24, 17};
 /* Scaling compensation for the Haar equivalent basis function. Left is
    for horizontal/vertical. Right is for diagonal. */
 #if OD_DISABLE_FILTER || OD_DEBLOCKING
-const od_coeff OD_DC_QM[OD_NBSIZES - 1][2] = {
-  {16, 16}, {16, 16}, {16, 16}
+const od_coeff OD_DC_QM[OD_NBSIZES][2] = {
+  {16, 16}, {16, 16}, {16, 16}, {16, 16}
 };
 #else
-const od_coeff OD_DC_QM[OD_NBSIZES - 1][2] = {
-  {21, 25}, {18, 20}, {17, 18}
+const od_coeff OD_DC_QM[OD_NBSIZES][2] = {
+  {21, 25}, {18, 20}, {17, 18}, {17, 17}
 };
 #endif
 
 /* Haar "quantization matrix" for each decomposition level (starting from LF).
    */
-const int OD_HAAR_QM[2][OD_LOG_BSIZE_MAX] = {
+const int OD_HAAR_QM[2][OD_LOG_BSIZE_MAX + 1] = {
   /* horizontal/vertical direction. */
-  {16, 16, 16, 24, 32},
+  {16, 16, 16, 16, 24, 32},
   /* "diagonal" direction. */
-  {16, 16, 24, 32, 48},
+  {16, 16, 16, 24, 32, 48},
 };
 
 void *od_aligned_malloc(size_t _sz,size_t _align) {
