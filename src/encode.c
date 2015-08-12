@@ -832,11 +832,11 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
       quantized_dc = d[bo];
       (*enc->state.opt_vtbl.fdct_2d[bs])(d + bo, w, c + bo, w);
       if (ctx->is_keyframe) d[bo] = quantized_dc;
-      od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 0, qm);
+      od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 0, qm, ctx->is_keyframe);
     }
     if (!ctx->is_keyframe) {
       (*enc->state.opt_vtbl.fdct_2d[bs])(md + bo, w, mc + bo, w);
-      od_apply_qm(md + bo, w, md + bo, w, bs, xdec, 0, qm);
+      od_apply_qm(md + bo, w, md + bo, w, bs, xdec, 0, qm, ctx->is_keyframe);
     }
   }
   od_encode_compute_pred(enc, ctx, pred, bs, pli, bx, by);
@@ -919,7 +919,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     od_haar_inv(c + bo, w, d + bo, w, bs + 2);
   }
   else {
-    od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
+    od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm, ctx->is_keyframe);
     (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
   }
 #else
@@ -966,7 +966,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
           d[bo + i*w + j] = md[bo + i*w + j];
         }
       }
-      od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
+      od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm, ctx->is_keyframe);
       (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
     }
   }
@@ -1000,7 +1000,7 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
     }
     else {
       (*enc->state.opt_vtbl.fdct_2d[bs])(d + bo, w, ctx->c + bo, w);
-      if (!lossless) od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 0, qm);
+      if (!lossless) od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 0, qm, ctx->is_keyframe);
     }
   }
   else {
@@ -1008,7 +1008,7 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
     bs = bsi - xdec;
     f = OD_FILT_SIZE(bs - 1, xdec);
     bo = (by << (OD_LOG_BSIZE0 + bs))*w + (bx << (OD_LOG_BSIZE0 + bs));
-    od_prefilter_split(ctx->c + bo, w, bs, f);
+    if (ctx->is_keyframe) od_prefilter_split(ctx->c + bo, w, bs, f);
     bsi--;
     bx <<= 1;
     by <<= 1;
@@ -1264,8 +1264,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       }
     }
     f = OD_FILT_SIZE(bs - 1, xdec);
-    od_prefilter_split(ctx->c + bo, w, bs, f);
-    if (!ctx->is_keyframe) od_prefilter_split(ctx->mc + bo, w, bs, f);
+    if (ctx->is_keyframe) od_prefilter_split(ctx->c + bo, w, bs, f);
     skip_split = 1;
     if (pli == 0) {
       /* Code the "split this block" symbol (4). */
@@ -1286,7 +1285,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     skip_split &= od_encode_recursive(enc, ctx, pli, 2*bx + 1, 2*by + 1,
      bsi - 1, xdec, ydec, rdo_only, hgrad, vgrad);
     skip_block = skip_split;
-    od_postfilter_split(ctx->c + bo, w, bs, f);
+    if (ctx->is_keyframe) od_postfilter_split(ctx->c + bo, w, bs, f);
     if (rdo_only && bsi <= OD_LIMIT_BSIZE_MAX) {
       int i;
       int j;
@@ -1626,13 +1625,9 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         }
       }
     }
-    if (!mbctx->use_haar_wavelet) {
+    if (!mbctx->use_haar_wavelet && mbctx->is_keyframe) {
       od_apply_prefilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec,
        ydec);
-      if (!mbctx->is_keyframe) {
-        od_apply_prefilter_frame_sbs(state->mctmp[pli], w, nhsb, nvsb, xdec,
-         ydec);
-      }
     }
   }
   for (sby = 0; sby < nvsb; sby++) {
@@ -1718,7 +1713,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     ydec = state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec;
     w = frame_width >> xdec;
     h = frame_height >> ydec;
-    if (!mbctx->use_haar_wavelet) {
+    if (!mbctx->use_haar_wavelet && mbctx->is_keyframe) {
       od_apply_postfilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec,
        ydec);
     }
