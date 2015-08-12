@@ -43,7 +43,7 @@ typedef struct od_adapt_ctx      od_adapt_ctx;
    (different from quantization lambda). Tuned on subset1 and ntt-short
    although it's hard to tune since FASTSSIM and PSNRHVS go in opposite
    directions (did some visual inspection). */
-#define OD_BS_RDO_LAMBDA (.08)
+#define OD_BS_RDO_LAMBDA (.0896)
 
 extern const od_coeff OD_DC_RES[3];
 
