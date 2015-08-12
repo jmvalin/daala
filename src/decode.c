@@ -462,7 +462,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int bs,
     }
     else {
       (*dec->state.opt_vtbl.fdct_2d[bs])(md + bo, w, mc + bo, w);
-      od_apply_qm(md + bo, w, md + bo, w, bs, xdec, 0, qm);
+      od_apply_qm(md + bo, w, md + bo, w, bs, xdec, 0, qm, ctx->is_keyframe);
     }
   }
   od_decode_compute_pred(dec, ctx, pred, bs, pli, bx, by);
@@ -530,7 +530,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int bs,
     od_haar_inv(c + bo, w, d + bo, w, bs + 2);
   }
   else {
-    od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
+    od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm, ctx->is_keyframe);
     /*Apply the inverse transform.*/
     (*dec->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
   }
@@ -704,9 +704,6 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
     bs = bsi - xdec;
     f = OD_FILT_SIZE(bs - 1, xdec);
     bo = (by << (OD_LOG_BSIZE0 + bs))*w + (bx << (OD_LOG_BSIZE0 + bs));
-    if (!ctx->is_keyframe) {
-      od_prefilter_split(ctx->mc + bo, w, bs, f);
-    }
     if (ctx->is_keyframe) {
       od_decode_haar_dc_level(dec, ctx, pli, 2*bx, 2*by, bsi - 1, xdec, &hgrad,
        &vgrad);
@@ -721,7 +718,7 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
      hgrad, vgrad);
     bs = bsi - xdec;
     bo = (by << (OD_LOG_BSIZE0 + bs))*w + (bx << (OD_LOG_BSIZE0 + bs));
-    od_postfilter_split(ctx->c + bo, w, bs, f);
+    if (ctx->is_keyframe) od_postfilter_split(ctx->c + bo, w, bs, f);
   }
 }
 
@@ -857,10 +854,6 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
           }
         }
       }
-      if (!mbctx->is_keyframe && !mbctx->use_haar_wavelet) {
-        od_apply_prefilter_frame_sbs(state->mctmp[pli], w, nhsb, nvsb, xdec,
-         ydec);
-      }
     }
   }
   for (pli = 0; pli < nplanes; pli++) {
@@ -895,7 +888,7 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
     ydec = state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec;
     w = frame_width >> xdec;
     h = frame_height >> ydec;
-    if (!mbctx->use_haar_wavelet) {
+    if (!mbctx->use_haar_wavelet && mbctx->is_keyframe) {
       od_apply_postfilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec,
        ydec);
     }

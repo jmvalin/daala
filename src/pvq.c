@@ -261,17 +261,18 @@ const double *const OD_PVQ_BETA[2][OD_NPLANES_MAX][OD_NBSIZES + 1] = {
    error in the quantized domain would result in a smaller pixel domain
    error). */
 void od_apply_qm(od_coeff *out, int out_stride, od_coeff *in, int in_stride,
- int bs, int dec, int inverse, const int *qm) {
+ int bs, int dec, int inverse, const int *qm, int is_keyframe) {
   int i;
   int j;
   for (i = 0; i < 4 << bs; i++) {
     for (j = 0; j < 4 << bs; j++) {
       double mag;
-#if OD_DISABLE_FILTER
-      mag = 1;
-#else
-      mag = OD_BASIS_MAG[dec][bs][i]*OD_BASIS_MAG[dec][bs][j];
-#endif
+
+      if (is_keyframe) {
+        mag = OD_BASIS_MAG[dec][bs][i]*OD_BASIS_MAG[dec][bs][j];
+      }
+      else mag = 1;
+
       if (i == 0 && j == 0) {
         mag = 1;
       }
