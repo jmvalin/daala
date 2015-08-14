@@ -1345,6 +1345,97 @@ void od_post_filter32(od_coeff _x[32], const od_coeff _y[32]) {
 #endif
 }
 
+#define OD_DEBLOCK_BETA(q) (10000)
+#define OD_DEBLOCK_TC(q) (10000)
+
+void od_thor_deblock_col8(od_coeff *c0, int stride, int q) {
+  od_coeff p12;
+  od_coeff p02;
+  od_coeff q12;
+  od_coeff q02;
+  od_coeff p15;
+  od_coeff p05;
+  od_coeff q15;
+  od_coeff q05;
+  od_coeff d;
+
+  p12 = c0[2*stride - 2];
+  p02 = c0[2*stride - 1];
+  q02 = c0[2*stride + 0];
+  q12 = c0[2*stride + 1];
+  p15 = c0[5*stride - 2];
+  p05 = c0[5*stride - 1];
+  q05 = c0[5*stride + 0];
+  q15 = c0[5*stride + 1];
+  d = abs(p12-p02) + abs(q12-q02) + abs(p15-p05) + abs(q15-q05);
+  if (d < OD_DEBLOCK_BETA(q)) {
+    int k;
+    od_coeff tc;
+    tc = OD_DEBLOCK_TC(q);
+    for (k = 0; k < 8; k++) {
+      od_coeff p0;
+      od_coeff p1;
+      od_coeff q0;
+      od_coeff q1;
+      od_coeff delta;
+      p1 = c0[k*stride - 2];
+      p0 = c0[k*stride - 1];
+      q0 = c0[k*stride + 0];
+      q1 = c0[k*stride + 1];
+      delta = (18*(q0-p0) - 6*(q1-p1) + 16)>>5;
+      delta = OD_CLAMPI(-tc, delta,tc);
+      c0[k*stride - 2] = p1 + delta/2;
+      c0[k*stride - 1] = p0 + delta;
+      c0[k*stride + 0] = q0 - delta;
+      c0[k*stride + 1] = q1 - delta/2;
+    }
+  }
+}
+
+void od_thor_deblock_row8(od_coeff *c0, int stride, int q) {
+  od_coeff p12;
+  od_coeff p02;
+  od_coeff q12;
+  od_coeff q02;
+  od_coeff p15;
+  od_coeff p05;
+  od_coeff q15;
+  od_coeff q05;
+  od_coeff d;
+
+  p12 = c0[2 - 2*stride];
+  p02 = c0[2 - 1*stride];
+  q02 = c0[2 + 0*stride];
+  q12 = c0[2 + 1*stride];
+  p15 = c0[5 - 2*stride];
+  p05 = c0[5 - 1*stride];
+  q05 = c0[5 + 0*stride];
+  q15 = c0[5 + 1*stride];
+  d = abs(p12-p02) + abs(q12-q02) + abs(p15-p05) + abs(q15-q05);
+  if (d < OD_DEBLOCK_BETA(q)) {
+    int k;
+    od_coeff tc;
+    tc = OD_DEBLOCK_TC(q);
+    for (k = 0; k < 8; k++) {
+      od_coeff p0;
+      od_coeff p1;
+      od_coeff q0;
+      od_coeff q1;
+      od_coeff delta;
+      p1 = c0[k - 2*stride];
+      p0 = c0[k - 1*stride];
+      q0 = c0[k + 0*stride];
+      q1 = c0[k + 1*stride];
+      delta = (18*(q0-p0) - 6*(q1-p1) + 16)>>5;
+      delta = OD_CLAMPI(-tc, delta,tc);
+      c0[k - 2*stride] = p1 + delta/2;
+      c0[k - 1*stride] = p0 + delta;
+      c0[k + 0*stride] = q0 - delta;
+      c0[k + 1*stride] = q1 - delta/2;
+    }
+  }
+}
+
 #define OD_BLOCK_SIZE4x4_DEC(bsize, bstride, bx, by, dec) \
  OD_MAXI(OD_BLOCK_SIZE4x4(bsize, bstride, bx, by), dec)
 
