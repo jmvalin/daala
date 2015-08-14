@@ -1345,6 +1345,9 @@ void od_post_filter32(od_coeff _x[32], const od_coeff _y[32]) {
 #endif
 }
 
+#define OD_DEBLOCKING (1)
+
+#if OD_DEBLOCKING
 #define OD_DEBLOCK_BETA(q) (10000)
 #define OD_DEBLOCK_TC(q) (10000)
 
@@ -1435,11 +1438,14 @@ void od_thor_deblock_row8(od_coeff *c0, int stride, int q) {
     }
   }
 }
+#endif
 
 #define OD_BLOCK_SIZE4x4_DEC(bsize, bstride, bx, by, dec) \
  OD_MAXI(OD_BLOCK_SIZE4x4(bsize, bstride, bx, by), dec)
 
 void od_prefilter_split(od_coeff *c0, int stride, int bs, int f) {
+#if OD_DEBLOCKING
+#else
   int i;
   int j;
   od_coeff *c;
@@ -1455,12 +1461,22 @@ void od_prefilter_split(od_coeff *c0, int stride, int bs, int f) {
   for (i = 0; i < 4 << bs; i++) {
     (*OD_PRE_FILTER[f])(c + i*stride, c + i*stride);
   }
+#endif
 }
 
 void od_postfilter_split(od_coeff *c0, int stride, int bs, int f) {
   int i;
   int j;
   od_coeff *c;
+#if OD_DEBLOCKING
+  if (bs==0) return;
+  c = c0 + (2 << bs);
+  for (i = 0; i < 4 << bs; i += 8)
+    od_thor_deblock_col8(c, stride, 10);
+  c = c0 + (2 << bs)*stride;
+  for (i = 0; i < 4 << bs; i += 8)
+    od_thor_deblock_row8(c, stride, 10);
+#else
   c = c0 + (2 << bs) - (2 << f);
   for (i = 0; i < 4 << bs; i++) {
     (*OD_POST_FILTER[f])(c + i*stride, c + i*stride);
@@ -1473,6 +1489,7 @@ void od_postfilter_split(od_coeff *c0, int stride, int bs, int f) {
     (*OD_POST_FILTER[f])(t, t);
     for (k = 0; k < 4 << f; k++) c[stride*k + j] = t[k];
   }
+#endif
 }
 
 void od_apply_prefilter_frame_sbs(od_coeff *c0, int stride, int nhsb, int nvsb,
