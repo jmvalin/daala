@@ -1345,8 +1345,6 @@ void od_post_filter32(od_coeff _x[32], const od_coeff _y[32]) {
 #endif
 }
 
-#define OD_DEBLOCKING (1)
-
 #if OD_DEBLOCKING
 #define OD_DEBLOCK_BETA(q) (32 << OD_COEFF_SHIFT)
 #define OD_DEBLOCK_TC(q) (4 << OD_COEFF_SHIFT)
