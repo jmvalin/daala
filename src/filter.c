@@ -1346,8 +1346,8 @@ void od_post_filter32(od_coeff _x[32], const od_coeff _y[32]) {
 }
 
 #if OD_DEBLOCKING
-#define OD_DEBLOCK_BETA(q) (32 << OD_COEFF_SHIFT)
-#define OD_DEBLOCK_TC(q) (4 << OD_COEFF_SHIFT)
+#define OD_DEBLOCK_BETA(q) (18 << OD_COEFF_SHIFT)
+#define OD_DEBLOCK_TC(q) (2 << OD_COEFF_SHIFT)
 
 void od_thor_deblock_col8(od_coeff *c0, int stride, int q) {
   od_coeff p12;
