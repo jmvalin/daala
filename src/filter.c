@@ -1470,10 +1470,10 @@ void od_postfilter_split(od_coeff *c0, int stride, int bs, int f) {
   if (bs==0) return;
   c = c0 + (2 << bs);
   for (i = 0; i < 4 << bs; i += 8)
-    od_thor_deblock_col8(c, stride, 10);
+    od_thor_deblock_col8(c + i*stride, stride, 10);
   c = c0 + (2 << bs)*stride;
   for (i = 0; i < 4 << bs; i += 8)
-    od_thor_deblock_row8(c, stride, 10);
+    od_thor_deblock_row8(c + i, stride, 10);
 #else
   c = c0 + (2 << bs) - (2 << f);
   for (i = 0; i < 4 << bs; i++) {
@@ -1532,7 +1532,7 @@ void od_apply_postfilter_frame_sbs(od_coeff *c0, int stride, int nhsb,
   for (sbx = 1; sbx < nhsb; sbx++) {
     int i;
     for (i = 0; i < nvsb << OD_LOG_BSIZE_MAX >> ydec; i+=8) {
-      od_thor_deblock_col8(c, stride, 10);
+      od_thor_deblock_col8(c + i*stride, stride, 10);
     }
     c += OD_BSIZE_MAX >> xdec;
   }
@@ -1540,7 +1540,7 @@ void od_apply_postfilter_frame_sbs(od_coeff *c0, int stride, int nhsb,
   for (sby = 1; sby < nvsb; sby++) {
     int j;
     for (j = 0; j < nhsb << OD_LOG_BSIZE_MAX >> xdec; j+=8) {
-      od_thor_deblock_row8(c, stride, 10);
+      od_thor_deblock_row8(c + j, stride, 10);
     }
     c += OD_BSIZE_MAX*stride >> ydec;
   }
