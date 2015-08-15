@@ -268,7 +268,7 @@ void od_apply_qm(od_coeff *out, int out_stride, od_coeff *in, int in_stride,
     for (j = 0; j < 4 << bs; j++) {
       double mag;
 
-      if (is_keyframe && !OD_DEBLOCKING) {
+      if (is_keyframe) {
         mag = OD_BASIS_MAG[dec][bs][i]*OD_BASIS_MAG[dec][bs][j];
       }
       else mag = 1;
