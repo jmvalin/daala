@@ -1492,6 +1492,8 @@ void od_postfilter_split(od_coeff *c0, int stride, int bs, int f) {
 
 void od_apply_prefilter_frame_sbs(od_coeff *c0, int stride, int nhsb, int nvsb,
  int xdec, int ydec) {
+#if OD_DEBLOCKING
+#else
   int sbx;
   int sby;
   int i;
@@ -1517,10 +1519,32 @@ void od_apply_prefilter_frame_sbs(od_coeff *c0, int stride, int nhsb, int nvsb,
     }
     c += OD_BSIZE_MAX >> xdec;
   }
+#endif
 }
 
 void od_apply_postfilter_frame_sbs(od_coeff *c0, int stride, int nhsb,
  int nvsb, int xdec, int ydec) {
+#if OD_DEBLOCKING
+  od_coeff *c;
+  int sbx;
+  int sby;
+  c = c0 + (OD_BSIZE_MAX >> ydec);
+  for (sbx = 1; sbx < nhsb; sbx++) {
+    int i;
+    for (i = 0; i < nvsb << OD_LOG_BSIZE_MAX >> ydec; i+=8) {
+      od_thor_deblock_col8(c, stride, 10);
+    }
+    c += OD_BSIZE_MAX >> xdec;
+  }
+  c = c0 + (OD_BSIZE_MAX >> ydec)*stride;
+  for (sby = 1; sby < nvsb; sby++) {
+    int j;
+    for (j = 0; j < nhsb << OD_LOG_BSIZE_MAX >> xdec; j+=8) {
+      od_thor_deblock_row8(c, stride, 10);
+    }
+    c += OD_BSIZE_MAX*stride >> ydec;
+  }
+#else
   int sbx;
   int sby;
   int i;
@@ -1546,6 +1570,7 @@ void od_apply_postfilter_frame_sbs(od_coeff *c0, int stride, int nhsb,
     }
     c += OD_BSIZE_MAX*stride >> ydec;
   }
+#endif
 }
 
 /*Smooths a block using the constrained lowpass filter from Thor
