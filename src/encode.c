@@ -1005,7 +1005,9 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
     bs = bsi - xdec;
     f = OD_FILT_SIZE(bs - 1, xdec);
     bo = (by << (OD_LOG_BSIZE0 + bs))*w + (bx << (OD_LOG_BSIZE0 + bs));
-    if (ctx->is_keyframe) od_prefilter_split(ctx->c + bo, w, bs, f);
+    if (ctx->is_keyframe) {
+      od_prefilter_split(ctx->c + bo, w, bs, f, enc->coded_quantizer[pli]);
+    }
     bsi--;
     bx <<= 1;
     by <<= 1;
@@ -1261,7 +1263,9 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       }
     }
     f = OD_FILT_SIZE(bs - 1, xdec);
-    if (ctx->is_keyframe) od_prefilter_split(ctx->c + bo, w, bs, f);
+    if (ctx->is_keyframe) {
+      od_prefilter_split(ctx->c + bo, w, bs, f, enc->coded_quantizer[pli]);
+    }
     skip_split = 1;
     if (pli == 0) {
       /* Code the "split this block" symbol (4). */
@@ -1282,7 +1286,9 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     skip_split &= od_encode_recursive(enc, ctx, pli, 2*bx + 1, 2*by + 1,
      bsi - 1, xdec, ydec, rdo_only, hgrad, vgrad);
     skip_block = skip_split;
-    if (ctx->is_keyframe) od_postfilter_split(ctx->c + bo, w, bs, f);
+    if (ctx->is_keyframe) {
+      od_postfilter_split(ctx->c + bo, w, bs, f, enc->coded_quantizer[pli]);
+    }
     if (rdo_only && bsi <= OD_LIMIT_BSIZE_MAX) {
       int i;
       int j;
@@ -1616,7 +1622,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     }
     if (!mbctx->use_haar_wavelet && mbctx->is_keyframe) {
       od_apply_prefilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec,
-       ydec);
+       ydec, enc->coded_quantizer[pli]);
     }
   }
   for (sby = 0; sby < nvsb; sby++) {
@@ -1704,7 +1710,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     h = frame_height >> ydec;
     if (!mbctx->use_haar_wavelet && mbctx->is_keyframe) {
       od_apply_postfilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec,
-       ydec);
+       ydec, enc->coded_quantizer[pli]);
     }
   }
   if (!rdo_only && enc->quantizer[0] > 0) {
