@@ -727,7 +727,8 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
      hgrad, vgrad);
     bs = bsi - xdec;
     bo = (by << (OD_LOG_BSIZE0 + bs))*w + (bx << (OD_LOG_BSIZE0 + bs));
-    if (ctx->is_keyframe) od_postfilter_split(ctx->c + bo, w, bs, f);
+    if (ctx->is_keyframe) od_postfilter_split(ctx->c + bo, w, bs, f,
+     dec->coded_quantizer[pli]);
   }
 }
 
@@ -866,9 +867,10 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
     }
   }
   for (pli = 0; pli < nplanes; pli++) {
+    dec->coded_quantizer[pli] = od_ec_dec_uint(&dec->ec,
+      OD_N_CODED_QUANTIZERS, "quantizer");
     dec->quantizer[pli] =
-     od_codedquantizer_to_quantizer(od_ec_dec_uint(&dec->ec,
-     OD_N_CODED_QUANTIZERS, "quantizer"));
+     od_codedquantizer_to_quantizer(dec->coded_quantizer[pli]);
   }
   for (sby = 0; sby < nvsb; sby++) {
     for (sbx = 0; sbx < nhsb; sbx++) {
@@ -899,7 +901,7 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
     h = frame_height >> ydec;
     if (!mbctx->use_haar_wavelet && mbctx->is_keyframe) {
       od_apply_postfilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec,
-       ydec);
+       ydec, dec->coded_quantizer[pli]);
     }
   }
   if (dec->quantizer[0] > 0) {
