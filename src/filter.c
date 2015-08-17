@@ -1475,17 +1475,25 @@ void od_prefilter_split(od_coeff *c0, int stride, int bs, int f, int q) {
 void od_postfilter_split(od_coeff *c0, int stride, int bs, int f, int q,
  unsigned char *skip, int skip_stride) {
   int i;
-  int j;
   od_coeff *c;
 #if OD_DEBLOCKING
   if (bs==0) return;
   c = c0 + (2 << bs);
-  for (i = 0; i < 4 << bs; i += 8)
-    od_thor_deblock_col8(c + i*stride, stride, q);
+  for (i = 0; i < 4 << bs; i += 8) {
+    if (!skip[(i >> 3)*skip_stride + (1 << bs) - 1]
+     || !skip[(i >> 3)*skip_stride + (1 << bs)]) {
+      od_thor_deblock_col8(c + i*stride, stride, q);
+    }
+  }
   c = c0 + (2 << bs)*stride;
-  for (i = 0; i < 4 << bs; i += 8)
-    od_thor_deblock_row8(c + i, stride, q);
+  for (i = 0; i < 4 << bs; i += 8) {
+    if (!skip[((1 << bs) - 1)*skip_stride + (i >> 3)]
+     || !skip[(1 << bs)*skip_stride + (i >> 3)]) {
+      od_thor_deblock_row8(c + i, stride, q);
+    }
+  }
 #else
+  int j;
   c = c0 + (2 << bs) - (2 << f);
   for (i = 0; i < 4 << bs; i++) {
     (*OD_POST_FILTER[f])(c + i*stride, c + i*stride);
