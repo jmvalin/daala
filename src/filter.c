@@ -1472,7 +1472,8 @@ void od_prefilter_split(od_coeff *c0, int stride, int bs, int f, int q) {
 #endif
 }
 
-void od_postfilter_split(od_coeff *c0, int stride, int bs, int f, int q) {
+void od_postfilter_split(od_coeff *c0, int stride, int bs, int f, int q,
+ unsigned char *skip, int skip_stride) {
   int i;
   int j;
   od_coeff *c;

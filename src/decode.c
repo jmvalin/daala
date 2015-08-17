@@ -678,10 +678,10 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
   bs = OD_MAXI(obs, xdec);
   OD_ASSERT(bs <= bsi);
   if (bs == bsi) {
+    int i;
+    int j;
     bs -= xdec;
     if (pli == 0) {
-      int i;
-      int j;
       int n4;
       n4 = 1 << bsi;
       /* Save the block size decision so that chroma can reuse it. */
@@ -706,6 +706,12 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
        dec->state.adapt.skip_increment, "skip");
     }
     od_block_decode(dec, ctx, bs, pli, bx, by, skip);
+    for (i = 0; i < 1 << bs; i++) {
+      for (j = 0; j < 1 << bs; j++) {
+        dec->state.bskip[pli][((by << bs) + i)*dec->state.skip_stride + (bx << bs) + j] = (skip == 2) && !ctx->is_keyframe;
+      }
+    }
+
   }
   else {
     int f;
@@ -727,8 +733,9 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
      hgrad, vgrad);
     bs = bsi - xdec;
     bo = (by << (OD_LOG_BSIZE0 + bs))*w + (bx << (OD_LOG_BSIZE0 + bs));
-    if (ctx->is_keyframe) od_postfilter_split(ctx->c + bo, w, bs, f,
-     dec->coded_quantizer[pli]);
+    od_postfilter_split(ctx->c + bo, w, bs, f, dec->coded_quantizer[pli],
+     &dec->state.bskip[pli][(by << bs)*dec->state.skip_stride + (bx << bs)],
+     dec->state.skip_stride);
   }
 }
 
