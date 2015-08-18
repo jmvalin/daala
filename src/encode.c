@@ -1733,9 +1733,10 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     ydec = state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec;
     w = frame_width >> xdec;
     h = frame_height >> ydec;
-    if (!mbctx->use_haar_wavelet && mbctx->is_keyframe) {
+    if (!mbctx->use_haar_wavelet) {
       od_apply_postfilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec,
-       ydec, enc->coded_quantizer[pli]);
+       ydec, enc->coded_quantizer[pli], &enc->state.bskip[pli][0],
+       enc->state.skip_stride);
     }
   }
   if (!rdo_only && enc->quantizer[0] > 0) {

@@ -89,7 +89,7 @@ void od_postfilter_split(od_coeff *c0, int stride, int bs, int f, int q,
 void od_apply_prefilter_frame_sbs(od_coeff *c, int stride, int nhsb, int nvsb,
  int xdec, int ydec, int q);
 void od_apply_postfilter_frame_sbs(od_coeff *c, int stride, int nhsb, int nvsb,
- int xdec, int ydec, int q);
+ int xdec, int ydec, int q, unsigned char *skip, int skip_stride);
 void od_apply_filter_sb_rows(od_coeff *c, int stride, int nhsb, int nvsb,
  int xdec, int ydec, int inv, int bs);
 void od_apply_filter_sb_cols(od_coeff *c, int stride, int nhsb, int nvsb,
