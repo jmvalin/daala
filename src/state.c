@@ -359,7 +359,7 @@ static int od_state_init_impl(od_state *state, const daala_info *info) {
   }
   state->bstride = (state->nhsb + 2)*4;
   state->bsize += 4*state->bstride + 4;
-  /* FIXME: Fix SB constants. */
+  /* FIXME: Fix SB constants and consider chroma subsampling. */
   for (pli = 0; pli < 3; pli++) {
     state->bskip[pli] = (unsigned char *)malloc(
      sizeof(*state->bskip)*state->nhsb*8*state->nvsb*8);
@@ -406,6 +406,7 @@ void od_state_clear(od_state *state) {
     free(state->mdtmp[pli]);
   }
   free(state->bsize);
+  for (pli = 0; pli < 3; pli++) free(state->bskip[pli]);
   free(state->clpf_flags);
   free(state->sb_skip_flags);
 }
