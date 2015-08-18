@@ -897,9 +897,10 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
     ydec = state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec;
     w = frame_width >> xdec;
     h = frame_height >> ydec;
-    if (!mbctx->use_haar_wavelet && mbctx->is_keyframe) {
+    if (!mbctx->use_haar_wavelet) {
       od_apply_postfilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec,
-       ydec, dec->coded_quantizer[pli]);
+       ydec, dec->coded_quantizer[pli], &dec->state.bskip[pli][0],
+       dec->state.skip_stride);
     }
   }
   if (dec->quantizer[0] > 0) {
