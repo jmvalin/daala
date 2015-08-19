@@ -471,7 +471,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int bs,
     }
     else {
       (*dec->state.opt_vtbl.fdct_2d[bs])(md + bo, w, mc + bo, w);
-      od_apply_qm(md + bo, w, md + bo, w, bs, xdec, 0, qm, ctx->is_keyframe);
+      od_apply_qm(md + bo, w, md + bo, w, bs, xdec, 0, qm);
     }
   }
   od_decode_compute_pred(dec, ctx, pred, bs, pli, bx, by);
@@ -539,7 +539,7 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int bs,
     od_haar_inv(c + bo, w, d + bo, w, bs + 2);
   }
   else {
-    od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm, ctx->is_keyframe);
+    od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
     /*Apply the inverse transform.*/
     (*dec->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
   }

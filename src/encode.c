@@ -832,11 +832,11 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
       quantized_dc = d[bo];
       (*enc->state.opt_vtbl.fdct_2d[bs])(d + bo, w, c + bo, w);
       if (ctx->is_keyframe) d[bo] = quantized_dc;
-      od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 0, qm, ctx->is_keyframe);
+      od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 0, qm);
     }
     if (!ctx->is_keyframe) {
       (*enc->state.opt_vtbl.fdct_2d[bs])(md + bo, w, mc + bo, w);
-      od_apply_qm(md + bo, w, md + bo, w, bs, xdec, 0, qm, ctx->is_keyframe);
+      od_apply_qm(md + bo, w, md + bo, w, bs, xdec, 0, qm);
     }
   }
   od_encode_compute_pred(enc, ctx, pred, bs, pli, bx, by);
@@ -919,7 +919,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     od_haar_inv(c + bo, w, d + bo, w, bs + 2);
   }
   else {
-    od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm, ctx->is_keyframe);
+    od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
     (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
   }
 #else
@@ -966,7 +966,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
           d[bo + i*w + j] = md[bo + i*w + j];
         }
       }
-      od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm, ctx->is_keyframe);
+      od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
       (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
     }
   }
@@ -1000,7 +1000,7 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
     }
     else {
       (*enc->state.opt_vtbl.fdct_2d[bs])(d + bo, w, ctx->c + bo, w);
-      if (!lossless) od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 0, qm, ctx->is_keyframe);
+      if (!lossless) od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 0, qm);
     }
   }
   else {

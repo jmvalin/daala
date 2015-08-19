@@ -63,7 +63,7 @@ int od_qm_get_index(int bs, int band);
 extern const double *const OD_PVQ_BETA[2][OD_NPLANES_MAX][OD_NBSIZES + 1];
 
 void od_apply_qm(od_coeff *out, int out_stride, od_coeff *in, int in_stride,
- int bs, int dec, int inverse, const int *qm, int is_keyframe);
+ int bs, int dec, int inverse, const int *qm);
 int od_compute_householder(double *r, int n, double gr, int *sign);
 void od_apply_householder(double *x, const double *r, int n);
 void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
