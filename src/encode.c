@@ -1008,9 +1008,7 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
     bs = bsi - xdec;
     f = OD_FILT_SIZE(bs - 1, xdec);
     bo = (by << (OD_LOG_BSIZE0 + bs))*w + (bx << (OD_LOG_BSIZE0 + bs));
-    if (ctx->is_keyframe) {
-      od_prefilter_split(ctx->c + bo, w, bs, f, enc->coded_quantizer[pli]);
-    }
+    od_prefilter_split(ctx->c + bo, w, bs, f);
     bsi--;
     bx <<= 1;
     by <<= 1;
@@ -1275,9 +1273,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       }
     }
     f = OD_FILT_SIZE(bs - 1, xdec);
-    if (ctx->is_keyframe) {
-      od_prefilter_split(ctx->c + bo, w, bs, f, enc->coded_quantizer[pli]);
-    }
+    od_prefilter_split(ctx->c + bo, w, bs, f);
+    if (!ctx->is_keyframe) od_prefilter_split(ctx->mc + bo, w, bs, f);
     skip_split = 1;
     if (pli == 0) {
       /* Code the "split this block" symbol (4). */
@@ -1645,9 +1642,13 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         }
       }
     }
-    if (!mbctx->use_haar_wavelet && mbctx->is_keyframe) {
+    if (!mbctx->use_haar_wavelet) {
       od_apply_prefilter_frame_sbs(state->ctmp[pli], w, nhsb, nvsb, xdec,
-       ydec, enc->coded_quantizer[pli]);
+       ydec);
+      if (!mbctx->is_keyframe) {
+        od_apply_prefilter_frame_sbs(state->mctmp[pli], w, nhsb, nvsb, xdec,
+         ydec);
+      }
     }
   }
   for (sby = 0; sby < nvsb; sby++) {

@@ -719,6 +719,9 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
     bs = bsi - xdec;
     f = OD_FILT_SIZE(bs - 1, xdec);
     bo = (by << (OD_LOG_BSIZE0 + bs))*w + (bx << (OD_LOG_BSIZE0 + bs));
+    if (!ctx->is_keyframe) {
+      od_prefilter_split(ctx->mc + bo, w, bs, f);
+    }
     if (ctx->is_keyframe) {
       od_decode_haar_dc_level(dec, ctx, pli, 2*bx, 2*by, bsi - 1, xdec, &hgrad,
        &vgrad);
@@ -870,6 +873,10 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
              << coeff_shift;
           }
         }
+      }
+      if (!mbctx->is_keyframe && !mbctx->use_haar_wavelet) {
+        od_apply_prefilter_frame_sbs(state->mctmp[pli], w, nhsb, nvsb, xdec,
+          ydec);
       }
     }
   }
