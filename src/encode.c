@@ -1419,7 +1419,7 @@ static void od_predict_frame(daala_enc_ctx *enc) {
     predict unpredictable areas when lambda is too small.
    Hopefully when we fix that, we can remove the limit.*/
   od_mv_est(enc->mvest,
-   OD_MAXI((4480000 + (((1 << OD_COEFF_SHIFT) - 1) >> 1) >> OD_COEFF_SHIFT)*
+   OD_MAXI((4000000 + (((1 << OD_COEFF_SHIFT) - 1) >> 1) >> OD_COEFF_SHIFT)*
    enc->quantizer[0] >> (23 - OD_LAMBDA_SCALE), 40));
   od_state_mc_predict(&enc->state);
   /*Do edge extension here because the block-size analysis needs to read
