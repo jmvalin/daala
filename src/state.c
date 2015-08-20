@@ -351,6 +351,8 @@ static int od_state_init_impl(od_state *state, const daala_info *info) {
       }
     }
     else state->lbuf[pli] = state->ltmp[pli] = NULL;
+    state->bskip[pli] = (unsigned char *)malloc(sizeof(*state->bskip)*
+     state->nhsb*state->nvsb<<(2*(OD_NBSIZES-1) - xdec - ydec));
   }
   state->bsize = (unsigned char *)malloc(
    sizeof(*state->bsize)*(state->nhsb + 2)*4*(state->nvsb + 2)*4);
@@ -359,11 +361,6 @@ static int od_state_init_impl(od_state *state, const daala_info *info) {
   }
   state->bstride = (state->nhsb + 2)*4;
   state->bsize += 4*state->bstride + 4;
-  /* FIXME: Fix SB constants and consider chroma subsampling. */
-  for (pli = 0; pli < 3; pli++) {
-    state->bskip[pli] = (unsigned char *)malloc(
-     sizeof(*state->bskip)*state->nhsb*8*state->nvsb*8);
-  }
   state->skip_stride = state->nhsb*8;
 #if defined(OD_DUMP_IMAGES) || defined(OD_DUMP_RECONS)
   state->dump_tags = 0;
