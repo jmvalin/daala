@@ -748,11 +748,13 @@ static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
     for (j = 0; j < 8; j++) {
       double mag;
       mag = 16./OD_QM8_Q4_HVS[i*8 + j];
+#if !OD_DEBLOCKING
       /* We attempt to consider the basis magnitudes here, though that's not
          perfect for block size 16x16 and above since only some edges are
          filtered then. */
       mag *= OD_BASIS_MAG[0][bs][i << (bs - 1)]*
        OD_BASIS_MAG[0][bs][j << (bs - 1)];
+#endif
       mag *= mag;
       sum += et[8*i + j]*(double)et[8*i + j]*mag;
     }
