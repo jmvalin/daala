@@ -785,7 +785,11 @@ static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
        distortion value. We tried a half-dozen values and picked the one where
        we liked the ntt-short1 curves best. The tuning is approximate since
        the different metrics go in different directions. */
+#if OD_DEBLOCKING
+    sum *= 1.5;
+#else
     sum *= 1.7;
+#endif
   }
   return sum;
 }
