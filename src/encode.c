@@ -766,7 +766,7 @@ static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
       sum += et[8*i + j]*(double)et[8*i + j]*mag;
     }
   }
-  return activity*activity*(sum+.3*vardist);
+  return activity*activity*(sum+2*vardist);
 }
 
 static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
