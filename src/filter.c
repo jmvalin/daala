@@ -1658,14 +1658,6 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   int i;
   int j;
   int n;
-  int delta;
-  int sum;
-  int sign;
-  od_coeff aa;
-  od_coeff bb;
-  od_coeff cc;
-  od_coeff dd;
-  od_coeff xx;
   int left;
   int top;
   int bottom;
@@ -1688,6 +1680,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   threshold = q / 2;
   for (i = top; i < bottom; i++) {
     for (j = left; j < right; j++) {
+      int sum;
+      od_coeff xx;
       int m;
       int k;
       int count;
