@@ -1704,8 +1704,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
         int count;
         xx = x[i*xstride + j];
         sum = count = 0;
-        for (k = -3; k <= 3; k++) {
-          for (m = -3; m <= 3; m++) {
+        for (k = -2; k <= 2; k++) {
+          for (m = -2; m <= 2; m++) {
             od_coeff yy;
             yy = x[(i + k)*xstride + j + m];
             if (abs(yy - xx) <= threshold) {
