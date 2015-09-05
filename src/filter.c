@@ -1653,6 +1653,11 @@ void od_clpf(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   }
 }
 
+/* Deringing filter based on a non-linear 5x5 moving average around the
+   processed pixel. To avoid blurring edges, only pixels within +/- threshold
+   of the centre pixel are included in the average. We give a double weight to
+   the pixels within half the threshold to further reduce blurring out
+   the details. */
 void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
  int sbx, int sby, int nhsb, int nvsb, int q) {
   int i;
@@ -1666,6 +1671,9 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   n = 1 << ln;
   left = top = 0;
   right = bottom = n;
+  /* We avoid filtering the pixels for which some of the pixels to average
+     are outside the frame. We could change the filter instead, but it would
+     add special cases for any future vectorization. */
   if (sbx == 0) left = 2;
   if (sby == 0) top = 2;
   if (sbx == nhsb - 1) right -= 2;
@@ -1677,6 +1685,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       }
     }
   }
+  /* The threshold is meant to be the estimated amount of ringing for a given
+     quantizer. */
   threshold = q / 2;
   for (i = top; i < bottom; i++) {
     for (j = left; j < right; j++) {

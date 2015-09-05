@@ -1868,6 +1868,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         unfiltered_error = 0;
         filtered_error = 0;
 #if 0
+        /* Optimize deringing for PSNR. */
         for (y = 0; y < n; y++) {
           for (x = 0; x < n; x++) {
             int r;
@@ -1881,12 +1882,14 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           }
         }
 #else
+        /* Optimize deringing for the block size decision metric. */
         {
           od_coeff orig[OD_BSIZE_MAX*OD_BSIZE_MAX];
           od_coeff out[OD_BSIZE_MAX*OD_BSIZE_MAX];
           for (y = 0; y < n; y++) {
             for (x = 0; x < n; x++) {
-              orig[y*OD_BSIZE_MAX + x] = (input[y*ystride + x] - 128) << OD_COEFF_SHIFT;
+              orig[y*OD_BSIZE_MAX + x] = (input[y*ystride + x] - 128)
+               << OD_COEFF_SHIFT;
               out[y*OD_BSIZE_MAX + x] = output[y*w + x];
             }
           }
