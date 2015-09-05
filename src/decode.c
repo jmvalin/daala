@@ -997,8 +997,8 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
               the input to the filter, but because we look past block edges,
               we do this anyway on the edge pixels. Unfortunately, this limits
               potential parallelism.*/
-            od_clpf(buf, OD_BSIZE_MAX, &state->ctmp[pli][(sby << ln)*w +
-             (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb);
+            od_dering(buf, OD_BSIZE_MAX, &state->ctmp[pli][(sby << ln)*w +
+             (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, dec->quantizer[pli]);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {
