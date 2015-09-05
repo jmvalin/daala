@@ -1666,10 +1666,10 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   n = 1 << ln;
   left = top = 0;
   right = bottom = n;
-  if (sbx == 0) left = 3;
-  if (sby == 0) top = 3;
-  if (sbx == nhsb - 1) right -= 3;
-  if (sby == nvsb - 1) bottom -= 3;
+  if (sbx == 0) left = 2;
+  if (sby == 0) top = 2;
+  if (sbx == nhsb - 1) right -= 2;
+  if (sby == nvsb - 1) bottom -= 2;
   if (sbx == 0 || sby == 0 || sbx == nhsb - 1 || sby == nvsb - 1) {
     for (i = 0; i < n; i++) {
       for (j = 0; j < n; j++) {
@@ -1687,8 +1687,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       int count;
       xx = x[i*xstride + j];
       sum = count = 0;
-      for (k = -3; k <= 3; k++) {
-        for (m = -3; m <= 3; m++) {
+      for (k = -2; k <= 2; k++) {
+        for (m = -2; m <= 2; m++) {
           od_coeff yy;
           yy = x[(i + k)*xstride + j + m];
           if (abs(yy - xx) <= threshold) {
