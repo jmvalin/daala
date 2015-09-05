@@ -1695,6 +1695,10 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
             sum += yy;
             count++;
           }
+          if (abs(yy - xx) <= threshold/2) {
+            sum += yy;
+            count++;
+          }
         }
       }
       y[i*ystride + j] = (sum + count/2)/count;
