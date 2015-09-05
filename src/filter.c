@@ -1701,6 +1701,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
           }
         }
       }
+      sum -= xx;
+      count -= 1;
       y[i*ystride + j] = (sum + count/2)/count;
     }
   }
