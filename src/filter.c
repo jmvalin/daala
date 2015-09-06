@@ -1644,7 +1644,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   }
   /* The threshold is meant to be the estimated amount of ringing for a given
      quantizer. */
-  threshold = q / 3;
+  threshold = q / 4;
   for (i = top; i < bottom; i++) {
     for (j = left; j < right; j++) {
       int sum;
