@@ -1610,6 +1610,137 @@ void od_apply_postfilter_frame_sbs(od_coeff *c0, int stride, int nhsb,
 #endif
 }
 
+#define MAXN 8
+static int od_dir_find(const od_coeff *img, int n, int stride) {
+  int i;
+  int cost[9] = {0};
+  int partial[9][2*MAXN + 1] = {{0}};
+  int best_cost = 0;
+  int best_dir = 0;
+  for (i = 0; i < n; i++) {
+    int j;
+    for (j = 0; j < n; j++) {
+      int x;
+      x = img[i*stride + j] >> OD_COEFF_SHIFT;
+      partial[0][i + j] += x;
+      partial[1][i + j/2] += x;
+      partial[2][i] += x;
+      partial[3][n/2 - 1 + i - j/2] += x;
+      partial[4][n - 1 + i - j] += x;
+      partial[5][n/2 - 1 - i/2 + j] += x;
+      partial[6][j] += x;
+      partial[7][i/2 + j] += x;
+      partial[8][0] += x;
+    }
+  }
+  for (i = 0; i < n; i++) {
+    cost[2] += partial[2][i]*partial[2][i]/n;
+    cost[6] += partial[6][i]*partial[6][i]/n;
+  }
+  for (i = 0; i < n - 1; i++) {
+    cost[0] += partial[0][i]*partial[0][i]/(i + 1)
+     + partial[0][2*n - 2 - i]*partial[0][2*n - 2 - i]/(i + 1);
+    cost[4] += partial[4][i]*partial[4][i]/(i + 1)
+     + partial[4][2*n - 2 - i]*partial[4][2*n - 2 - i]/(i + 1);
+  }
+  cost[0] += partial[0][n - 1]*partial[0][n - 1]/n;
+  cost[4] += partial[4][n - 1]*partial[4][n - 1]/n;
+  for (i = 1; i < 8; i+=2) {
+    int j;
+    for (j = 0; j < n/2 + 1; j++) {
+      cost[i] += partial[i][n/2 - 1 + j]*partial[i][n/2 - 1 + j]/n;
+    }
+    for (j = 0; j < n/2 - 1; j++) {
+      cost[i] += partial[i][j]*partial[i][j]/(2*j+2);
+      cost[i] += partial[i][3*n/2 - j - 2]*partial[i][3*n/2 - j - 2]/(2*j+2);
+    }
+  }
+  cost[8] = (partial[8][0]/n)*(partial[8][0]/n) + 2*n*n;
+  for (i = 0; i < 9; i+=2) {
+    if (cost[i] > best_cost) {
+      best_cost = cost[i];
+      best_dir = i;
+    }
+  }
+  /* Convert to a max of 4*N. */
+  return best_dir*(4*n/8);
+}
+
+#define OD_FILT_BORDER (3)
+/* Deringing filter based on a non-linear 5x5 moving average around the
+   processed pixel. To avoid blurring edges, only pixels within +/- threshold
+   of the centre pixel are included in the average. We give a double weight to
+   the pixels within half the threshold to further reduce blurring out
+   the details. */
+void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
+ int sbx, int sby, int nhsb, int nvsb, int q) {
+  int i;
+  int j;
+  int n;
+  int left;
+  int top;
+  int bottom;
+  int right;
+  int threshold;
+  int bx;
+  int by;
+  int dir[8][8];
+  n = 1 << ln;
+  left = top = 0;
+  right = bottom = n;
+  /* We avoid filtering the pixels for which some of the pixels to average
+     are outside the frame. We could change the filter instead, but it would
+     add special cases for any future vectorization. */
+  if (sbx == 0) left = OD_FILT_BORDER;
+  if (sby == 0) top = OD_FILT_BORDER;
+  if (sbx == nhsb - 1) right -= OD_FILT_BORDER;
+  if (sby == nvsb - 1) bottom -= OD_FILT_BORDER;
+  if (1||sbx == 0 || sby == 0 || sbx == nhsb - 1 || sby == nvsb - 1) {
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        y[i*ystride + j] = x[i*xstride + j];
+      }
+    }
+  }
+  if (sbx == 0 || sby == 0 || sbx == nhsb - 1 || sby == nvsb - 1) return;
+  for (by=0;by<n/8;by++) {
+    for (bx=0;bx<n/8;bx++) {
+      dir[by][bx] = od_dir_find(&x[8*i*xstride + 8*j], 8, xstride);
+    }
+  }
+  /* The threshold is meant to be the estimated amount of ringing for a given
+     quantizer. */
+  threshold = 1.0*pow(q, 0.84182);
+  for (i = top; i < bottom; i++) {
+    for (j = left; j < right; j++) {
+      int sum_h;
+      int sum_v;
+      long long sum;
+      int count;
+      int sum_45;
+      int sum_135;
+      od_coeff xx;
+      od_coeff yy;
+      int k;
+      xx = x[i*xstride + j];
+      sum_h = sum_v = sum_45 = sum_135 = 0;
+      for (k = -3; k <= 3; k++) {
+        sum_h += x[i*xstride + j - k];
+        sum_v += x[(i + k)*xstride + j];
+        sum_45 += x[(i + k)*xstride + j - k];
+        sum_135 += x[(i + k)*xstride + j + k];
+      }
+      if (dir[i/8][j/8] == 0) yy = (sum_45+3)/7;
+      else if (dir[i/8][j/8] == 2) yy = (sum_h+3)/7;
+      else if (dir[i/8][j/8] == 4) yy = (sum_135+3)/7;
+      else if (dir[i/8][j/8] == 6) yy = (sum_v+3)/7;
+      else if (dir[i/8][j/8] == 8) yy = (sum_v+sum_h+7)/14;
+      yy = 0;
+      y[i*ystride + j] = yy;
+    }
+  }
+}
+
 /*Smooths a block using the constrained lowpass filter from Thor
   (https://tools.ietf.org/html/draft-fuldseth-netvc-thor-00#section-8.2).*/
 void od_clpf(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,

@@ -1909,7 +1909,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         filtered_rate = od_encode_cdf_cost(1, state->adapt.clpf_cdf[c], 2);
         unfiltered_rate = od_encode_cdf_cost(0, state->adapt.clpf_cdf[c], 2);
         q2 = enc->quantizer[0] * enc->quantizer[0];
-        filtered = (filtered_error + OD_PVQ_LAMBDA*q2*filtered_rate) <
+        filtered = 1||(filtered_error + OD_PVQ_LAMBDA*q2*filtered_rate) <
          (unfiltered_error + 0.1*q2*unfiltered_rate);
         state->clpf_flags[sby*nhsb + sbx] = filtered;
         od_encode_cdf_adapt(&enc->ec, filtered, state->adapt.clpf_cdf[c], 2,
