@@ -1656,14 +1656,13 @@ static int od_dir_find(const od_coeff *img, int n, int stride) {
     }
   }
   cost[8] = (partial[8][0]/n)*(partial[8][0]/n) + 2*n*n;
-  for (i = 0; i < 9; i+=2) {
+  for (i = 0; i < 8; i+=2) {
     if (cost[i] > best_cost) {
       best_cost = cost[i];
       best_dir = i;
     }
   }
-  /* Convert to a max of 4*N. */
-  return best_dir*(4*n/8);
+  return best_dir;
 }
 
 #define OD_FILT_BORDER (3)
@@ -1705,7 +1704,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   if (sbx == 0 || sby == 0 || sbx == nhsb - 1 || sby == nvsb - 1) return;
   for (by=0;by<n/8;by++) {
     for (bx=0;bx<n/8;bx++) {
-      dir[by][bx] = od_dir_find(&x[8*i*xstride + 8*j], 8, xstride);
+      dir[by][bx] = od_dir_find(&x[8*by*xstride + 8*bx], 8, xstride);
     }
   }
   /* The threshold is meant to be the estimated amount of ringing for a given
@@ -1725,7 +1724,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       xx = x[i*xstride + j];
       sum_h = sum_v = sum_45 = sum_135 = 0;
       for (k = -3; k <= 3; k++) {
-        sum_h += x[i*xstride + j - k];
+        sum_h += x[i*xstride + j + k];
         sum_v += x[(i + k)*xstride + j];
         sum_45 += x[(i + k)*xstride + j - k];
         sum_135 += x[(i + k)*xstride + j + k];
@@ -1735,8 +1734,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       else if (dir[i/8][j/8] == 4) yy = (sum_135+3)/7;
       else if (dir[i/8][j/8] == 6) yy = (sum_v+3)/7;
       else if (dir[i/8][j/8] == 8) yy = (sum_v+sum_h+7)/14;
-      yy = 0;
-      y[i*ystride + j] = yy;
+      else yy = 0;
+      if (abs(yy-y[i*ystride + j]) < threshold/2) y[i*ystride + j] = yy;
     }
   }
 }
