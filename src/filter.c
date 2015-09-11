@@ -1741,10 +1741,10 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
     for (j = left+1; j < right-1; j++) {
       od_coeff yy;
       if (dir[i/8][j/8] <= 4) {
-        yy = (y[i*ystride + j] + y[(i + 1)*ystride + j] + y[(i - 1)*ystride + j] + 1)/3;
+        yy = (2*y[i*ystride + j] + y[(i + 1)*ystride + j] + y[(i - 1)*ystride + j] + 2)/4;
       }
       else {
-        yy = (y[i*ystride + j] + y[i*ystride + j + 1] + y[i*ystride + j - 1] + 1)/3;
+        yy = (2*y[i*ystride + j] + y[i*ystride + j + 1] + y[i*ystride + j - 1] + 2)/4;
       }
       /* Only keep the smoothed version if the delta is smaller than that
          from directional smoothing. */
