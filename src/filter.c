@@ -1656,7 +1656,7 @@ static int od_dir_find(const od_coeff *img, int n, int stride) {
     }
   }
   cost[8] = (partial[8][0]/n)*(partial[8][0]/n) + 2*n*n;
-  for (i = 0; i < 8; i+=2) {
+  for (i = 0; i < 8; i++) {
     if (cost[i] > best_cost) {
       best_cost = cost[i];
       best_dir = i;
@@ -1723,19 +1723,21 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       int k;
       xx = x[i*xstride + j];
       sum_h = sum_v = sum_45 = sum_135 = 0;
-      for (k = -3; k <= 3; k++) {
-        sum_h += x[i*xstride + j + k];
-        sum_v += x[(i + k)*xstride + j];
-        sum_45 += x[(i + k)*xstride + j - k];
-        sum_135 += x[(i + k)*xstride + j + k];
+      sum=0;
+      if (dir[i/8][j/8] <= 4) {
+        int f = dir[i/8][j/8] - 2;
+        for (k = -3; k <= 3; k++) {
+          sum += x[(i + f*k/2)*xstride + j + k];
+        }
       }
-      if (dir[i/8][j/8] == 0) yy = (sum_45+3)/7;
-      else if (dir[i/8][j/8] == 2) yy = (sum_h+3)/7;
-      else if (dir[i/8][j/8] == 4) yy = (sum_135+3)/7;
-      else if (dir[i/8][j/8] == 6) yy = (sum_v+3)/7;
-      else if (dir[i/8][j/8] == 8) yy = (sum_v+sum_h+7)/14;
-      else yy = 0;
-      if (abs(yy-y[i*ystride + j]) < threshold/2) y[i*ystride + j] = yy;
+      else {
+        int f = 6 - dir[i/8][j/8];
+        for (k = -3; k <= 3; k++) {
+          sum += x[(i + k)*xstride + j + f*k/2];
+        }
+      }
+      yy = (sum + 3)/7;
+      if (abs(yy-y[i*ystride + j]) < threshold) y[i*ystride + j] = yy;
     }
   }
 }
