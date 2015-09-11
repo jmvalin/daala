@@ -1748,7 +1748,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       }
       /* Only keep the smoothed version if the delta is smaller than that
          from directional smoothing. */
-      if (2*abs(yy - y[i*ystride + j]) < abs(y[i*ystride + j]-x[i*xstride + j])) {
+      if (4*abs(yy - y[i*ystride + j]) < abs(y[i*ystride + j]-x[i*xstride + j])) {
         z[i][j] = yy;
       }
       else {
