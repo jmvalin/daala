@@ -1665,6 +1665,8 @@ static int od_dir_find(const od_coeff *img, int n, int stride) {
   return best_dir;
 }
 
+#include <stdio.h>
+
 #define OD_FILT_BORDER (3)
 /* Deringing filter based on a non-linear 5x5 moving average around the
    processed pixel. To avoid blurring edges, only pixels within +/- threshold
@@ -1684,6 +1686,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   int bx;
   int by;
   int dir[8][8];
+  int z[32][32];
   n = 1 << ln;
   left = top = 0;
   right = bottom = n;
@@ -1712,17 +1715,11 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   threshold = 1.0*pow(q, 0.84182);
   for (i = top; i < bottom; i++) {
     for (j = left; j < right; j++) {
-      int sum_h;
-      int sum_v;
-      long long sum;
-      int count;
-      int sum_45;
-      int sum_135;
+      od_coeff sum;
       od_coeff xx;
       od_coeff yy;
       int k;
       xx = x[i*xstride + j];
-      sum_h = sum_v = sum_45 = sum_135 = 0;
       sum=0;
       if (dir[i/8][j/8] <= 4) {
         int f = dir[i/8][j/8] - 2;
@@ -1737,7 +1734,29 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
         }
       }
       yy = (sum + 3)/7;
-      if (abs(yy-y[i*ystride + j]) < threshold) y[i*ystride + j] = yy;
+      if (abs(yy-xx) < threshold) y[i*ystride + j] = yy;
+    }
+  }
+  for (i = top+1; i < bottom-1; i++) {
+    for (j = left+1; j < right-1; j++) {
+      od_coeff yy;
+      if (dir[i/8][j/8] <= 4) {
+        yy = (y[i*ystride + j] + y[(i + 1)*ystride + j] + y[(i - 1)*ystride + j] + 1)/3;
+      }
+      else {
+        yy = (y[i*ystride + j] + y[i*ystride + j + 1] + y[i*ystride + j - 1] + 1)/3;
+      }
+      if (2*abs(yy - y[i*ystride + j]) < abs(y[i*ystride + j]-x[i*xstride + j])) {
+        z[i][j] = yy;
+      }
+      else {
+        z[i][j] = y[i*ystride + j];
+      }
+    }
+  }
+  for (i = top+1; i < bottom-1; i++) {
+    for (j = left+1; j < right-1; j++) {
+      y[i*ystride + j] = z[i][j];
     }
   }
 }
