@@ -1611,6 +1611,8 @@ void od_apply_postfilter_frame_sbs(od_coeff *c0, int stride, int nhsb,
 }
 
 #define MAXN 8
+/* Detect direction. 0 means 45-degree up-right, 2 is horizontal, and so on.
+   Direction 8 is "DC" (disabled for now). */
 static int od_dir_find(const od_coeff *img, int n, int stride) {
   int i;
   int cost[9] = {0};
@@ -1668,11 +1670,6 @@ static int od_dir_find(const od_coeff *img, int n, int stride) {
 #include <stdio.h>
 
 #define OD_FILT_BORDER (3)
-/* Deringing filter based on a non-linear 5x5 moving average around the
-   processed pixel. To avoid blurring edges, only pixels within +/- threshold
-   of the centre pixel are included in the average. We give a double weight to
-   the pixels within half the threshold to further reduce blurring out
-   the details. */
 void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
  int sbx, int sby, int nhsb, int nvsb, int q) {
   int i;
@@ -1713,6 +1710,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   /* The threshold is meant to be the estimated amount of ringing for a given
      quantizer. */
   threshold = 1.0*pow(q, 0.84182);
+  /* Smooth in the direction detected. */
   for (i = top; i < bottom; i++) {
     for (j = left; j < right; j++) {
       od_coeff sum;
@@ -1737,6 +1735,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       if (abs(yy-xx) < threshold) y[i*ystride + j] = yy;
     }
   }
+  /* Smooth in the direction orthogonal to what was detected. */
   for (i = top+1; i < bottom-1; i++) {
     for (j = left+1; j < right-1; j++) {
       od_coeff yy;
@@ -1746,6 +1745,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       else {
         yy = (y[i*ystride + j] + y[i*ystride + j + 1] + y[i*ystride + j - 1] + 1)/3;
       }
+      /* Only keep the smoothed version if the delta is smaller than that
+         from directional smoothing. */
       if (2*abs(yy - y[i*ystride + j]) < abs(y[i*ystride + j]-x[i*xstride + j])) {
         z[i][j] = yy;
       }
