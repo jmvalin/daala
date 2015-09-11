@@ -1684,6 +1684,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   int by;
   int dir[8][8];
   int z[32][32];
+  static const int taps[4] = {4, 3, 2, 1};
   n = 1 << ln;
   left = top = 0;
   right = bottom = n;
@@ -1722,16 +1723,16 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       if (dir[i/8][j/8] <= 4) {
         int f = dir[i/8][j/8] - 2;
         for (k = -3; k <= 3; k++) {
-          sum += x[(i + f*k/2)*xstride + j + k];
+          sum += taps[abs(k)]*x[(i + f*k/2)*xstride + j + k];
         }
       }
       else {
         int f = 6 - dir[i/8][j/8];
         for (k = -3; k <= 3; k++) {
-          sum += x[(i + k)*xstride + j + f*k/2];
+          sum += taps[abs(k)]*x[(i + k)*xstride + j + f*k/2];
         }
       }
-      yy = (sum + 3)/7;
+      yy = (sum + 8)/16;
       if (abs(yy-xx) < threshold) y[i*ystride + j] = yy;
     }
   }
