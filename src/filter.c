@@ -1684,7 +1684,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   int by;
   int dir[8][8];
   int z[32][32];
-  static const int taps[4] = {4, 3, 2, 1};
+  static const int taps[4] = {1, 2, 2, 1};
   n = 1 << ln;
   left = top = 0;
   right = bottom = n;
@@ -1723,37 +1723,51 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       if (dir[i/8][j/8] <= 4) {
         int f = dir[i/8][j/8] - 2;
         for (k = -3; k <= 3; k++) {
-          sum += taps[abs(k)]*x[(i + f*k/2)*xstride + j + k];
+          od_coeff p;
+          p = x[(i + f*k/2)*xstride + j + k];
+          if (abs(p - xx) > threshold) p = xx;
+          sum += taps[abs(k)]*p;
         }
       }
       else {
         int f = 6 - dir[i/8][j/8];
         for (k = -3; k <= 3; k++) {
-          sum += taps[abs(k)]*x[(i + k)*xstride + j + f*k/2];
+          od_coeff p;
+          p = x[(i + k)*xstride + j + f*k/2];
+          if (abs(p - xx) > threshold) p = xx;
+          sum += taps[abs(k)]*p;
         }
       }
-      yy = (sum + 8)/16;
-      if (abs(yy-xx) < threshold) y[i*ystride + j] = yy;
+      yy = (sum + 5)/11;
+      y[i*ystride + j] = yy;
     }
   }
   /* Smooth in the direction orthogonal to what was detected. */
   for (i = top+1; i < bottom-1; i++) {
     for (j = left+1; j < right-1; j++) {
+      od_coeff athresh;
       od_coeff yy;
+      od_coeff sum;
+      athresh = OD_MINI(threshold, threshold/3 + abs(y[i*ystride + j]-x[i*xstride + j]));
+      yy = y[i*ystride + j];
+      sum = y[i*ystride + j];
       if (dir[i/8][j/8] <= 4) {
-        yy = (2*y[i*ystride + j] + y[(i + 1)*ystride + j] + y[(i - 1)*ystride + j] + 2)/4;
+        if (abs(y[(i + 1)*ystride + j] - yy) < athresh)
+          sum += y[(i + 1)*ystride + j];
+        else sum += yy;
+        if (abs(y[(i - 1)*ystride + j] - yy) < athresh)
+          sum += y[(i - 1)*ystride + j];
+        else sum += yy;
       }
       else {
-        yy = (2*y[i*ystride + j] + y[i*ystride + j + 1] + y[i*ystride + j - 1] + 2)/4;
+        if (abs(y[i*ystride + j + 1] - yy) < athresh)
+          sum += y[i*ystride + j + 1];
+        else sum += yy;
+        if (abs(y[i*ystride + j - 1] - yy) < athresh)
+          sum += y[i*ystride + j - 1];
+        else sum += yy;
       }
-      /* Only keep the smoothed version if the delta is smaller than that
-         from directional smoothing. */
-      if (4*abs(yy - y[i*ystride + j]) < abs(y[i*ystride + j]-x[i*xstride + j])) {
-        z[i][j] = yy;
-      }
-      else {
-        z[i][j] = y[i*ystride + j];
-      }
+      z[i][j] = (sum+1)/3;
     }
   }
   for (i = top+1; i < bottom-1; i++) {

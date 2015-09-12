@@ -1930,7 +1930,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
               we do this anyway on the edge pixels. Unfortunately, this limits
               potential parallelism.*/
             od_dering(buf, OD_BSIZE_MAX, &state->ctmp[pli][(sby << ln)*w +
-             (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[0]);
+             (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[pli]);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {
