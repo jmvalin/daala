@@ -700,7 +700,7 @@ static int od_compute_var_4x4(od_coeff *x, int stride) {
 }
 
 static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
- int stride, int bs) {
+ int stride, int bs, int psy) {
   od_coeff e[8*8];
   od_coeff et[8*8];
   double sum;
@@ -766,11 +766,11 @@ static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
       sum += et[8*i + j]*(double)et[8*i + j]*mag;
     }
   }
-  return activity*activity*(sum + vardist);
+  return activity*activity*(sum + psy*vardist);
 }
 
 static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
- int n, int bs) {
+ int n, int bs, int psy) {
   int i;
   double sum;
   sum = 0;
@@ -785,7 +785,7 @@ static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
     for (i = 0; i < n; i += 8) {
       int j;
       for (j = 0; j < n; j += 8) {
-        sum += od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], n, bs);
+        sum += od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], n, bs, psy);
       }
     }
     /* Compensate for the fact that the quantization matrix lowers the
@@ -995,10 +995,10 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     for (i = 0; i < n; i++) {
       for (j = 0; j < n; j++) c_noskip[n*i + j] = c[bo + i*w + j];
     }
-    dist_noskip = od_compute_dist(enc, c_orig, c_noskip, n, bs);
+    dist_noskip = od_compute_dist(enc, c_orig, c_noskip, n, bs, 1);
     lambda = od_bs_rdo_lambda(enc->quantizer[pli]);
     rate_noskip = od_ec_enc_tell_frac(&enc->ec) - tell;
-    dist_skip = od_compute_dist(enc, c_orig, mc_orig, n, bs);
+    dist_skip = od_compute_dist(enc, c_orig, mc_orig, n, bs, 1);
     rate_skip = (1 << OD_BITRES)*od_encode_cdf_cost(2,
      enc->state.adapt.skip_cdf[2*bs + (pli != 0)],
      4 + (pli == 0 && bs > 0));
@@ -1368,8 +1368,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
         for (j = 0; j < n; j++) split[n*i + j] = ctx->c[bo + i*w + j];
       }
       rate_split = od_ec_enc_tell_frac(&enc->ec) - tell;
-      dist_split = od_compute_dist(enc, c_orig, split, n, bs);
-      dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs);
+      dist_split = od_compute_dist(enc, c_orig, split, n, bs, 1);
+      dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs, 1);
       lambda = od_bs_rdo_lambda(enc->quantizer[pli]);
       if (skip_split || dist_nosplit + lambda*rate_nosplit < dist_split
        + lambda*rate_split) {
@@ -1893,8 +1893,8 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
               out[y*OD_BSIZE_MAX + x] = output[y*w + x];
             }
           }
-          unfiltered_error = od_compute_dist(enc, orig, out, OD_BSIZE_MAX, 3);
-          filtered_error = od_compute_dist(enc, orig, buf, OD_BSIZE_MAX, 3);
+          unfiltered_error = od_compute_dist(enc, orig, out, OD_BSIZE_MAX, 3, 0);
+          filtered_error = od_compute_dist(enc, orig, buf, OD_BSIZE_MAX, 3, 0);
         }
 #endif
         up = 0;
