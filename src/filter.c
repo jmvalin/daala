@@ -1749,8 +1749,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
           od_coeff p1;
           p0 = x[(i + f*k/2)*xstride + j + k];
           p1 = x[(i - f*k/2)*xstride + j - k];
-          if (abs(p0 - xx) > threshold) stop = 1;
-          if (abs(p1 - xx) > threshold) stop = 1;
+          if (abs(p0 + p1 - 2*xx) > threshold) stop = 1;
           if (stop) p1 = p0 = xx;
           sum += taps[abs(k)]*(p0+p1);
         }
@@ -1764,8 +1763,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
           od_coeff p1;
           p0 = x[(i + k)*xstride + j + f*k/2];
           p1 = x[(i - k)*xstride + j - f*k/2];
-          if (abs(p0 - xx) > threshold) stop = 1;
-          if (abs(p1 - xx) > threshold) stop = 1;
+          if (abs(p0 + p1 - 2*xx) > threshold) stop = 1;
           if (stop) p1 = p0 = xx;
           sum += taps[abs(k)]*(p0+p1);
         }
