@@ -1867,7 +1867,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
         unfiltered_error = 0;
         filtered_error = 0;
-#if 0
+#if 1
         /* Optimize deringing for PSNR. */
         for (y = 0; y < n; y++) {
           for (x = 0; x < n; x++) {
