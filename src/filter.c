@@ -1746,8 +1746,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
     }
   }
   /* Smooth in the direction orthogonal to what was detected. */
-  for (i = top+1; i < bottom-1; i++) {
-    for (j = left+1; j < right-1; j++) {
+  for (i = top+2; i < bottom-2; i++) {
+    for (j = left+2; j < right-2; j++) {
       od_coeff athresh;
       od_coeff yy;
       od_coeff sum;
@@ -1761,6 +1761,12 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
         if (abs(y[(i - 1)*ystride + j] - yy) < athresh)
           sum += y[(i - 1)*ystride + j];
         else sum += yy;
+        if (abs(y[(i + 2)*ystride + j] - yy) < athresh)
+          sum += y[(i + 2)*ystride + j];
+        else sum += yy;
+        if (abs(y[(i - 2)*ystride + j] - yy) < athresh)
+          sum += y[(i - 2)*ystride + j];
+        else sum += yy;
       }
       else {
         if (abs(y[i*ystride + j + 1] - yy) < athresh)
@@ -1769,12 +1775,18 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
         if (abs(y[i*ystride + j - 1] - yy) < athresh)
           sum += y[i*ystride + j - 1];
         else sum += yy;
+        if (abs(y[i*ystride + j + 2] - yy) < athresh)
+          sum += y[i*ystride + j + 2];
+        else sum += yy;
+        if (abs(y[i*ystride + j - 2] - yy) < athresh)
+          sum += y[i*ystride + j - 2];
+        else sum += yy;
       }
-      z[i][j] = (sum+1)/3;
+      z[i][j] = (sum+1)/5;
     }
   }
-  for (i = top+1; i < bottom-1; i++) {
-    for (j = left+1; j < right-1; j++) {
+  for (i = top+2; i < bottom-2; i++) {
+    for (j = left+2; j < right-2; j++) {
       y[i*ystride + j] = z[i][j];
     }
   }
