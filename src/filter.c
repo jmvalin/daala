@@ -1671,8 +1671,8 @@ static int od_dir_find(const od_coeff *img, int n, int stride) {
 
 #define OD_FILT_BORDER (3)
 #define OD_DERING_VERY_LARGE (1000000000)
-#define OD_DERING_INBUF_SIZE ((OD_BSIZE_MAX+2*OD_FILT_BORDER)*\
- (OD_BSIZE_MAX+2*OD_FILT_BORDER))
+#define OD_DERING_INBUF_SIZE ((OD_BSIZE_MAX + 2*OD_FILT_BORDER)*\
+ (OD_BSIZE_MAX + 2*OD_FILT_BORDER))
 
 void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
  int sbx, int sby, int nhsb, int nvsb, int q, int xdec, int dir[8][8],
@@ -1680,14 +1680,9 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   int i;
   int j;
   int n;
-  int left;
-  int top;
-  int bottom;
-  int right;
   int threshold;
   int bx;
   int by;
-  int z[32][32];
   od_coeff inbuf[OD_DERING_INBUF_SIZE];
   od_coeff *in;
   int bstride;
@@ -1698,17 +1693,11 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   n = 1 << ln;
   bsize = 3 - xdec;
   nhb = nvb = n >> bsize;
-  left = top = 0;
-  right = bottom = n;
-  bstride = (OD_BSIZE_MAX+2*OD_FILT_BORDER);
+  bstride = (OD_BSIZE_MAX + 2*OD_FILT_BORDER);
   in = inbuf + OD_FILT_BORDER*bstride + OD_FILT_BORDER;
   /* We avoid filtering the pixels for which some of the pixels to average
      are outside the frame. We could change the filter instead, but it would
      add special cases for any future vectorization. */
-  if (sbx == 0) left = OD_FILT_BORDER;
-  if (sby == 0) top = OD_FILT_BORDER;
-  if (sbx == nhsb - 1) right -= OD_FILT_BORDER;
-  if (sby == nvsb - 1) bottom -= OD_FILT_BORDER;
   for (i = 0; i < OD_DERING_INBUF_SIZE; i++) inbuf[i] = OD_DERING_VERY_LARGE;
   for (i = -OD_FILT_BORDER*(sby != 0); i < n
    + OD_FILT_BORDER*(sby != nvsb - 1); i++) {
@@ -1718,8 +1707,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
     }
   }
   if (pli == 0) {
-    for (by=0;by<nvb;by++) {
-      for (bx=0;bx<nhb;bx++) {
+    for (by = 0; by < nvb; by++) {
+      for (bx = 0; bx < nhb; bx++) {
         dir[by][bx] = od_dir_find(&x[8*by*xstride + 8*bx], 8, xstride);
       }
     }
@@ -1773,7 +1762,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       od_coeff athresh;
       od_coeff yy;
       od_coeff sum;
-      athresh = OD_MINI(threshold, threshold/3 + abs(in[i*bstride + j]-x[i*xstride + j]));
+      athresh = OD_MINI(threshold, threshold/3
+       + abs(in[i*bstride + j] - x[i*xstride + j]));
       yy = in[i*bstride + j];
       sum = in[i*bstride + j];
       if (dir[i >> bsize][j >> bsize] <= 4) {
@@ -1792,7 +1782,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
           sum += in[i*bstride + j - 1];
         else sum += yy;
       }
-      y[i*ystride + j] = (sum+1)/3;
+      y[i*ystride + j] = (sum + 1)/3;
     }
   }
 }
