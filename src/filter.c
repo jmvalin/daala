@@ -1716,6 +1716,41 @@ static void od_dering_direction(od_coeff *y, int ystride, od_coeff *in,
   }
 }
 
+/* Smooth in the direction orthogonal to what was detected. */
+static void od_dering_orthogonal(od_coeff *y, int ystride, od_coeff *in,
+ int bstride, od_coeff *x, int xstride, int n, int threshold, int dir) {
+  int i;
+  int j;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      od_coeff athresh;
+      od_coeff yy;
+      od_coeff sum;
+      athresh = OD_MINI(threshold, threshold/3
+       + abs(in[i*bstride + j] - x[i*xstride + j]));
+      yy = in[i*bstride + j];
+      sum = in[i*bstride + j];
+      if (dir <= 4) {
+        if (abs(in[(i + 1)*bstride + j] - yy) < athresh)
+          sum += in[(i + 1)*bstride + j];
+        else sum += yy;
+        if (abs(in[(i - 1)*bstride + j] - yy) < athresh)
+          sum += in[(i - 1)*bstride + j];
+        else sum += yy;
+      }
+      else {
+        if (abs(in[i*bstride + j + 1] - yy) < athresh)
+          sum += in[i*bstride + j + 1];
+        else sum += yy;
+        if (abs(in[i*bstride + j - 1] - yy) < athresh)
+          sum += in[i*bstride + j - 1];
+        else sum += yy;
+      }
+      y[i*ystride + j] = (sum + 1)/3;
+    }
+  }
+
+}
 void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
  int sbx, int sby, int nhsb, int nvsb, int q, int xdec,
  int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS], int pli) {
@@ -1768,33 +1803,12 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       in[i*bstride + j] = y[i*ystride + j];
     }
   }
-  /* Smooth in the direction orthogonal to what was detected. */
-  for (i = 0; i < n; i++) {
-    for (j = 0; j < n; j++) {
-      od_coeff athresh;
-      od_coeff yy;
-      od_coeff sum;
-      athresh = OD_MINI(threshold, threshold/3
-       + abs(in[i*bstride + j] - x[i*xstride + j]));
-      yy = in[i*bstride + j];
-      sum = in[i*bstride + j];
-      if (dir[i >> bsize][j >> bsize] <= 4) {
-        if (abs(in[(i + 1)*bstride + j] - yy) < athresh)
-          sum += in[(i + 1)*bstride + j];
-        else sum += yy;
-        if (abs(in[(i - 1)*bstride + j] - yy) < athresh)
-          sum += in[(i - 1)*bstride + j];
-        else sum += yy;
-      }
-      else {
-        if (abs(in[i*bstride + j + 1] - yy) < athresh)
-          sum += in[i*bstride + j + 1];
-        else sum += yy;
-        if (abs(in[i*bstride + j - 1] - yy) < athresh)
-          sum += in[i*bstride + j - 1];
-        else sum += yy;
-      }
-      y[i*ystride + j] = (sum + 1)/3;
+  for (by = 0; by < nvb; by++) {
+    for (bx = 0; bx < nhb; bx++) {
+      od_dering_orthogonal(&y[(by*ystride << bsize) + (bx << bsize)], ystride,
+       &in[(by*bstride << bsize) + (bx << bsize)], bstride,
+       &x[(by*xstride << bsize) + (bx << bsize)], xstride, 1 << bsize,
+       threshold, dir[by][bx]);
     }
   }
 }
