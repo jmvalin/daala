@@ -1670,6 +1670,10 @@ static int od_dir_find(const od_coeff *img, int n, int stride) {
 #include <stdio.h>
 
 #define OD_FILT_BORDER (3)
+#define OD_DERING_VERY_LARGE (1000000000)
+#define OD_DERING_INBUF_SIZE ((OD_BSIZE_MAX+2*OD_FILT_BORDER)*\
+ (OD_BSIZE_MAX+2*OD_FILT_BORDER))
+
 void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
  int sbx, int sby, int nhsb, int nvsb, int q, int xdec, int dir[8][8],
  int pli) {
@@ -1684,6 +1688,9 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   int bx;
   int by;
   int z[32][32];
+  od_coeff inbuf[OD_DERING_INBUF_SIZE];
+  od_coeff *in;
+  int bstride;
   int nhb;
   int nvb;
   int bsize;
@@ -1693,6 +1700,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   nhb = nvb = n >> bsize;
   left = top = 0;
   right = bottom = n;
+  bstride = (OD_BSIZE_MAX+2*OD_FILT_BORDER);
+  in = inbuf + OD_FILT_BORDER*bstride + OD_FILT_BORDER;
   /* We avoid filtering the pixels for which some of the pixels to average
      are outside the frame. We could change the filter instead, but it would
      add special cases for any future vectorization. */
@@ -1700,11 +1709,12 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   if (sby == 0) top = OD_FILT_BORDER;
   if (sbx == nhsb - 1) right -= OD_FILT_BORDER;
   if (sby == nvsb - 1) bottom -= OD_FILT_BORDER;
-  if (1||sbx == 0 || sby == 0 || sbx == nhsb - 1 || sby == nvsb - 1) {
-    for (i = 0; i < n; i++) {
-      for (j = 0; j < n; j++) {
-        y[i*ystride + j] = x[i*xstride + j];
-      }
+  for (i = 0; i < OD_DERING_INBUF_SIZE; i++) inbuf[i] = OD_DERING_VERY_LARGE;
+  for (i = -OD_FILT_BORDER*(sby != 0); i < n
+   + OD_FILT_BORDER*(sby != nvsb - 1); i++) {
+    for (j = -OD_FILT_BORDER*(sbx != 0); j < n
+     + OD_FILT_BORDER*(sbx != nhsb - 1); j++) {
+      in[i*bstride + j] = x[i*xstride + j];
     }
   }
   if (pli == 0) {
@@ -1718,21 +1728,21 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
      quantizer. */
   threshold = 1.0*pow(q, 0.84182);
   /* Smooth in the direction detected. */
-  for (i = top; i < bottom; i++) {
-    for (j = left; j < right; j++) {
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
       od_coeff sum;
       od_coeff xx;
       od_coeff yy;
       int k;
-      xx = x[i*xstride + j];
+      xx = in[i*bstride + j];
       sum= 0;
       if (dir[i >> bsize][j >> bsize] <= 4) {
         int f = dir[i >> bsize][j >> bsize] - 2;
         for (k = 1; k <= 3; k++) {
           od_coeff p0;
           od_coeff p1;
-          p0 = x[(i + f*k/2)*xstride + j + k] - xx;
-          p1 = x[(i - f*k/2)*xstride + j - k] - xx;
+          p0 = in[(i + f*k/2)*bstride + j + k] - xx;
+          p1 = in[(i - f*k/2)*bstride + j - k] - xx;
           if (abs(p0) < threshold) sum += taps[k]*p0;
           if (abs(p1) < threshold) sum += taps[k]*p1;
         }
@@ -1742,8 +1752,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
         for (k = 1; k <= 3; k++) {
           od_coeff p0;
           od_coeff p1;
-          p0 = x[(i + k)*xstride + j + f*k/2] - xx;
-          p1 = x[(i - k)*xstride + j - f*k/2] - xx;
+          p0 = in[(i + k)*bstride + j + f*k/2] - xx;
+          p1 = in[(i - k)*bstride + j - f*k/2] - xx;
           if (abs(p0) < threshold) sum += taps[k]*p0;
           if (abs(p1) < threshold) sum += taps[k]*p1;
         }
@@ -1752,37 +1762,37 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       y[i*ystride + j] = yy;
     }
   }
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      in[i*bstride + j] = y[i*ystride + j];
+    }
+  }
   /* Smooth in the direction orthogonal to what was detected. */
-  for (i = top+1; i < bottom-1; i++) {
-    for (j = left+1; j < right-1; j++) {
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
       od_coeff athresh;
       od_coeff yy;
       od_coeff sum;
-      athresh = OD_MINI(threshold, threshold/3 + abs(y[i*ystride + j]-x[i*xstride + j]));
-      yy = y[i*ystride + j];
-      sum = y[i*ystride + j];
+      athresh = OD_MINI(threshold, threshold/3 + abs(in[i*bstride + j]-x[i*xstride + j]));
+      yy = in[i*bstride + j];
+      sum = in[i*bstride + j];
       if (dir[i >> bsize][j >> bsize] <= 4) {
-        if (abs(y[(i + 1)*ystride + j] - yy) < athresh)
-          sum += y[(i + 1)*ystride + j];
+        if (abs(in[(i + 1)*bstride + j] - yy) < athresh)
+          sum += in[(i + 1)*bstride + j];
         else sum += yy;
-        if (abs(y[(i - 1)*ystride + j] - yy) < athresh)
-          sum += y[(i - 1)*ystride + j];
+        if (abs(in[(i - 1)*bstride + j] - yy) < athresh)
+          sum += in[(i - 1)*bstride + j];
         else sum += yy;
       }
       else {
-        if (abs(y[i*ystride + j + 1] - yy) < athresh)
-          sum += y[i*ystride + j + 1];
+        if (abs(in[i*bstride + j + 1] - yy) < athresh)
+          sum += in[i*bstride + j + 1];
         else sum += yy;
-        if (abs(y[i*ystride + j - 1] - yy) < athresh)
-          sum += y[i*ystride + j - 1];
+        if (abs(in[i*bstride + j - 1] - yy) < athresh)
+          sum += in[i*bstride + j - 1];
         else sum += yy;
       }
-      z[i][j] = (sum+1)/3;
-    }
-  }
-  for (i = top+1; i < bottom-1; i++) {
-    for (j = left+1; j < right-1; j++) {
-      y[i*ystride + j] = z[i][j];
+      y[i*ystride + j] = (sum+1)/3;
     }
   }
 }
