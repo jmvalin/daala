@@ -1674,9 +1674,51 @@ static int od_dir_find(const od_coeff *img, int n, int stride) {
 #define OD_DERING_INBUF_SIZE ((OD_BSIZE_MAX + 2*OD_FILT_BORDER)*\
  (OD_BSIZE_MAX + 2*OD_FILT_BORDER))
 
+/* Smooth in the direction detected. */
+static void od_dering_direction(od_coeff *y, int ystride, od_coeff *in,
+ int bstride, int n, int threshold, int dir) {
+  int i;
+  int j;
+  static const int taps[4] = {2, 3, 2, 2};
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      od_coeff sum;
+      od_coeff xx;
+      od_coeff yy;
+      int k;
+      xx = in[i*bstride + j];
+      sum= 0;
+      if (dir <= 4) {
+        int f = dir - 2;
+        for (k = 1; k <= 3; k++) {
+          od_coeff p0;
+          od_coeff p1;
+          p0 = in[(i + f*k/2)*bstride + j + k] - xx;
+          p1 = in[(i - f*k/2)*bstride + j - k] - xx;
+          if (abs(p0) < threshold) sum += taps[k]*p0;
+          if (abs(p1) < threshold) sum += taps[k]*p1;
+        }
+      }
+      else {
+        int f = 6 - dir;
+        for (k = 1; k <= 3; k++) {
+          od_coeff p0;
+          od_coeff p1;
+          p0 = in[(i + k)*bstride + j + f*k/2] - xx;
+          p1 = in[(i - k)*bstride + j - f*k/2] - xx;
+          if (abs(p0) < threshold) sum += taps[k]*p0;
+          if (abs(p1) < threshold) sum += taps[k]*p1;
+        }
+      }
+      yy = xx + (sum + 8)/16;
+      y[i*ystride + j] = yy;
+    }
+  }
+}
+
 void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
- int sbx, int sby, int nhsb, int nvsb, int q, int xdec, int dir[8][8],
- int pli) {
+ int sbx, int sby, int nhsb, int nvsb, int q, int xdec,
+ int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS], int pli) {
   int i;
   int j;
   int n;
@@ -1689,7 +1731,6 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   int nhb;
   int nvb;
   int bsize;
-  static const int taps[4] = {2, 3, 2, 2};
   n = 1 << ln;
   bsize = 3 - xdec;
   nhb = nvb = n >> bsize;
@@ -1716,39 +1757,10 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   /* The threshold is meant to be the estimated amount of ringing for a given
      quantizer. */
   threshold = 1.0*pow(q, 0.84182);
-  /* Smooth in the direction detected. */
-  for (i = 0; i < n; i++) {
-    for (j = 0; j < n; j++) {
-      od_coeff sum;
-      od_coeff xx;
-      od_coeff yy;
-      int k;
-      xx = in[i*bstride + j];
-      sum= 0;
-      if (dir[i >> bsize][j >> bsize] <= 4) {
-        int f = dir[i >> bsize][j >> bsize] - 2;
-        for (k = 1; k <= 3; k++) {
-          od_coeff p0;
-          od_coeff p1;
-          p0 = in[(i + f*k/2)*bstride + j + k] - xx;
-          p1 = in[(i - f*k/2)*bstride + j - k] - xx;
-          if (abs(p0) < threshold) sum += taps[k]*p0;
-          if (abs(p1) < threshold) sum += taps[k]*p1;
-        }
-      }
-      else {
-        int f = 6 - dir[i >> bsize][j >> bsize];
-        for (k = 1; k <= 3; k++) {
-          od_coeff p0;
-          od_coeff p1;
-          p0 = in[(i + k)*bstride + j + f*k/2] - xx;
-          p1 = in[(i - k)*bstride + j - f*k/2] - xx;
-          if (abs(p0) < threshold) sum += taps[k]*p0;
-          if (abs(p1) < threshold) sum += taps[k]*p1;
-        }
-      }
-      yy = xx + (sum + 8)/16;
-      y[i*ystride + j] = yy;
+  for (by = 0; by < nvb; by++) {
+    for (bx = 0; bx < nhb; bx++) {
+      od_dering_direction(&y[(by*ystride << bsize) + (bx << bsize)], ystride,
+       &in[(by*bstride << bsize) + (bx << bsize)], bstride, 1 << bsize, threshold, dir[by][bx]);
     }
   }
   for (i = 0; i < n; i++) {

@@ -1855,7 +1855,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         int q2;
         double filtered_rate;
         double unfiltered_rate;
-        int dir[8][8];
+        int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
         if (state->sb_skip_flags[sby*nhsb + sbx]) {
           state->clpf_flags[sby*nhsb + sbx] = 0;
           continue;

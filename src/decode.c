@@ -986,7 +986,7 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
             od_coeff *output;
             int ln;
             int n;
-            int dir[8][8];
+            int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
             xdec = state->io_imgs[OD_FRAME_INPUT].planes[pli].xdec;
             ydec = state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec;
             w = frame_width >> xdec;
