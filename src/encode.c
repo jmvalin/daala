@@ -1905,6 +1905,8 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         if (sbx > 0) {
           left = state->clpf_flags[sby*nhsb + (sbx-1)];
         }
+        if (sbx == 0) left = up;
+        if (sby == 0) up = left;
         c = (up << 1) + left;
         filtered_rate = od_encode_cdf_cost(1, state->adapt.clpf_cdf[c], 2);
         unfiltered_rate = od_encode_cdf_cost(0, state->adapt.clpf_cdf[c], 2);
