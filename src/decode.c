@@ -986,6 +986,7 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
             od_coeff *output;
             int ln;
             int n;
+            int dir[8][8];
             xdec = state->io_imgs[OD_FRAME_INPUT].planes[pli].xdec;
             ydec = state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec;
             w = frame_width >> xdec;
@@ -998,7 +999,8 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
               we do this anyway on the edge pixels. Unfortunately, this limits
               potential parallelism.*/
             od_dering(buf, OD_BSIZE_MAX, &state->ctmp[pli][(sby << ln)*w +
-             (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, dec->quantizer[pli]);
+             (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, dec->quantizer[pli],
+             xdec, dir, pli);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {

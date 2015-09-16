@@ -1855,6 +1855,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         int q2;
         double filtered_rate;
         double unfiltered_rate;
+        int dir[8][8];
         if (state->sb_skip_flags[sby*nhsb + sbx]) {
           state->clpf_flags[sby*nhsb + sbx] = 0;
           continue;
@@ -1866,7 +1867,8 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         ln = OD_LOG_BSIZE_MAX - xdec;
         n = 1 << ln;
         od_dering(buf, OD_BSIZE_MAX, &state->dtmp[pli][(sby << ln)*w +
-         (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[0]);
+         (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[0], xdec,
+         dir, pli);
         ystride = state->io_imgs[OD_FRAME_INPUT].planes[pli].ystride;
         input = (unsigned char *)&state->io_imgs[OD_FRAME_INPUT].planes[pli].
          data[(sby << ln)*ystride + (sbx << ln)];
@@ -1936,7 +1938,8 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
               we do this anyway on the edge pixels. Unfortunately, this limits
               potential parallelism.*/
             od_dering(buf, OD_BSIZE_MAX, &state->dtmp[pli][(sby << ln)*w +
-             (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[pli]);
+             (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[pli],
+             xdec, dir, pli);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {

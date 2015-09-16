@@ -1671,7 +1671,8 @@ static int od_dir_find(const od_coeff *img, int n, int stride) {
 
 #define OD_FILT_BORDER (3)
 void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
- int sbx, int sby, int nhsb, int nvsb, int q) {
+ int sbx, int sby, int nhsb, int nvsb, int q, int xdec, int dir[8][8],
+ int pli) {
   int i;
   int j;
   int n;
@@ -1682,10 +1683,14 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   int threshold;
   int bx;
   int by;
-  int dir[8][8];
   int z[32][32];
+  int nhb;
+  int nvb;
+  int bsize;
   static const int taps[4] = {2, 3, 2, 2};
   n = 1 << ln;
+  bsize = 3 - xdec;
+  nhb = nvb = n >> bsize;
   left = top = 0;
   right = bottom = n;
   /* We avoid filtering the pixels for which some of the pixels to average
@@ -1702,9 +1707,11 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       }
     }
   }
-  for (by=0;by<n/8;by++) {
-    for (bx=0;bx<n/8;bx++) {
-      dir[by][bx] = od_dir_find(&x[8*by*xstride + 8*bx], 8, xstride);
+  if (pli == 0) {
+    for (by=0;by<nvb;by++) {
+      for (bx=0;bx<nhb;bx++) {
+        dir[by][bx] = od_dir_find(&x[8*by*xstride + 8*bx], 8, xstride);
+      }
     }
   }
   /* The threshold is meant to be the estimated amount of ringing for a given
@@ -1719,8 +1726,8 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       int k;
       xx = x[i*xstride + j];
       sum= 0;
-      if (dir[i/8][j/8] <= 4) {
-        int f = dir[i/8][j/8] - 2;
+      if (dir[i >> bsize][j >> bsize] <= 4) {
+        int f = dir[i >> bsize][j >> bsize] - 2;
         for (k = 1; k <= 3; k++) {
           od_coeff p0;
           od_coeff p1;
@@ -1731,7 +1738,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
         }
       }
       else {
-        int f = 6 - dir[i/8][j/8];
+        int f = 6 - dir[i >> bsize][j >> bsize];
         for (k = 1; k <= 3; k++) {
           od_coeff p0;
           od_coeff p1;
@@ -1754,7 +1761,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       athresh = OD_MINI(threshold, threshold/3 + abs(y[i*ystride + j]-x[i*xstride + j]));
       yy = y[i*ystride + j];
       sum = y[i*ystride + j];
-      if (dir[i/8][j/8] <= 4) {
+      if (dir[i >> bsize][j >> bsize] <= 4) {
         if (abs(y[(i + 1)*ystride + j] - yy) < athresh)
           sum += y[(i + 1)*ystride + j];
         else sum += yy;
