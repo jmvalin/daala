@@ -1679,17 +1679,18 @@ static void od_dering_direction(od_coeff *y, int ystride, od_coeff *in,
  int bstride, int n, int threshold, int dir) {
   int i;
   int j;
+  int f;
   static const int taps[4] = {2, 3, 2, 2};
-  for (i = 0; i < n; i++) {
-    for (j = 0; j < n; j++) {
-      od_coeff sum;
-      od_coeff xx;
-      od_coeff yy;
-      int k;
-      xx = in[i*bstride + j];
-      sum= 0;
-      if (dir <= 4) {
-        int f = dir - 2;
+  if (dir <= 4) {
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        od_coeff sum;
+        od_coeff xx;
+        od_coeff yy;
+        int k;
+        xx = in[i*bstride + j];
+        sum= 0;
+        f = dir - 2;
         for (k = 1; k <= 3; k++) {
           od_coeff p0;
           od_coeff p1;
@@ -1698,9 +1699,21 @@ static void od_dering_direction(od_coeff *y, int ystride, od_coeff *in,
           if (abs(p0) < threshold) sum += taps[k]*p0;
           if (abs(p1) < threshold) sum += taps[k]*p1;
         }
+        yy = xx + (sum + 8)/16;
+        y[i*ystride + j] = yy;
       }
-      else {
-        int f = 6 - dir;
+    }
+  }
+  else {
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        od_coeff sum;
+        od_coeff xx;
+        od_coeff yy;
+        int k;
+        xx = in[i*bstride + j];
+        sum= 0;
+        f = 6 - dir;
         for (k = 1; k <= 3; k++) {
           od_coeff p0;
           od_coeff p1;
@@ -1709,9 +1722,9 @@ static void od_dering_direction(od_coeff *y, int ystride, od_coeff *in,
           if (abs(p0) < threshold) sum += taps[k]*p0;
           if (abs(p1) < threshold) sum += taps[k]*p1;
         }
+        yy = xx + (sum + 8)/16;
+        y[i*ystride + j] = yy;
       }
-      yy = xx + (sum + 8)/16;
-      y[i*ystride + j] = yy;
     }
   }
 }
@@ -1721,35 +1734,46 @@ static void od_dering_orthogonal(od_coeff *y, int ystride, od_coeff *in,
  int bstride, od_coeff *x, int xstride, int n, int threshold, int dir) {
   int i;
   int j;
-  for (i = 0; i < n; i++) {
-    for (j = 0; j < n; j++) {
-      od_coeff athresh;
-      od_coeff yy;
-      od_coeff sum;
-      athresh = OD_MINI(threshold, threshold/3
-       + abs(in[i*bstride + j] - x[i*xstride + j]));
-      yy = in[i*bstride + j];
-      sum = in[i*bstride + j];
-      if (dir <= 4) {
+  if (dir <= 4) {
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        od_coeff athresh;
+        od_coeff yy;
+        od_coeff sum;
+        athresh = OD_MINI(threshold, threshold/3
+         + abs(in[i*bstride + j] - x[i*xstride + j]));
+        yy = in[i*bstride + j];
+        sum = in[i*bstride + j];
         if (abs(in[(i + 1)*bstride + j] - yy) < athresh)
           sum += in[(i + 1)*bstride + j];
         else sum += yy;
         if (abs(in[(i - 1)*bstride + j] - yy) < athresh)
           sum += in[(i - 1)*bstride + j];
         else sum += yy;
+        y[i*ystride + j] = (sum + 1)/3;
       }
-      else {
+    }
+  }
+  else {
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        od_coeff athresh;
+        od_coeff yy;
+        od_coeff sum;
+        athresh = OD_MINI(threshold, threshold/3
+         + abs(in[i*bstride + j] - x[i*xstride + j]));
+        yy = in[i*bstride + j];
+        sum = in[i*bstride + j];
         if (abs(in[i*bstride + j + 1] - yy) < athresh)
           sum += in[i*bstride + j + 1];
         else sum += yy;
         if (abs(in[i*bstride + j - 1] - yy) < athresh)
           sum += in[i*bstride + j - 1];
         else sum += yy;
+        y[i*ystride + j] = (sum + 1)/3;
       }
-      y[i*ystride + j] = (sum + 1)/3;
     }
   }
-
 }
 void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
  int sbx, int sby, int nhsb, int nvsb, int q, int xdec,
