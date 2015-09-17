@@ -1832,6 +1832,8 @@ void od_bilinear_smooth(od_coeff *x, int ln, int stride, int q, int pli) {
   int i;
   int j;
   int n;
+  int d;
+  int f;
   n = 1 << ln;
   x00 = x[0];
   x01 = x[n - 1];
@@ -1841,6 +1843,8 @@ void od_bilinear_smooth(od_coeff *x, int ln, int stride, int q, int pli) {
   a01 = x01 - x00;
   a10 = x10 - x00;
   a11 = x11 + x00 - x10 - x01;
+  d = abs(x11 + x00 - (x10+x01));
+  f = OD_MAXF(1, 1 + (((6 << OD_COEFF_SHIFT) - d) >> (1 + OD_COEFF_SHIFT)));
   /* Multiply by 1+1/n (approximation of n/(n-1)) here so that we can divide
      by n in the loop instead of dividing by n-1. */
   a01 += (a01 + n/2) >> ln;
@@ -1856,7 +1860,7 @@ void od_bilinear_smooth(od_coeff *x, int ln, int stride, int q, int pli) {
   }
   dist >>= 2*ln;
   /* Compute 1 - Wiener filter gain = strength * (q^2/12) / dist. */
-  w = OD_MINI(1024, OD_BILINEAR_STRENGTH[pli]*q*q/(1 + 12*dist));
+  w = OD_MINI(1024, f*OD_BILINEAR_STRENGTH[pli]*q*q/(1 + 12*dist));
   /* Square the theoretical gain to attenuate the effect when we're unsure
      whether it's useful. */
   w = w*w >> 12;
