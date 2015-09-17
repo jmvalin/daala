@@ -1634,25 +1634,25 @@ static int od_dir_find8(const od_coeff *img, int stride) {
     }
   }
   for (i = 0; i < 8; i++) {
-    cost[2] += partial[2][i]*partial[2][i] >> 3;
-    cost[6] += partial[6][i]*partial[6][i] >> 3;
+    cost[2] += (partial[2][i]*partial[2][i] + 4) >> 3;
+    cost[6] += (partial[6][i]*partial[6][i] + 4) >> 3;
   }
   for (i = 0; i < 7; i++) {
-    cost[0] += (partial[0][i]*partial[0][i]
-     + partial[0][14 - i]*partial[0][14 - i])/(i + 1);
-    cost[4] += (partial[4][i]*partial[4][i]
-     + partial[4][14 - i]*partial[4][14 - i])/(i + 1);
+    cost[0] += OD_DIVU_SMALL(partial[0][i]*partial[0][i]
+     + partial[0][14 - i]*partial[0][14 - i] + (i + 1)/2, i + 1);
+    cost[4] += OD_DIVU_SMALL(partial[4][i]*partial[4][i]
+     + partial[4][14 - i]*partial[4][14 - i] + (i + 1)/2, i + 1);
   }
-  cost[0] += partial[0][7]*partial[0][8 - 1] >> 3;
-  cost[4] += partial[4][7]*partial[4][8 - 1] >> 3;
+  cost[0] += (partial[0][7]*partial[0][8 - 1] + 4) >> 3;
+  cost[4] += (partial[4][7]*partial[4][8 - 1] + 4) >> 3;
   for (i = 1; i < 8; i += 2) {
     int j;
     for (j = 0; j < 4 + 1; j++) {
-      cost[i] += partial[i][3 + j]*partial[i][3 + j] >> 3;
+      cost[i] += (partial[i][3 + j]*partial[i][3 + j] + 4) >> 3;
     }
     for (j = 0; j < 4 - 1; j++) {
-      cost[i] += (partial[i][j]*partial[i][j]
-       + partial[i][10 - j]*partial[i][10 - j])/(2*j+2);
+      cost[i] += OD_DIVU_SMALL(partial[i][j]*partial[i][j]
+       + partial[i][10 - j]*partial[i][10 - j] + j + 1, 2*j + 2);
     }
   }
   for (i = 0; i < 8; i++) {
