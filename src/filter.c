@@ -1643,12 +1643,12 @@ static int od_dir_find8(const od_coeff *img, int stride) {
     cost[4] += partial[4][i]*partial[4][i]/(i + 1)
      + partial[4][16 - 2 - i]*partial[4][16 - 2 - i]/(i + 1);
   }
-  cost[0] += partial[0][8 - 1]*partial[0][8 - 1]/8;
-  cost[4] += partial[4][8 - 1]*partial[4][8 - 1]/8;
+  cost[0] += partial[0][8 - 1]*partial[0][8 - 1] >> 3;
+  cost[4] += partial[4][8 - 1]*partial[4][8 - 1] >> 3;
   for (i = 1; i < 8; i+=2) {
     int j;
     for (j = 0; j < 4 + 1; j++) {
-      cost[i] += partial[i][4 - 1 + j]*partial[i][4 - 1 + j]/8;
+      cost[i] += partial[i][4 - 1 + j]*partial[i][4 - 1 + j] >> 3;
     }
     for (j = 0; j < 4 - 1; j++) {
       cost[i] += partial[i][j]*partial[i][j]/(2*j+2);
