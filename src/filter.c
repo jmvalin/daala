@@ -1638,10 +1638,10 @@ static int od_dir_find8(const od_coeff *img, int stride) {
     cost[6] += partial[6][i]*partial[6][i] >> 3;
   }
   for (i = 0; i < 7; i++) {
-    cost[0] += OD_DIVU_SMALL(partial[0][i]*partial[0][i]
-     + partial[0][14 - i]*partial[0][14 - i], i + 1);
-    cost[4] += OD_DIVU_SMALL(partial[4][i]*partial[4][i]
-     + partial[4][14 - i]*partial[4][14 - i], i + 1);
+    cost[0] += OD_DIVU_SMALL(partial[0][i]*partial[0][i], i + 1)
+     + OD_DIVU_SMALL(partial[0][14 - i]*partial[0][14 - i], i + 1);
+    cost[4] += OD_DIVU_SMALL(partial[4][i]*partial[4][i], i + 1)
+     + OD_DIVU_SMALL(partial[4][14 - i]*partial[4][14 - i], i + 1);
   }
   cost[0] += partial[0][7]*partial[0][8 - 1] >> 3;
   cost[4] += partial[4][7]*partial[4][8 - 1] >> 3;
@@ -1651,8 +1651,8 @@ static int od_dir_find8(const od_coeff *img, int stride) {
       cost[i] += partial[i][3 + j]*partial[i][3 + j] >> 3;
     }
     for (j = 0; j < 4 - 1; j++) {
-      cost[i] += OD_DIVU_SMALL(partial[i][j]*partial[i][j]
-       + partial[i][10 - j]*partial[i][10 - j], 2*j + 2);
+      cost[i] += OD_DIVU_SMALL(partial[i][j]*partial[i][j], 2*j + 2)
+       + OD_DIVU_SMALL(partial[i][10 - j]*partial[i][10 - j], 2*j + 2);
     }
   }
   for (i = 0; i < 8; i++) {
