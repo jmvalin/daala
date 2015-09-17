@@ -1735,6 +1735,14 @@ static void od_dering_orthogonal(od_coeff *y, int ystride, od_coeff *in,
         od_coeff athresh;
         od_coeff yy;
         od_coeff sum;
+        /* Deringing orthogonal to the direction uses a tighter threshold
+           because we want to be conservative. We've presumably already
+           achieved some deringing, so the amount of change is expected
+           to be low. Also, since we might be filtering across an edge, we
+           want to make sure not to blur it. That being said, we might want
+           to be a little bit more aggressive on pure horizontal/vertical
+           since the ringing there tends to be directional, so it doesn't
+           get removed by the directional filtering. */
         athresh = OD_MINI(threshold, threshold/3
          + abs(in[i*bstride + j] - x[i*xstride + j]));
         yy = in[i*bstride + j];
