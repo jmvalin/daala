@@ -1612,47 +1612,47 @@ void od_apply_postfilter_frame_sbs(od_coeff *c0, int stride, int nhsb,
 
 #define MAXN 8
 /* Detect direction. 0 means 45-degree up-right, 2 is horizontal, and so on. */
-static int od_dir_find(const od_coeff *img, int n, int stride) {
+static int od_dir_find8(const od_coeff *img, int stride) {
   int i;
   int cost[8] = {0};
-  int partial[8][2*MAXN + 1] = {{0}};
+  int partial[8][15] = {{0}};
   int best_cost = 0;
   int best_dir = 0;
-  for (i = 0; i < n; i++) {
+  for (i = 0; i < 8; i++) {
     int j;
-    for (j = 0; j < n; j++) {
+    for (j = 0; j < 8; j++) {
       int x;
       x = img[i*stride + j] >> OD_COEFF_SHIFT;
       partial[0][i + j] += x;
       partial[1][i + j/2] += x;
       partial[2][i] += x;
-      partial[3][n/2 - 1 + i - j/2] += x;
-      partial[4][n - 1 + i - j] += x;
-      partial[5][n/2 - 1 - i/2 + j] += x;
+      partial[3][4 - 1 + i - j/2] += x;
+      partial[4][8 - 1 + i - j] += x;
+      partial[5][4 - 1 - i/2 + j] += x;
       partial[6][j] += x;
       partial[7][i/2 + j] += x;
     }
   }
-  for (i = 0; i < n; i++) {
-    cost[2] += partial[2][i]*partial[2][i]/n;
-    cost[6] += partial[6][i]*partial[6][i]/n;
+  for (i = 0; i < 8; i++) {
+    cost[2] += partial[2][i]*partial[2][i] >> 3;
+    cost[6] += partial[6][i]*partial[6][i] >> 3;
   }
-  for (i = 0; i < n - 1; i++) {
+  for (i = 0; i < 8 - 1; i++) {
     cost[0] += partial[0][i]*partial[0][i]/(i + 1)
-     + partial[0][2*n - 2 - i]*partial[0][2*n - 2 - i]/(i + 1);
+     + partial[0][16 - 2 - i]*partial[0][16 - 2 - i]/(i + 1);
     cost[4] += partial[4][i]*partial[4][i]/(i + 1)
-     + partial[4][2*n - 2 - i]*partial[4][2*n - 2 - i]/(i + 1);
+     + partial[4][16 - 2 - i]*partial[4][16 - 2 - i]/(i + 1);
   }
-  cost[0] += partial[0][n - 1]*partial[0][n - 1]/n;
-  cost[4] += partial[4][n - 1]*partial[4][n - 1]/n;
+  cost[0] += partial[0][8 - 1]*partial[0][8 - 1]/8;
+  cost[4] += partial[4][8 - 1]*partial[4][8 - 1]/8;
   for (i = 1; i < 8; i+=2) {
     int j;
-    for (j = 0; j < n/2 + 1; j++) {
-      cost[i] += partial[i][n/2 - 1 + j]*partial[i][n/2 - 1 + j]/n;
+    for (j = 0; j < 4 + 1; j++) {
+      cost[i] += partial[i][4 - 1 + j]*partial[i][4 - 1 + j]/8;
     }
-    for (j = 0; j < n/2 - 1; j++) {
+    for (j = 0; j < 4 - 1; j++) {
       cost[i] += partial[i][j]*partial[i][j]/(2*j+2);
-      cost[i] += partial[i][3*n/2 - j - 2]*partial[i][3*n/2 - j - 2]/(2*j+2);
+      cost[i] += partial[i][12 - j - 2]*partial[i][12 - j - 2]/(2*j+2);
     }
   }
   for (i = 0; i < 8; i++) {
@@ -1804,7 +1804,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   if (pli == 0) {
     for (by = 0; by < nvb; by++) {
       for (bx = 0; bx < nhb; bx++) {
-        dir[by][bx] = od_dir_find(&x[8*by*xstride + 8*bx], 8, xstride);
+        dir[by][bx] = od_dir_find8(&x[8*by*xstride + 8*bx], xstride);
       }
     }
   }
