@@ -1837,7 +1837,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     for (pli = 0; pli < nplanes; pli++) {
       xdec = state->io_imgs[OD_FRAME_INPUT].planes[pli].xdec;
       ydec = state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec;
-      OD_COPY(&state->dtmp[pli][0], &state->ctmp[pli][0],
+      OD_COPY(&state->etmp[pli][0], &state->ctmp[pli][0],
        nvsb*nhsb*OD_BSIZE_MAX*OD_BSIZE_MAX >> xdec >> ydec);
     }
     for (sby = 0; sby < nvsb; sby++) {
@@ -1868,7 +1868,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         OD_ASSERT(xdec == state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec);
         ln = OD_LOG_BSIZE_MAX - xdec;
         n = 1 << ln;
-        od_dering(buf, OD_BSIZE_MAX, &state->dtmp[pli][(sby << ln)*w +
+        od_dering(buf, OD_BSIZE_MAX, &state->etmp[pli][(sby << ln)*w +
          (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[0], xdec,
          dir, pli);
         ystride = state->io_imgs[OD_FRAME_INPUT].planes[pli].ystride;
@@ -1935,7 +1935,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
             w = frame_width >> xdec;
             ln = OD_LOG_BSIZE_MAX - xdec;
             n = 1 << ln;
-            od_dering(buf, OD_BSIZE_MAX, &state->dtmp[pli][(sby << ln)*w +
+            od_dering(buf, OD_BSIZE_MAX, &state->etmp[pli][(sby << ln)*w +
              (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[pli],
              xdec, dir, pli);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
