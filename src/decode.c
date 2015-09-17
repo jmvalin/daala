@@ -898,6 +898,12 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
        ydec);
     }
   }
+    for (pli = 0; pli < nplanes; pli++) {
+      xdec = dec->output_img.planes[pli].xdec;
+      ydec = dec->output_img.planes[pli].ydec;
+      OD_COPY(&state->etmp[pli][0], &state->ctmp[pli][0],
+       nvsb*nhsb*OD_BSIZE_MAX*OD_BSIZE_MAX >> xdec >> ydec);
+    }
   for (sby = 0; sby < nvsb; sby++) {
     for (sbx = 0; sbx < nhsb; sbx++) {
       int filtered;
@@ -928,6 +934,7 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
           od_coeff *output;
           int ln;
           int n;
+          int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
           xdec = dec->output_img.planes[pli].xdec;
           ydec = dec->output_img.planes[pli].ydec;
           w = frame_width >> xdec;
@@ -938,8 +945,9 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
             the input to the filter, but because we look past block edges,
             we do this anyway on the edge pixels. Unfortunately, this limits
             potential parallelism.*/
-          od_clpf(buf, OD_BSIZE_MAX, &state->ctmp[pli][(sby << ln)*w +
-           (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb);
+          od_dering(buf, OD_BSIZE_MAX, &state->etmp[pli][(sby << ln)*w +
+           (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, dec->quantizer[pli],
+           xdec, dir, pli);
           output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
           for (y = 0; y < n; y++) {
             for (x = 0; x < n; x++) {
