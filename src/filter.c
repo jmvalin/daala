@@ -1610,7 +1610,6 @@ void od_apply_postfilter_frame_sbs(od_coeff *c0, int stride, int nhsb,
 #endif
 }
 
-#define MAXN 8
 /* Detect direction. 0 means 45-degree up-right, 2 is horizontal, and so on. */
 static int od_dir_find8(const od_coeff *img, int stride) {
   int i;
