@@ -1611,7 +1611,7 @@ void od_apply_postfilter_frame_sbs(od_coeff *c0, int stride, int nhsb,
 }
 
 /* Detect direction. 0 means 45-degree up-right, 2 is horizontal, and so on. */
-static int od_dir_find8(const od_coeff *img, int stride) {
+static int od_dir_find8(const od_coeff *img, int stride, int32_t *var) {
   int i;
   int cost[8] = {0};
   int partial[8][15] = {{0}};
@@ -1700,6 +1700,7 @@ static int od_dir_find8(const od_coeff *img, int stride) {
       best_dir = i;
     }
   }
+  *var = best_cost - cost[(best_dir + 4) & 7];
   {
     int xp;
     int xm;
@@ -1797,9 +1798,34 @@ static void od_dering_orthogonal(od_coeff *y, int ystride, od_coeff *in,
   }
 }
 
+/* round(256*min(3, max(.5, 1.08*(sqrt(2)*2.^([0:17]+8)/256/256).^.16))) */
+static int16_t od_thresh_table[18] = {
+  128, 134, 150, 168, 188, 210, 234, 262,
+  292, 327, 365, 408, 455, 509, 569, 635,
+  710, 768,
+};
+
+static void od_compute_thresh(int thresh[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS],
+ int threshold, int32_t var[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS],
+ int32_t sb_var, int nhb, int nvb) {
+  int bx;
+  int by;
+  for (by = 0; by < nvb; by++) {
+    for (bx = 0; bx < nhb; bx++) {
+      int v1;
+      int v2;
+      v1 = OD_MINI(32767, var[by][bx] >> 6);
+      v2 = OD_MINI(32767, sb_var/(OD_BSIZE_MAX*OD_BSIZE_MAX));
+      thresh[by][bx] = threshold*od_thresh_table[OD_CLAMPI(0,
+       OD_ILOG(v1*v2) - 9, 17)] >> 8;
+    }
+  }
+}
+
 void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
  int sbx, int sby, int nhsb, int nvsb, int q, int xdec,
- int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS], int pli) {
+ int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS],
+ int pli) {
   int i;
   int j;
   int n;
@@ -1812,6 +1838,9 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   int nhb;
   int nvb;
   int bsize;
+  int varsum = 0;
+  int32_t var[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
+  int thresh[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
   n = 1 << ln;
   bsize = 3 - xdec;
   nhb = nvb = n >> bsize;
@@ -1828,13 +1857,6 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       in[i*bstride + j] = x[i*xstride + j];
     }
   }
-  if (pli == 0) {
-    for (by = 0; by < nvb; by++) {
-      for (bx = 0; bx < nhb; bx++) {
-        dir[by][bx] = od_dir_find8(&x[8*by*xstride + 8*bx], xstride);
-      }
-    }
-  }
   /* The threshold is meant to be the estimated amount of ringing for a given
      quantizer. Ringing is mostly proportional to the quantizer, but we
      use an exponent slightly smaller than unity because as quantization
@@ -1844,11 +1866,27 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
      -v 5 appeared to be around 0.5*q, while the best threshold for -v 400
      was 0.25*q, i.e. 1-log(.5/.25)/log(400/5) = 0.84182 */
   threshold = 1.0*pow(q, 0.84182);
+  if (pli == 0) {
+    for (by = 0; by < nvb; by++) {
+      for (bx = 0; bx < nhb; bx++) {
+        dir[by][bx] = od_dir_find8(&x[8*by*xstride + 8*bx], xstride, &var[by][bx]);
+        varsum += var[by][bx];
+      }
+    }
+    od_compute_thresh(thresh, threshold, var, varsum, nhb, nvb);
+  }
+  else {
+    for (by = 0; by < nvb; by++) {
+      for (bx = 0; bx < nhb; bx++) {
+        thresh[by][bx] = threshold;
+      }
+    }
+  }
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       od_dering_direction(&y[(by*ystride << bsize) + (bx << bsize)], ystride,
        &in[(by*bstride << bsize) + (bx << bsize)], bstride, 1 << bsize,
-       threshold, dir[by][bx]);
+       thresh[by][bx], dir[by][bx]);
     }
   }
   for (i = 0; i < n; i++) {
@@ -1861,7 +1899,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       od_dering_orthogonal(&y[(by*ystride << bsize) + (bx << bsize)], ystride,
        &in[(by*bstride << bsize) + (bx << bsize)], bstride,
        &x[(by*xstride << bsize) + (bx << bsize)], xstride, 1 << bsize,
-       threshold, dir[by][bx]);
+       thresh[by][bx], dir[by][bx]);
     }
   }
 }
