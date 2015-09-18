@@ -1892,6 +1892,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
             unfiltered_error += (r - o)*(double)(r - o);
           }
         }
+        printf("%f\n", unfiltered_error);
 #else
         /* Optimize deringing for the block size decision metric. */
         {
