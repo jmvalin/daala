@@ -1611,17 +1611,20 @@ void od_apply_postfilter_frame_sbs(od_coeff *c0, int stride, int nhsb,
 }
 
 /* Detect direction. 0 means 45-degree up-right, 2 is horizontal, and so on. */
-static int od_dir_find8(const od_coeff *img, int stride) {
+static int od_dir_find8(const od_coeff *img, int stride, int32_t *var) {
   int i;
   int cost[8] = {0};
   int partial[8][15] = {{0}};
   int best_cost = 0;
   int best_dir = 0;
+  int32_t sum2;
+  sum2 = 0;
   for (i = 0; i < 8; i++) {
     int j;
     for (j = 0; j < 8; j++) {
       int x;
       x = img[i*stride + j] >> OD_COEFF_SHIFT;
+      sum2 += x*x;
       partial[0][i + j] += x;
       partial[1][i + j/2] += x;
       partial[2][i] += x;
@@ -1712,6 +1715,7 @@ static int od_dir_find8(const od_coeff *img, int stride) {
     }
   }
 #endif
+  *var = sum2;
   return best_dir;
 }
 
@@ -1812,6 +1816,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   int nhb;
   int nvb;
   int bsize;
+  int varsum = 0;
   n = 1 << ln;
   bsize = 3 - xdec;
   nhb = nvb = n >> bsize;
@@ -1831,7 +1836,9 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   if (pli == 0) {
     for (by = 0; by < nvb; by++) {
       for (bx = 0; bx < nhb; bx++) {
-        dir[by][bx] = od_dir_find8(&x[8*by*xstride + 8*bx], xstride);
+        int var;
+        dir[by][bx] = od_dir_find8(&x[8*by*xstride + 8*bx], xstride, &var);
+        varsum += var;
       }
     }
   }
@@ -1844,6 +1851,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
      -v 5 appeared to be around 0.5*q, while the best threshold for -v 400
      was 0.25*q, i.e. 1-log(.5/.25)/log(400/5) = 0.84182 */
   threshold = 1.0*pow(q, 0.84182);
+  threshold *= OD_CLAMPF(.5, pow(varsum/1024, .33)/8, 2);
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       od_dering_direction(&y[(by*ystride << bsize) + (bx << bsize)], ystride,
