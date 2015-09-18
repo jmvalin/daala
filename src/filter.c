@@ -1846,7 +1846,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
         int var;
         dir[by][bx] = od_dir_find8(&x[8*by*xstride + 8*bx], xstride, &var);
         varsum += var;
-        thresh[by][bx] = threshold*OD_CLAMPF(.5, pow(var/64., .25)/7, 2);
+        thresh[by][bx] = threshold*OD_CLAMPF(.5, pow(var/64., .25)/8, 2);
       }
     }
   }
