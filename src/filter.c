@@ -1654,12 +1654,64 @@ static int od_dir_find8(const od_coeff *img, int stride) {
        + OD_DIVU_SMALL(partial[i][10 - j]*partial[i][10 - j], 2*j + 2);
     }
   }
+#if 0
   for (i = 0; i < 8; i++) {
     if (cost[i] > best_cost) {
       best_cost = cost[i];
       best_dir = i;
     }
   }
+  if (0) {
+    int x1, x2, x3;
+    int choice;
+    if (best_dir&1) {
+      if (cost[(best_dir+1)&7] > cost[(best_dir+7)&7]) {
+        x1 = (best_dir+1)&7;
+        x2 = (best_dir+7)&7;
+        x3 = (best_dir+3)&7;
+      }
+      else {
+        x1 = (best_dir+7)&7;
+        x2 = (best_dir+1)&7;
+        x3 = (best_dir+5)&7;
+      }
+      choice = 1;
+    }
+    else {
+      x1 = best_dir;
+      if (cost[(best_dir+2)&7] > cost[(best_dir+6)&7]) {
+        x2 = (best_dir+2)&7;
+        x3 = (best_dir+6)&7;
+      }
+      else {
+        x2 = (best_dir+6)&7;
+        x3 = (best_dir+2)&7;
+      }
+      choice = 0;
+    }
+    printf("%d %d %d %d\n", cost[x1], cost[x2], cost[x3], choice);
+  }
+#else
+  best_cost = 0;
+  best_dir = 0;
+  for (i = 0; i < 8; i += 2) {
+    if (cost[i] > best_cost) {
+      best_cost = cost[i];
+      best_dir = i;
+    }
+  }
+  {
+    int xp;
+    int xm;
+    xp = cost[(best_dir + 2) & 7];
+    xm = cost[(best_dir + 6) & 7];
+    if (xp > xm) {
+      if (3*xp - xm - 2*best_cost > 0) best_dir = (best_dir + 1) & 7;
+    } else {
+      if (3*xm - xp - 2*best_cost > 0) best_dir = (best_dir + 7) & 7;
+    }
+  }
+#endif
   return best_dir;
 }
 
