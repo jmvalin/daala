@@ -1712,6 +1712,48 @@ static int od_dir_find8(const od_coeff *img, int stride) {
     }
   }
 #endif
+  if (1) {
+    od_coeff minval;
+    od_coeff maxval;
+    od_coeff threshold;
+    od_coeff minsum;
+    od_coeff maxsum;
+    int32_t bi_cost;
+    int count;
+    minval = maxval = img[0] >> OD_COEFF_SHIFT;
+    /* bilevel search */
+    for (i = 0; i < 8; i++) {
+      int j;
+      for (j = 0; j < 8; j++) {
+        od_coeff x;
+        x = img[i*stride + j] >> OD_COEFF_SHIFT;
+        minval = OD_MINI(minval, x);
+        maxval = OD_MINI(minval, x);
+      }
+    }
+    threshold = (minval + maxval) >> 1;
+    minsum = maxsum = 0;
+    count = 0;
+    for (i = 0; i < 8; i++) {
+      int j;
+      for (j = 0; j < 8; j++) {
+        od_coeff x;
+        x = img[i*stride + j] >> OD_COEFF_SHIFT;
+        if (x > threshold) {
+          maxsum += x;
+          count++;
+        }
+        else {
+          minsum += x;
+        }
+      }
+    }
+    if (count >0 && count < 64) {
+      bi_cost = maxsum*maxsum/count + minsum*minsum/(64 - count);
+      if (bi_cost > best_cost) best_dir = 8;
+    }
+    best_dir = 8;
+  }
   return best_dir;
 }
 
@@ -1719,6 +1761,40 @@ static int od_dir_find8(const od_coeff *img, int stride) {
 #define OD_DERING_VERY_LARGE (1000000000)
 #define OD_DERING_INBUF_SIZE ((OD_BSIZE_MAX + 2*OD_FILT_BORDER)*\
  (OD_BSIZE_MAX + 2*OD_FILT_BORDER))
+
+/* Smooth in the neighborhood. */
+static void od_dering_flat(od_coeff *y, int ystride, od_coeff *in,
+ int bstride, int n, int threshold) {
+  int i;
+  int j;
+  int k;
+  static const int off[24][2] = {
+    {0, -1}, {0, 1}, {-1, 0}, {1, 0},
+    {-1, -1}, {-1, 1}, {1, -1}, {1, 1},
+    {0, -2}, {0, 2}, {-2, 0}, {2, 0},
+    {-1, -2}, {-1, 2}, {1, -2}, {1, 2},
+    {-2, -1}, {-2, 1}, {2, -1}, {2, 1},
+    {-2, -2}, {-2, 2}, {2, -2}, {2, 2}
+  };
+  int offset[24];
+  for (i = 0;i < 24; i++) offset[i] = off[i][0]*bstride + off[i][1];
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      od_coeff sum;
+      od_coeff xx;
+      od_coeff yy;
+      xx = in[i*bstride + j];
+      sum= 0;
+      for (k = 0; k < 24; k++) {
+        od_coeff p;
+        p = in[i*bstride + j + offset[k]] - xx;
+        if (abs(p) < threshold*2) sum += p;
+      }
+      yy = xx + (sum + 8)/16;
+      y[i*ystride + j] = yy;
+    }
+  }
+}
 
 /* Smooth in the direction detected. */
 static void od_dering_direction(od_coeff *y, int ystride, od_coeff *in,
@@ -1729,6 +1805,10 @@ static void od_dering_direction(od_coeff *y, int ystride, od_coeff *in,
   int f;
   static const int taps[4] = {3, 2, 2};
   int offset[4];
+  if (dir == 8) {
+    od_dering_flat(y, ystride, in, bstride, n, threshold);
+    return;
+  }
   if (dir <= 4) {
     f = dir - 2;
     for (k = 1; k <= 3; k++) offset[k - 1] = f*k/2*bstride + k;
@@ -1764,6 +1844,7 @@ static void od_dering_orthogonal(od_coeff *y, int ystride, od_coeff *in,
   int i;
   int j;
   int offset;
+  if (dir == 8) return;
   if (dir <= 4) offset = bstride;
   else offset = 1;
   for (i = 0; i < n; i++) {
@@ -1792,7 +1873,7 @@ static void od_dering_orthogonal(od_coeff *y, int ystride, od_coeff *in,
       if (abs(p) < athresh) sum += p;
       p = in[i*bstride + j - 2*offset] - yy;
       if (abs(p) < athresh) sum += p;
-      y[i*ystride + j] = yy + (sum + 2)/5;
+      y[i*ystride + j] = (yy + (sum + 2)/5);
     }
   }
 }
