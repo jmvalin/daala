@@ -993,6 +993,7 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
             int ln;
             int n;
             int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
+            int thresh[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
             xdec = state->io_imgs[OD_FRAME_INPUT].planes[pli].xdec;
             ydec = state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec;
             w = frame_width >> xdec;
@@ -1006,7 +1007,7 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
               potential parallelism.*/
             od_dering(buf, OD_BSIZE_MAX, &state->etmp[pli][(sby << ln)*w +
              (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, dec->quantizer[pli],
-             xdec, dir, pli);
+             xdec, dir, thresh, pli);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {

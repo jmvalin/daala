@@ -1858,6 +1858,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         double filtered_rate;
         double unfiltered_rate;
         int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
+        int thresh[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
         if (state->sb_skip_flags[sby*nhsb + sbx]) {
           state->clpf_flags[sby*nhsb + sbx] = 0;
           continue;
@@ -1870,7 +1871,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         n = 1 << ln;
         od_dering(buf, OD_BSIZE_MAX, &state->etmp[pli][(sby << ln)*w +
          (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[0], xdec,
-         dir, pli);
+         dir, thresh, pli);
         ystride = state->io_imgs[OD_FRAME_INPUT].planes[pli].ystride;
         input = (unsigned char *)&state->io_imgs[OD_FRAME_INPUT].planes[pli].
          data[(sby << ln)*ystride + (sbx << ln)];
@@ -1937,7 +1938,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
             n = 1 << ln;
             od_dering(buf, OD_BSIZE_MAX, &state->etmp[pli][(sby << ln)*w +
              (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[pli],
-             xdec, dir, pli);
+             xdec, dir, thresh, pli);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {

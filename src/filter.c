@@ -1803,7 +1803,8 @@ static void od_dering_orthogonal(od_coeff *y, int ystride, od_coeff *in,
 
 void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
  int sbx, int sby, int nhsb, int nvsb, int q, int xdec,
- int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS], int pli) {
+ int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS],
+ int thresh[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS], int pli) {
   int i;
   int j;
   int n;
@@ -1833,12 +1834,14 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       in[i*bstride + j] = x[i*xstride + j];
     }
   }
+  threshold = 1.0*pow(q, 0.84182);
   if (pli == 0) {
     for (by = 0; by < nvb; by++) {
       for (bx = 0; bx < nhb; bx++) {
         int var;
         dir[by][bx] = od_dir_find8(&x[8*by*xstride + 8*bx], xstride, &var);
         varsum += var;
+        thresh[by][bx] = threshold*OD_CLAMPF(.5, pow(var/64., .33)/8, 4);
       }
     }
   }
@@ -1850,13 +1853,12 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
      value here comes from observing that on ntt-short, the best threshold for
      -v 5 appeared to be around 0.5*q, while the best threshold for -v 400
      was 0.25*q, i.e. 1-log(.5/.25)/log(400/5) = 0.84182 */
-  threshold = 1.0*pow(q, 0.84182);
   threshold *= OD_CLAMPF(.5, pow(varsum/1024, .33)/8, 2);
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       od_dering_direction(&y[(by*ystride << bsize) + (bx << bsize)], ystride,
        &in[(by*bstride << bsize) + (bx << bsize)], bstride, 1 << bsize,
-       threshold, dir[by][bx]);
+       thresh[by][bx], dir[by][bx]);
     }
   }
   for (i = 0; i < n; i++) {
@@ -1869,7 +1871,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
       od_dering_orthogonal(&y[(by*ystride << bsize) + (bx << bsize)], ystride,
        &in[(by*bstride << bsize) + (bx << bsize)], bstride,
        &x[(by*xstride << bsize) + (bx << bsize)], xstride, 1 << bsize,
-       threshold, dir[by][bx]);
+       thresh[by][bx], dir[by][bx]);
     }
   }
 }
