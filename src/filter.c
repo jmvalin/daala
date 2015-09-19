@@ -1850,7 +1850,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   if (pli == 0) {
     for (by = 0; by < nvb; by++) {
       for (bx = 0; bx < nhb; bx++) {
-        thresh[by][bx] = threshold*OD_CLAMPF(.5, 1.2*pow(varsum/1024./256., .16), 3);
+        thresh[by][bx] = threshold*OD_CLAMPF(.5, 0.8*pow(varsum/1024./256., .16), 3);
       }
     }
   }
