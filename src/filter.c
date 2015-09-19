@@ -1843,14 +1843,15 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
         int var;
         dir[by][bx] = od_dir_find8(&x[8*by*xstride + 8*bx], xstride, &var);
         varsum += var;
-        thresh[by][bx] = threshold*OD_CLAMPF(.5, .9*pow(var/64./256., .26), 3);
+        thresh[by][bx] = threshold*.9*pow(var/64./256., .16);
       }
     }
   }
   if (pli == 0) {
     for (by = 0; by < nvb; by++) {
       for (bx = 0; bx < nhb; bx++) {
-        thresh[by][bx] = threshold*OD_CLAMPF(.5, pow(varsum/1024./256., .16), 1.5);
+        thresh[by][bx] *= pow(varsum/1024./256., .16);
+        thresh[by][bx] = OD_CLAMPF(.5*threshold, 1.2*thresh[by][bx], 3*threshold);
       }
     }
   }
@@ -1863,7 +1864,6 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
      -v 5 appeared to be around 0.5*q, while the best threshold for -v 400
      was 0.25*q, i.e. 1-log(.5/.25)/log(400/5) = 0.84182 */
   threshold *= OD_CLAMPF(.5, pow(varsum/1024, .33)/8, 2);
-  if (pli==0) printf("%d ", varsum);
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       od_dering_direction(&y[(by*ystride << bsize) + (bx << bsize)], ystride,
