@@ -1756,9 +1756,11 @@ static void od_dering_orthogonal(od_coeff *y, int ystride, od_coeff *in,
 
 /* This table approximates x^0.16 with the index being log2(x). It is clamped
    to [-.5, 3]. The table is computed as:
-   round(256*min(3, max(.5, 0.9*(sqrt(2)*2.^([0:17]+8)/256/256).^.16))) */
+   round(256*min(3, max(.5, 0.9*(sqrt(2)*2.^([0:17]+10)/256/256).^.16))) */
 static int16_t od_thresh_table_q8[18] = {
-  128, 128, 128, 140, 156, 175, 195, 218, 244, 272, 304, 340, 380, 424, 474, 529, 591, 661
+  128, 140, 156, 175, 195, 218, 244, 272,
+  304, 340, 380, 424, 474, 529, 591, 661,
+  738, 768,
 };
 
 /* Compute deringing filter threshold for each 8x8 block based on the
@@ -1781,7 +1783,7 @@ static void od_compute_thresh(int thresh[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS],
       v1 = OD_MINI(32767, var[by][bx] >> 6);
       v2 = OD_MINI(32767, sb_var/(OD_BSIZE_MAX*OD_BSIZE_MAX));
       thresh[by][bx] = threshold*od_thresh_table_q8[OD_CLAMPI(0,
-       OD_ILOG(v1*v2) - 9, 17)] >> 8;
+       OD_ILOG(v1*v2) - 11, 17)] >> 8;
     }
   }
 }
