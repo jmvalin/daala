@@ -1783,7 +1783,7 @@ static void od_dering_orthogonal(od_coeff *y, int ystride, od_coeff *in,
          get removed by the directional filtering. */
       athresh = OD_MINI(threshold, threshold/3
        + abs(in[i*bstride + j] - x[i*xstride + j]));
-      if (dir == 2 || dir == 6) athresh = threshold;
+      /*if (dir == 2 || dir == 6) athresh = threshold;*/
       yy = in[i*bstride + j];
       sum = 0;
       p = in[i*bstride + j + offset] - yy;
