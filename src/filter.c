@@ -1847,7 +1847,17 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
     for (by = 0; by < nvb; by++) {
       for (bx = 0; bx < nhb; bx++) {
         thresh[by][bx] = threshold;
-        if (bskip[(by << 1 >> xdec)*skip_stride + (bx << 1 >> xdec)]) thresh[by][bx] = 0;
+        if (xdec == 0) {
+          if (bskip[(by << 1 >> xdec)*skip_stride + (bx << 1 >> xdec)] &&
+           bskip[(by << 1 >> xdec)*skip_stride + (bx << 1 >> xdec) + 1] &&
+           bskip[((by << 1 >> xdec)+1)*skip_stride + (bx << 1 >> xdec)] &&
+           bskip[((by << 1 >> xdec)+1)*skip_stride + (bx << 1 >> xdec) + 1]) {
+            thresh[by][bx] = 0;
+          }
+        }
+        else {
+          if (bskip[(by << 1 >> xdec)*skip_stride + (bx << 1 >> xdec)]) thresh[by][bx] = 0;
+        }
       }
     }
   }
