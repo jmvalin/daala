@@ -1881,7 +1881,9 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         n = 1 << ln;
         od_dering(buf, OD_BSIZE_MAX, &state->etmp[pli][(sby << ln)*w +
          (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[0], xdec,
-         dir, pli);
+         dir, pli, &enc->state.bskip[pli]
+         [(sby << (OD_NBSIZES - 1 - ydec))*enc->state.skip_stride
+         + (sbx << (OD_NBSIZES - 1 - xdec))], enc->state.skip_stride);
         ystride = state->io_imgs[OD_FRAME_INPUT].planes[pli].ystride;
         input = (unsigned char *)&state->io_imgs[OD_FRAME_INPUT].planes[pli].
          data[(sby << ln)*ystride + (sbx << ln)];
@@ -1948,7 +1950,9 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
             n = 1 << ln;
             od_dering(buf, OD_BSIZE_MAX, &state->etmp[pli][(sby << ln)*w +
              (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[pli],
-             xdec, dir, pli);
+             xdec, dir, pli, &enc->state.bskip[pli]
+             [(sby << (OD_NBSIZES - 1 - ydec))*enc->state.skip_stride
+             + (sbx << (OD_NBSIZES - 1 - xdec))], enc->state.skip_stride);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {

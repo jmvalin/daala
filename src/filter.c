@@ -1792,7 +1792,7 @@ static void od_compute_thresh(int thresh[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS],
 void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
  int sbx, int sby, int nhsb, int nvsb, int q, int xdec,
  int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS],
- int pli) {
+ int pli, unsigned char *bskip, int skip_stride) {
   int i;
   int j;
   int n;
@@ -1847,6 +1847,7 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
     for (by = 0; by < nvb; by++) {
       for (bx = 0; bx < nhb; bx++) {
         thresh[by][bx] = threshold;
+        if (bskip[(by << 1 >> xdec)*skip_stride + (bx << 1 >> xdec)]) thresh[by][bx] = 0;
       }
     }
   }
@@ -1870,6 +1871,21 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
        thresh[by][bx], dir[by][bx]);
     }
   }
+#if 0
+  for (by = 0; by < nvb; by++) {
+    for (bx = 0; bx < nhb; bx++) {
+      if (bskip[(by << 1 >> xdec)*skip_stride + (bx << 1 >> xdec)]) {
+        int i;
+        int j;
+        for (i=0;i<1<<bsize;i++) {
+          for (j=0;j<1<<bsize;j++) {
+            y[((by<<bsize)+i)*ystride + ((bx<<bsize)+j)] = 0;
+          }
+        }
+      }
+    }
+  }
+#endif
 }
 
 /** Smoothes a block using bilinear interpolation from its four corners.
