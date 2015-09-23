@@ -1852,30 +1852,23 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   }
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
-      if (xdec == 0) {
-        int xstart;
-        int ystart;
-        int xend;
-        int yend;
-        int skip;
-        xstart = (sbx == 0) ? 0 : 0;
-        ystart = (sby == 0) ? 0 : 0;
-        xend = (sbx == nhsb - 1) ? 2 : 2;
-        yend = (sby == nvsb - 1) ? 2 : 2;
-        skip = 1;
-        for (i = ystart; i < yend; i++) {
-          for (j = xstart; j < xend; j++) {
-            skip = skip && bskip[((by << 1 >> xdec) + i)*skip_stride
-             + (bx << 1 >> xdec) + j];
-          }
-        }
-        if (skip) {
-          thresh[by][bx] = 0;
+      int xstart;
+      int ystart;
+      int xend;
+      int yend;
+      int skip;
+      xstart = (sbx == 0) ? 0 : -1;
+      ystart = (sby == 0) ? 0 : -1;
+      xend = (2 >> xdec) + (sbx != nhsb - 1);
+      yend = (2 >> xdec) + (sby != nvsb - 1);
+      skip = 1;
+      for (i = ystart; i < yend; i++) {
+        for (j = xstart; j < xend; j++) {
+          skip = skip && bskip[((by << 1 >> xdec) + i)*skip_stride
+           + (bx << 1 >> xdec) + j];
         }
       }
-      else {
-        if (bskip[(by << 1 >> xdec)*skip_stride + (bx << 1 >> xdec)]) thresh[by][bx] = 0;
-      }
+      if (skip) thresh[by][bx] = 0;
     }
   }
   for (by = 0; by < nvb; by++) {
