@@ -1928,7 +1928,6 @@ static void od_split_superblocks(daala_enc_ctx *enc, int is_keyframe) {
   int m;
   od_state *state;
   OD_ASSERT(enc->input_img.planes[0].xstride == 1);
-  OD_ASSERT(state->ref_imgi[OD_FRAME_SELF]].planes[0].xstride == 1);
   state = &enc->state;
   nhsb = state->nhsb;
   nvsb = state->nvsb;
