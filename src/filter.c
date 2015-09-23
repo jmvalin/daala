@@ -1853,10 +1853,23 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       if (xdec == 0) {
-        if (bskip[(by << 1 >> xdec)*skip_stride + (bx << 1 >> xdec)] &&
-         bskip[(by << 1 >> xdec)*skip_stride + (bx << 1 >> xdec) + 1] &&
-         bskip[((by << 1 >> xdec)+1)*skip_stride + (bx << 1 >> xdec)] &&
-         bskip[((by << 1 >> xdec)+1)*skip_stride + (bx << 1 >> xdec) + 1]) {
+        int xstart;
+        int ystart;
+        int xend;
+        int yend;
+        int skip;
+        xstart = (sbx == 0) ? 0 : -1;
+        ystart = (sby == 0) ? 0 : -1;
+        xend = (sbx == nhsb - 1) ? 2 : 3;
+        yend = (sby == nvsb - 1) ? 2 : 3;
+        skip = 1;
+        for (i = ystart; i < yend; i++) {
+          for (j = xstart; j < xend; j++) {
+            skip = skip && bskip[((by << 1 >> xdec) + i)*skip_stride
+             + (bx << 1 >> xdec) + j];
+          }
+        }
+        if (skip) {
           thresh[by][bx] = 0;
         }
       }

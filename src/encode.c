@@ -1875,6 +1875,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         }
         pli = 0;
         xdec = state->io_imgs[OD_FRAME_INPUT].planes[pli].xdec;
+        ydec = state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec;
         w = frame_width >> xdec;
         OD_ASSERT(xdec == state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec);
         ln = OD_LOG_BSIZE_MAX - xdec;
@@ -1945,6 +1946,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           }
           for (pli = 1; pli < nplanes; pli++) {
             xdec = state->io_imgs[OD_FRAME_INPUT].planes[pli].xdec;
+            ydec = state->io_imgs[OD_FRAME_INPUT].planes[pli].ydec;
             w = frame_width >> xdec;
             ln = OD_LOG_BSIZE_MAX - xdec;
             n = 1 << ln;
