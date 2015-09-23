@@ -1858,10 +1858,10 @@ void od_dering(od_coeff *y, int ystride, od_coeff *x, int xstride, int ln,
         int xend;
         int yend;
         int skip;
-        xstart = (sbx == 0) ? 0 : -1;
-        ystart = (sby == 0) ? 0 : -1;
-        xend = (sbx == nhsb - 1) ? 2 : 3;
-        yend = (sby == nvsb - 1) ? 2 : 3;
+        xstart = (sbx == 0) ? 0 : 0;
+        ystart = (sby == 0) ? 0 : 0;
+        xend = (sbx == nhsb - 1) ? 2 : 2;
+        yend = (sby == nvsb - 1) ? 2 : 2;
         skip = 1;
         for (i = ystart; i < yend; i++) {
           for (j = xstart; j < xend; j++) {
