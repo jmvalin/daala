@@ -1137,7 +1137,7 @@ static void od_img_plane_edge_ext(od_img_plane *dst_p,
   xstride = dst_p->xstride;
   ystride = dst_p->ystride;
   dst_data = dst_p->data;
-  OD_ASSERT(horz_padding&1 == 0);
+  OD_ASSERT((horz_padding & 1) == 0);
   /*Left side.*/
   for (y = 0; y < plane_height; y++) {
     dst = dst_data + ystride*y;
