@@ -145,7 +145,7 @@ struct od_adapt_ctx {
   int haar_split_increment;
   uint16_t haar_bits_cdf[3][16];
   int haar_bits_increment;
-  uint16_t clpf_cdf[4][2];
+  uint16_t clpf_cdf[9][2];
   int clpf_increment;
   /* 4 possible values for the sblock above (or skip), 4 for the sblock to the
      left (or skip). */

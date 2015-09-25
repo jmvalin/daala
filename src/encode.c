@@ -2354,7 +2354,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         double unfiltered_rate;
         int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
         if (state->sb_skip_flags[sby*nhsb + sbx]) {
-          state->dering_flags[sby*nhsb + sbx] = 0;
+          state->dering_flags[sby*nhsb + sbx] = 2;
           continue;
         }
         pli = 0;
@@ -2405,15 +2405,17 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           filtered_error = od_compute_dist(enc, orig, buf, OD_BSIZE_MAX, 3);
         }
 #endif
-        up = 0;
+        up = 2;
         if (sby > 0) {
           up = state->dering_flags[(sby - 1)*nhsb + sbx];
         }
-        left = 0;
+        left = 2;
         if (sbx > 0) {
           left = state->dering_flags[sby*nhsb + (sbx - 1)];
         }
-        c = (up << 1) + left;
+        if (left == 2) left = up;
+        if (up == 2) up = left;
+        c = up*3 + left;
         filtered_rate = od_encode_cdf_cost(1, state->adapt.clpf_cdf[c], 2);
         unfiltered_rate = od_encode_cdf_cost(0, state->adapt.clpf_cdf[c], 2);
         q2 = enc->quantizer[0] * enc->quantizer[0];
