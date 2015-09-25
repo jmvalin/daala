@@ -1743,13 +1743,13 @@ static void od_dering_orthogonal(od_coeff *y, int ystride, od_coeff *in,
       yy = in[i*bstride + j];
       sum = 0;
       p = in[i*bstride + j + offset] - yy;
-      if (abs(p) < athresh) sum += 3*p;
+      if (abs(p) < athresh) sum += 4*p;
       p = in[i*bstride + j - offset] - yy;
-      if (abs(p) < athresh) sum += 3*p;
+      if (abs(p) < athresh) sum += 4*p;
       p = in[i*bstride + j + 2*offset] - yy;
-      if (abs(p) < athresh) sum += 3*p;
+      if (abs(p) < athresh) sum += 2*p;
       p = in[i*bstride + j - 2*offset] - yy;
-      if (abs(p) < athresh) sum += 3*p;
+      if (abs(p) < athresh) sum += 2*p;
       y[i*ystride + j] = yy + OD_DIV_ROUND(sum, 16);
     }
   }
