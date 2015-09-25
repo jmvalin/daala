@@ -2327,6 +2327,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     }
   }
   if (!rdo_only && enc->quantizer[0] > 0) {
+    int ddec = 1;
     /* We copy ctmp to dtmp so we can use it as an unmodified input
        and avoid filtering some pixels twice. */
     for (pli = 0; pli < nplanes; pli++) {
@@ -2335,8 +2336,8 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
       OD_COPY(&state->etmp[pli][0], &state->ctmp[pli][0],
        nvsb*nhsb*OD_BSIZE_MAX*OD_BSIZE_MAX >> xdec >> ydec);
     }
-    for (sby = 0; sby < nvsb; sby++) {
-      for (sbx = 0; sbx < nhsb; sbx++) {
+    for (sby = 0; sby < nvsb << ddec; sby++) {
+      for (sbx = 0; sbx < nhsb << ddec; sbx++) {
         int ln;
         int n;
         od_coeff buf[OD_BSIZE_MAX*OD_BSIZE_MAX];
@@ -2353,8 +2354,8 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         double filtered_rate;
         double unfiltered_rate;
         int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
-        if (state->sb_skip_flags[sby*nhsb + sbx]) {
-          state->dering_flags[sby*nhsb + sbx] = 0;
+        if (state->sb_skip_flags[(sby >> ddec)*nhsb + (sbx >> ddec)]) {
+          state->dering_flags[sby*(nhsb << ddec) + sbx] = 0;
           continue;
         }
         pli = 0;
@@ -2362,13 +2363,13 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         ydec = enc->input_img.planes[pli].ydec;
         w = frame_width >> xdec;
         OD_ASSERT(xdec == ydec);
-        ln = OD_LOG_BSIZE_MAX - xdec;
+        ln = OD_LOG_BSIZE_MAX - xdec - ddec;
         n = 1 << ln;
-        od_dering(buf, OD_BSIZE_MAX, &state->etmp[pli][(sby << ln)*w +
-         (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[0], xdec,
+        od_dering(buf, n, &state->etmp[pli][(sby << ln)*w +
+         (sbx << ln)], w, ln, sbx, sby, nhsb << ddec, nvsb << ddec, enc->quantizer[0], xdec,
          dir, pli, &enc->state.bskip[pli]
-         [(sby << (OD_NBSIZES - 1 - ydec))*enc->state.skip_stride
-         + (sbx << (OD_NBSIZES - 1 - xdec))], enc->state.skip_stride);
+         [(sby << (OD_NBSIZES - 1 - ydec - ddec))*enc->state.skip_stride
+         + (sbx << (OD_NBSIZES - 1 - xdec - ddec))], enc->state.skip_stride);
         ystride = enc->input_img.planes[pli].ystride;
         input = (unsigned char *)&enc->input_img.planes[pli].
          data[(sby << ln)*ystride + (sbx << ln)];
@@ -2396,22 +2397,22 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           od_coeff out[OD_BSIZE_MAX*OD_BSIZE_MAX];
           for (y = 0; y < n; y++) {
             for (x = 0; x < n; x++) {
-              orig[y*OD_BSIZE_MAX + x] = (input[y*ystride + x] - 128)
+              orig[y*n + x] = (input[y*ystride + x] - 128)
                << OD_COEFF_SHIFT;
-              out[y*OD_BSIZE_MAX + x] = output[y*w + x];
+              out[y*n + x] = output[y*w + x];
             }
           }
-          unfiltered_error = od_compute_dist(enc, orig, out, OD_BSIZE_MAX, 3);
-          filtered_error = od_compute_dist(enc, orig, buf, OD_BSIZE_MAX, 3);
+          unfiltered_error = od_compute_dist(enc, orig, out, n, 3);
+          filtered_error = od_compute_dist(enc, orig, buf, n, 3);
         }
 #endif
         up = 0;
         if (sby > 0) {
-          up = state->dering_flags[(sby - 1)*nhsb + sbx];
+          up = state->dering_flags[(sby - 1)*(nhsb << ddec) + sbx];
         }
         left = 0;
         if (sbx > 0) {
-          left = state->dering_flags[sby*nhsb + (sbx - 1)];
+          left = state->dering_flags[sby*(nhsb << ddec) + (sbx - 1)];
         }
         c = (up << 1) + left;
         filtered_rate = od_encode_cdf_cost(1, state->adapt.clpf_cdf[c], 2);
@@ -2423,26 +2424,26 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         if (!enc->use_dering) {
           filtered = 0;
         }
-        state->dering_flags[sby*nhsb + sbx] = filtered;
+        state->dering_flags[sby*(nhsb << ddec) + sbx] = filtered;
         od_encode_cdf_adapt(&enc->ec, filtered, state->adapt.clpf_cdf[c], 2,
          state->adapt.clpf_increment);
         if (filtered) {
           for (y = 0; y < n; y++) {
             for (x = 0; x < n; x++) {
-              output[y*w + x] = buf[y*OD_BSIZE_MAX + x];
+              output[y*w + x] = buf[y*n + x];
             }
           }
           for (pli = 1; pli < nplanes; pli++) {
             xdec = enc->input_img.planes[pli].xdec;
             ydec = enc->input_img.planes[pli].ydec;
             w = frame_width >> xdec;
-            ln = OD_LOG_BSIZE_MAX - xdec;
+            ln = OD_LOG_BSIZE_MAX - xdec - ddec;
             n = 1 << ln;
             od_dering(buf, OD_BSIZE_MAX, &state->etmp[pli][(sby << ln)*w +
-             (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, enc->quantizer[pli],
+             (sbx << ln)], w, ln, sbx, sby, nhsb << ddec, nvsb << ddec, enc->quantizer[pli],
              xdec, dir, pli, &enc->state.bskip[pli]
-             [(sby << (OD_NBSIZES - 1 - ydec))*enc->state.skip_stride
-             + (sbx << (OD_NBSIZES - 1 - xdec))], enc->state.skip_stride);
+             [(sby << (OD_NBSIZES - 1 - ydec - ddec))*enc->state.skip_stride
+             + (sbx << (OD_NBSIZES - 1 - xdec - ddec))], enc->state.skip_stride);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {
