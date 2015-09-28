@@ -416,7 +416,7 @@ double od_pvq_compute_gain(od_coeff *x, int n, int q0, double *g, double beta){
  */
 int od_pvq_compute_max_theta(double qcg, double beta){
   /* Set angular resolution (in ra) to match the encoded gain */
-  int ts = (int)floor(.5 + 1.2*qcg*M_PI/(2*beta));
+  int ts = (int)floor(.5 + 0.8*qcg*M_PI/(2*beta));
   /* Special case for low gains -- will need to be tuned anyway */
   if (qcg < 1.4) ts = 1;
   return ts;
