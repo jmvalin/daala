@@ -465,7 +465,7 @@ int od_pvq_compute_k(double qcg, int itheta, double theta, int noref, int n,
       return OD_MAXI(1, (int)floor(.5 + 1.2*(itheta - .2)*sqrt((n + 2)/2)));
     }
     else {
-      return OD_MAXI(1, (int)floor(.5 + (qcg*sin(theta) - .2)*
+      return OD_MAXI(1, (int)floor(.5 + 1.2*(qcg*sin(theta) - .2)*
        sqrt((n + 2)/2)/beta));
     }
   }
