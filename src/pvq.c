@@ -416,7 +416,7 @@ double od_pvq_compute_gain(od_coeff *x, int n, int q0, double *g, double beta){
  */
 int od_pvq_compute_max_theta(double qcg, double beta){
   /* Set angular resolution (in ra) to match the encoded gain */
-  int ts = (int)floor(.5 + 0.7*qcg*M_PI/(2*beta));
+  int ts = (int)floor(.5 + 0.8*qcg*M_PI/(2*beta));
   /* Special case for low gains -- will need to be tuned anyway */
   if (qcg < 1.4) ts = 1;
   return ts;
@@ -462,7 +462,7 @@ int od_pvq_compute_k(double qcg, int itheta, double theta, int noref, int n,
        distributed within a band so at low gain the number of dimensions that
        are likely to have a pulse is less than n. */
     if (nodesync) {
-      return OD_MAXI(1, (int)floor(.5 + (itheta - .2)*sqrt((n + 2)/2)));
+      return OD_MAXI(1, (int)floor(.5 + .8*(itheta - .2)*sqrt((n + 2)/2)));
     }
     else {
       return OD_MAXI(1, (int)floor(.5 + (qcg*sin(theta) - .2)*
