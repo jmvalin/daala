@@ -346,7 +346,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
   double gain_weight;
   lambda = OD_PVQ_LAMBDA;
   /* Give more weight to gain error when calculating the total distortion. */
-  gain_weight = 1.4;
+  gain_weight = 1.0;
   OD_ASSERT(n > 1);
   corr = 0;
   for (i = 0; i < n; i++) {
@@ -394,7 +394,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
     *max_theta = 0;
     noref = 0;
   }
-  if (!od_vector_is_null(r0, n) && corr > 0) {
+  if (is_keyframe && !od_vector_is_null(r0, n) && corr > 0) {
     /* Perform theta search only if prediction is useful. */
     theta = acos(corr);
     m = od_compute_householder(r, n, gr, &s);
@@ -447,7 +447,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
   /* Don't bother with no-reference version if there's a reasonable
      correlation. The only exception is luma on a keyframe because
      H/V prediction is unreliable. */
-  if ((is_keyframe && pli == 0) || corr < .5 || cg < 2.) {
+  if (!is_keyframe || (is_keyframe && pli == 0) || corr < .5 || cg < 2.) {
     double x1[MAXN];
     for (i = 0; i < n; i++) x1[i] = x0[i];
     /* Search for the best gain (haven't determined reasonable range yet). */
@@ -673,6 +673,10 @@ int od_pvq_encode(daala_enc_ctx *enc,
   int skip_theta_value;
   const unsigned char *qm;
   double dc_rate;
+  od_coeff in0[1024*2];
+  od_coeff ref0[1024*2];
+  int tot;
+  int hack = !is_keyframe;
   qm = &enc->state.pvq_qm_q4[pli][0];
   exg = &enc->state.adapt.pvq_exg[pli][bs][0];
   ext = enc->state.adapt.pvq_ext + bs*PVQ_MAX_PARTITIONS;
@@ -682,6 +686,15 @@ int od_pvq_encode(daala_enc_ctx *enc,
   off = &OD_BAND_OFFSETS[bs][1];
   dc_quant = OD_MAXI(1, q0*qm[od_qm_get_index(bs, 0)] >> 4);
   tell = 0;
+  tot = off[nb_bands];
+  for (i = 1; i < tot; i++) {
+    in0[i] = in[i];
+    ref0[i] = ref[i];
+    if (hack) {
+      in[i] = in[i] - ref[i];
+      ref[i] = 0;
+    }
+  }
   for (i = 0; i < nb_bands; i++) size[i] = off[i+1] - off[i];
   skip_diff = 0;
   flip = 0;
@@ -789,7 +802,11 @@ int od_pvq_encode(daala_enc_ctx *enc,
 #endif
     if (is_keyframe) for (i = 1; i < 1 << (2*bs + 4); i++) out[i] = 0;
     else for (i = 1; i < 1 << (2*bs + 4); i++) out[i] = ref[i];
-    if ((out[0] == 0)) return 1;
+    if ((out[0] == 0)) {
+      if (hack) for (i = 1; i < tot; i++) {out[i] += ref0[i]; in[i] = in0[i]; ref[i] = ref0[i];}
+      return 1;
+    }
   }
+  if (hack) for (i = 1; i < tot; i++) {out[i] += ref0[i]; in[i] = in0[i]; ref[i] = ref0[i];}
   return 0;
 }
