@@ -2202,7 +2202,7 @@ static const int OD_MV_GE3_EST_RATE[256] = {
 /*Estimate the number of bits that will be used to encode the given MV and its
    predictor.*/
 static int od_mv_est_cand_bits(od_mv_est_ctx *est, int equal_mvs,
- int dx, int dy, int predx, int predy, int ref, int ref_pred) {
+ int dx, int dy, int predx, int predy, int ref, int ref_pred, int level) {
   int ox;
   int oy;
   int id;
@@ -2236,6 +2236,8 @@ static int od_mv_est_bits(od_mv_est_ctx *est, int vx, int vy, int mv_res) {
   int mv_rate;
   int ref_pred;
   od_mv_grid_pt *mvg;
+  int level;
+  level = OD_MC_LEVEL[vy & OD_MVB_MASK][vx & OD_MVB_MASK];
   state = &est->enc->state;
   mvg = state->mv_grid[vy] + vx;
   equal_mvs = od_state_get_predictor(state, pred, vx, vy,
@@ -2244,7 +2246,7 @@ static int od_mv_est_bits(od_mv_est_ctx *est, int vx, int vy, int mv_res) {
    OD_MC_LEVEL[vy & OD_MVB_MASK][vx & OD_MVB_MASK]);
   mv_rate = od_mv_est_cand_bits(est, equal_mvs,
    mvg->mv[0] >> mv_res, mvg->mv[1] >> mv_res, pred[0], pred[1],
-   mvg->ref, ref_pred);
+   mvg->ref, ref_pred, level);
   return mv_rate;
 }
 
@@ -2670,7 +2672,7 @@ static void od_mv_est_init_mv(od_mv_est_ctx *est, int ref, int vx, int vy,
 #endif
   best_sad = od_mv_est_bma_sad(est, ref, bx, by, candx, candy, log_mvb_sz);
   best_rate = od_mv_est_cand_bits(est, equal_mvs,
-   candx << 1, candy << 1, pred[0], pred[1], ref, ref_pred);
+   candx << 1, candy << 1, pred[0], pred[1], ref, ref_pred, level);
   best_cost = (best_sad << OD_ERROR_SCALE) + best_rate*est->lambda;
   OD_LOG((OD_LOG_MOTION_ESTIMATION, OD_LOG_DEBUG,
    "Median predictor: (%i, %i)   Cost: %i", candx, candy, best_cost));
@@ -2726,7 +2728,7 @@ static void od_mv_est_init_mv(od_mv_est_ctx *est, int ref, int vx, int vy,
 #endif
       sad = od_mv_est_bma_sad(est, ref, bx, by, candx, candy, log_mvb_sz);
       rate = od_mv_est_cand_bits(est, equal_mvs,
-       candx << 1, candy << 1, pred[0], pred[1], ref, ref_pred);
+       candx << 1, candy << 1, pred[0], pred[1], ref, ref_pred, level);
       cost = (sad << OD_ERROR_SCALE) + rate*est->lambda;
       OD_LOG((OD_LOG_MOTION_ESTIMATION, OD_LOG_DEBUG,
        "Set B predictor %i: (%i, %i)    Cost: %i", ci, candx, candy, cost));
@@ -2773,7 +2775,7 @@ static void od_mv_est_init_mv(od_mv_est_ctx *est, int ref, int vx, int vy,
 #endif
         sad = od_mv_est_bma_sad(est, ref, bx, by, candx, candy, log_mvb_sz);
         rate = od_mv_est_cand_bits(est, equal_mvs,
-         candx << 1, candy << 1, pred[0], pred[1], ref, ref_pred);
+         candx << 1, candy << 1, pred[0], pred[1], ref, ref_pred, level);
         cost = (sad << OD_ERROR_SCALE) + rate*est->lambda;
         OD_LOG((OD_LOG_MOTION_ESTIMATION, OD_LOG_DEBUG,
          "Set C predictor %i: (%i, %i)    Cost: %i", ci, candx, candy, cost));
@@ -2833,7 +2835,7 @@ static void od_mv_est_init_mv(od_mv_est_ctx *est, int ref, int vx, int vy,
             sad = od_mv_est_bma_sad(est,
              ref, bx, by, candx, candy, log_mvb_sz);
             rate = od_mv_est_cand_bits(est, equal_mvs,
-             candx << 1, candy << 1, pred[0], pred[1], ref, ref_pred);
+             candx << 1, candy << 1, pred[0], pred[1], ref, ref_pred, level);
             cost = (sad << OD_ERROR_SCALE) + rate*est->lambda;
             OD_LOG((OD_LOG_MOTION_ESTIMATION, OD_LOG_DEBUG,
              "Pattern search %i: (%i, %i)    Cost: %i",
