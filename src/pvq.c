@@ -461,7 +461,7 @@ int od_pvq_compute_k(double qcg, int itheta, double theta, int noref, int n,
        approximation for the fact that the coefficients aren't identically
        distributed within a band so at low gain the number of dimensions that
        are likely to have a pulse is less than n. */
-    if (nodesync) {
+    if (1) {
       return OD_MAXI(1, (int)floor(.5 + (itheta - .2)*sqrt((n + 2)/2)));
     }
     else {
