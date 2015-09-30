@@ -6190,7 +6190,7 @@ void od_mv_est(od_mv_est_ctx *est, int lambda) {
      this point, the probabilities have been reset by od_adapt_ctx_reset.*/
   for (i = 0; i < 5; i++) {
     for (j = 0; j < 16; j++) {
-      est->mv_small_rate_est[i][j] = (int)((1 << OD_BITRES)
+      est->mv_small_rate_est[i][j] = 32+(int)((1 << OD_BITRES)
        *(OD_LOG2(est->enc->state.adapt.mv_small_cdf[i][15])
        - (OD_LOG2(est->enc->state.adapt.mv_small_cdf[i][j]
        - (j > 0 ? est->enc->state.adapt.mv_small_cdf[i][j - 1] : 0)))) + 0.5);
