@@ -1507,6 +1507,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
 }
 
 int mv_probs[5][2];
+int flag_probs[6][2];
 
 static void od_encode_mv(daala_enc_ctx *enc, int num_refs, od_mv_grid_pt *mvg,
  int vx, int vy, int level, int mv_res, int mv_range_x, int mv_range_y) {
@@ -2128,6 +2129,8 @@ static void od_encode_mvs(daala_enc_ctx *enc, int num_refs) {
          && grid[vy + mvb_sz][vx + mvb_sz].valid
          && grid[vy + mvb_sz][vx - mvb_sz].valid) {
           cdf = od_mv_split_flag_cdf(&enc->state, vx, vy, level);
+          flag_probs[level][0]++;
+          flag_probs[level][1]+=mvp->valid;
           od_encode_cdf_adapt(&enc->ec, mvp->valid,
            cdf, 2, enc->state.adapt.split_flag_increment);
           if (mvp->valid) {
