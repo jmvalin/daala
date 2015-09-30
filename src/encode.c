@@ -1506,6 +1506,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   }
 }
 
+int mv_probs[5][2];
+
 static void od_encode_mv(daala_enc_ctx *enc, int num_refs, od_mv_grid_pt *mvg,
  int vx, int vy, int level, int mv_res, int mv_range_x, int mv_range_y) {
   generic_encoder *model;
@@ -1531,8 +1533,10 @@ static void od_encode_mv(daala_enc_ctx *enc, int num_refs, od_mv_grid_pt *mvg,
   /*Interleave positive and negative values.*/
   model = &enc->state.adapt.mv_model;
   id = OD_MINI(abs(oy), 3)*4 + OD_MINI(abs(ox), 3);
-  od_encode_cdf_adapt(&enc->ec, id, enc->state.adapt.mv_small_cdf[equal_mvs + 1 - (level == 0 && equal_mvs == 4)],
+  od_encode_cdf_adapt(&enc->ec, id, enc->state.adapt.mv_small_cdf[equal_mvs + 1 - 0*(level == 0 && equal_mvs == 4)],
    16, enc->state.adapt.mv_small_increment);
+  mv_probs[equal_mvs][0] += 1;
+  mv_probs[equal_mvs][1] += (id != 0);
   if (abs(ox) >= 3) {
     generic_encode(&enc->ec, model, abs(ox) - 3, mv_range_x,
      &enc->state.adapt.mv_ex[level], 6);
@@ -2085,6 +2089,10 @@ static void od_encode_mvs(daala_enc_ctx *enc, int num_refs) {
   od_mv_grid_pt *mvp;
   od_mv_grid_pt **grid;
   uint16_t *cdf;
+  {
+    int i;
+    for (i=0;i<5;i++) mv_probs[i][0] = mv_probs[i][1] = 0;
+  }
   state = &enc->state;
   nhmvbs = enc->state.nhmvbs;
   nvmvbs = enc->state.nvmvbs;

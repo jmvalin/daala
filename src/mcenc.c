@@ -2199,6 +2199,7 @@ static const int OD_MV_GE3_EST_RATE[256] = {
   128, 128, 128, 128, 128, 128, 128, 144
 };
 
+extern int mv_probs[5][2];
 /*Estimate the number of bits that will be used to encode the given MV and its
    predictor.*/
 static int od_mv_est_cand_bits(od_mv_est_ctx *est, int equal_mvs,
@@ -6190,12 +6191,26 @@ void od_mv_est(od_mv_est_ctx *est, int lambda) {
   est->level_max = est->enc->params.mv_level_max;
   /*Rate estimations. Note that this does not depend on the previous frame: at
      this point, the probabilities have been reset by od_adapt_ctx_reset.*/
-  for (i = 0; i < 5; i++) {
-    for (j = 0; j < 16; j++) {
-      est->mv_small_rate_est[i][j] = (int)((1 << OD_BITRES)
-       *(OD_LOG2(est->enc->state.adapt.mv_small_cdf[i][15])
-       - (OD_LOG2(est->enc->state.adapt.mv_small_cdf[i][j]
-       - (j > 0 ? est->enc->state.adapt.mv_small_cdf[i][j - 1] : 0)))) + 0.5);
+  if (mv_probs[4][0] == 0)
+  {
+    for (i = 0; i < 5; i++) {
+      for (j = 0; j < 16; j++) {
+        est->mv_small_rate_est[i][j] = (int)((1 << OD_BITRES)
+         *(OD_LOG2(est->enc->state.adapt.mv_small_cdf[i][15])
+         - (OD_LOG2(est->enc->state.adapt.mv_small_cdf[i][j]
+         - (j > 0 ? est->enc->state.adapt.mv_small_cdf[i][j - 1] : 0)))) + 0.5);
+      }
+    }
+  }
+  else {
+    for (i = 0; i < 5; i++) {
+      double p;
+      p = (1. + mv_probs[i][1])/(2. + mv_probs[i][0]);
+      for (j = 0; j < 16; j++) {
+        est->mv_small_rate_est[i][j] = 1 + floor(.5 - 8*OD_LOG2((j == 0) ? (1-p) : p/15));
+        /*fprintf(stderr, "%d ", est->mv_small_rate_est[i][j]);*/
+      }
+      /*fprintf(stderr, "\n");*/
     }
   }
   /*If the luma plane is decimated for some reason, then our distortions will
