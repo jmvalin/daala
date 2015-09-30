@@ -3613,8 +3613,7 @@ static void od_mv_est_init_nodes(od_mv_est_ctx *est) {
            indicate the presence of children.
           TODO: Fix a more exact representation.
           TODO: Fix-up child flags for blocks outside the frame border.*/
-        flag_rate = (est->level_min <= level && level < est->level_max) <<
-         (1 + OD_BITRES);
+        flag_rate = (est->level_min <= level && level < est->level_max);
         mv_row[vx].dr = -mv_row[vx].mv_rate - flag_rate;
       }
       else grid[vx].valid = 0;
