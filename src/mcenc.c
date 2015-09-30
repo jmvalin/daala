@@ -6207,7 +6207,7 @@ void od_mv_est(od_mv_est_ctx *est, int lambda) {
       double p;
       p = (1. + mv_probs[i][1])/(2. + mv_probs[i][0]);
       for (j = 0; j < 16; j++) {
-        est->mv_small_rate_est[i][j] = 10 + floor(.5 - 8*OD_LOG2((j == 0) ? (1-p) : p/15));
+        est->mv_small_rate_est[i][j] = 16 + floor(.5 - 8*OD_LOG2((j == 0) ? (1-p) : p/15));
         /*fprintf(stderr, "%d ", est->mv_small_rate_est[i][j]);*/
       }
       /*fprintf(stderr, "\n");*/
