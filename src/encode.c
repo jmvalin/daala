@@ -2082,6 +2082,8 @@ static void od_split_superblocks(daala_enc_ctx *enc, int is_keyframe) {
   }
 }
 
+int flags_prob[10][2];
+
 static void od_encode_mvs(daala_enc_ctx *enc, int num_refs) {
   od_state *state;
   int nhmvbs;
@@ -2116,6 +2118,10 @@ static void od_encode_mvs(daala_enc_ctx *enc, int num_refs) {
       od_encode_mv(enc, num_refs, mvp, vx, vy, 0, mv_res, width, height);
     }
   }
+  {
+    int i;
+    for (i = 0; i < 8; i++) flags_prob[i][0] = flags_prob[i][1] = 0;
+  }
   /*od_ec_acct_add_label(&enc->ec.acct, "mvf-l1");
     od_ec_acct_add_label(&enc->ec.acct, "mvf-l2");
     od_ec_acct_add_label(&enc->ec.acct, "mvf-l3");
@@ -2134,6 +2140,8 @@ static void od_encode_mvs(daala_enc_ctx *enc, int num_refs) {
           cdf = od_mv_split_flag_cdf(&enc->state, vx, vy, level);
           od_encode_cdf_adapt(&enc->ec, mvp->valid,
            cdf, 2, enc->state.adapt.split_flag_increment);
+          flags_prob[level][0]++;
+          flags_prob[level][1] += mvp->valid != 0;
           if (mvp->valid) {
             od_encode_mv(enc, num_refs, mvp, vx, vy, level, mv_res,
              width, height);
@@ -2156,6 +2164,8 @@ static void od_encode_mvs(daala_enc_ctx *enc, int num_refs) {
           cdf = od_mv_split_flag_cdf(&enc->state, vx, vy, level);
           od_encode_cdf_adapt(&enc->ec, mvp->valid,
            cdf, 2, enc->state.adapt.split_flag_increment);
+          flags_prob[level][0]++;
+          flags_prob[level][1] += mvp->valid != 0;
           if (mvp->valid) {
             od_encode_mv(enc, num_refs, mvp, vx, vy, level, mv_res,
              width, height);
