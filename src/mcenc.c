@@ -2198,6 +2198,7 @@ static const int OD_MV_GE3_EST_RATE[256] = {
   128, 128, 128, 128, 128, 128, 128, 128,
   128, 128, 128, 128, 128, 128, 128, 144
 };
+int flag_cost[8];
 
 /*Estimate the number of bits that will be used to encode the given MV and its
    predictor.*/
@@ -2213,6 +2214,7 @@ static int od_mv_est_cand_bits(od_mv_est_ctx *est, int equal_mvs,
   ox = dx - predx;
   oy = dy - predy;
   id = OD_MINI(abs(oy), 3)*4 + OD_MINI(abs(ox), 3);
+  cost += flag_cost[level];
   cost += ((ox != 0) + (oy != 0))*sign_cost;
   cost += est->mv_small_rate_est[equal_mvs][id];
   if (abs(ox) >= 3) {
@@ -2224,7 +2226,7 @@ static int od_mv_est_cand_bits(od_mv_est_ctx *est, int equal_mvs,
   if (ref_pred != ref) {
     cost += 2 << OD_BITRES;
   }
-  return cost;
+  return OD_MAXI(0, cost);
 }
 
 /*Estimate the number of bits that will be used to encode the given MV grid
@@ -6164,6 +6166,8 @@ void od_mv_subpel_refine(od_mv_est_ctx *est, int cost_thresh) {
   od_state_set_mv_res(state, best_mv_res);
 }
 
+extern int flags_prob[10][2];
+
 void od_mv_est(od_mv_est_ctx *est, int lambda) {
   od_state *state;
   od_img_plane *iplane;
@@ -6188,6 +6192,11 @@ void od_mv_est(od_mv_est_ctx *est, int lambda) {
   est->level_min = OD_MINI(est->enc->params.mv_level_min,
    est->enc->params.mv_level_max);
   est->level_max = est->enc->params.mv_level_max;
+  for (i = 0; i < 8; i++) {
+    flag_cost[i] = floor(.5 - 8*OD_LOG2((1.+flags_prob[i][1])/(1. + flags_prob[i][0] - flags_prob[i][1])));
+    printf("%d ", flag_cost[i]);
+  }
+  printf("\n");
   /*Rate estimations. Note that this does not depend on the previous frame: at
      this point, the probabilities have been reset by od_adapt_ctx_reset.*/
   for (i = 0; i < 5; i++) {
