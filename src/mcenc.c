@@ -2226,7 +2226,7 @@ static int od_mv_est_cand_bits(od_mv_est_ctx *est, int equal_mvs,
   if (ref_pred != ref) {
     cost += 2 << OD_BITRES;
   }
-  return OD_MAXI(0, cost);
+  return OD_MAXI(1, cost);
 }
 
 /*Estimate the number of bits that will be used to encode the given MV grid
