@@ -6194,9 +6194,7 @@ void od_mv_est(od_mv_est_ctx *est, int lambda) {
   est->level_max = est->enc->params.mv_level_max;
   for (i = 0; i < 8; i++) {
     flag_cost[i] = floor(.5 - 8*OD_LOG2((1.+flags_prob[i][1])/(1. + flags_prob[i][0] - flags_prob[i][1])));
-    printf("%d ", flag_cost[i]);
   }
-  printf("\n");
   /*Rate estimations. Note that this does not depend on the previous frame: at
      this point, the probabilities have been reset by od_adapt_ctx_reset.*/
   for (i = 0; i < 5; i++) {
