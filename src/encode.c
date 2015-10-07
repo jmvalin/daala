@@ -946,6 +946,10 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   od_coeff preds[OD_BSIZE_MAX*OD_BSIZE_MAX];
   int zzi;
 #endif
+  if (pli == 0) {
+    printf("od_block_encode(): bx = %i, by = %i, pli = %i, bs = %i\n", bx, by,
+     pli, bs);
+  }
   OD_ASSERT(bs >= 0 && bs < OD_NBSIZES);
   n = 1 << (bs + 2);
   bx <<= bs;
@@ -999,6 +1003,15 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   if (ctx->is_keyframe && pli == 0 && !ctx->use_haar_wavelet) {
     od_hv_intra_pred(pred, d, w, bx, by, enc->state.bsize,
      enc->state.bstride, bs);
+  }
+  if (pli == 0) {
+    printf("pred: bx = %i, by = %i, pli = %i, bs = %i\n", bx, by, pli, bs);
+    for (j = 0; j < n; j++) {
+      for (i = 0; i < n; i++) {
+        printf("%s%i", i > 0 ? ", " : "", pred[j*n + i]);
+      }
+      printf("\n");
+    }
   }
 #if defined(OD_OUTPUT_PRED)
   for (zzi = 0; zzi < (n*n); zzi++) preds[zzi] = pred[zzi];
@@ -1071,12 +1084,30 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     od_coding_order_to_raster(&d[bo], w, scalar_out, n);
   }
   /*Apply the inverse transform.*/
+  if (pli == 0) {
+    printf("pre iQM: bx = %i, by = %i, pli = %i, bs = %i\n", bx, by, pli, bs);
+    for (j = 0; j < n; j++) {
+      for (i = 0; i < n; i++) {
+        printf("%s%i", i > 0 ? ", " : "", d[bo + j*w + i]);
+      }
+      printf("\n");
+    }
+  }
 #if !defined(OD_OUTPUT_PRED)
   if (ctx->use_haar_wavelet) {
     od_haar_inv(c + bo, w, d + bo, w, bs + 2);
   }
   else {
     od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
+    if (pli == 0) {
+      printf("pre iDCT: bx = %i, by = %i, pli = %i, bs = %i\n", bx, by, pli, bs);
+      for (j = 0; j < n; j++) {
+        for (i = 0; i < n; i++) {
+          printf("%s%i", i > 0 ? ", " : "", d[bo + j*w + i]);
+        }
+        printf("\n");
+      }
+    }
     (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
   }
 #else
@@ -1092,6 +1123,15 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
 # endif
   (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, preds, n);
 #endif
+  if (pli == 0) {
+    printf("post iDCT: bx = %i, by = %i, pli = %i, bs = %i\n", bx, by, pli, bs);
+    for (j = 0; j < n; j++) {
+      for (i = 0; i < n; i++) {
+        printf("%s%i", i > 0 ? ", " : "", c[bo + j*w + i]);
+      }
+      printf("\n");
+    }
+  }
   /* Allow skipping if it helps the RDO metric, even if the PVQ metric didn't
      skip. */
   if (!skip && has_late_skip_rdo) {
@@ -1163,6 +1203,25 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
     }
     else {
       (*enc->state.opt_vtbl.fdct_2d[bs])(d + bo, w, ctx->c + bo, w);
+      if (pli == 0) {
+        int i;
+        int j;
+        printf("bx = %i, by = %i, pli = %i, bs = %i\n", bx, by, pli, bs);
+        printf("pre fDCT\n");
+        for (j = 0; j < 1 << (OD_LOG_BSIZE0 + bs); j++) {
+          for (i = 0; i < 1 << (OD_LOG_BSIZE0 + bs); i++) {
+            printf("%s%i", i > 0 ? ", " : "", ctx->c[bo + j*w + i]);
+          }
+          printf("\n");
+        }
+        printf("post fDCT\n");
+        for (j = 0; j < 1 << (OD_LOG_BSIZE0 + bs); j++) {
+          for (i = 0; i < 1 << (OD_LOG_BSIZE0 + bs); i++) {
+            printf("%s%i", i > 0 ? ", " : "", d[bo + j*w + i]);
+          }
+          printf("\n");
+        }
+      }
       if (!lossless) od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 0, qm);
     }
   }
@@ -2279,6 +2338,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           if (rdo_only) {
             od_encode_checkpoint(enc, &buf);
           }
+          printf("od_compute_dcts(): rdo_only = %i\n", rdo_only);
           od_compute_dcts(enc, mbctx, pli, sbx, sby, OD_NBSIZES - 1, xdec,
            ydec, mbctx->use_haar_wavelet && !rdo_only);
           od_quantize_haar_dc_sb(enc, mbctx, pli, sbx, sby, xdec, ydec,
@@ -2299,6 +2359,17 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         }
         skipped = od_encode_recursive(enc, mbctx, pli, sbx, sby,
          OD_NBSIZES - 1, xdec, ydec, rdo_only, hgrad, vgrad);
+        if (rdo_only && pli == 0) {
+          printf("od_encode_coefficients(): bx = %i, by = %i, pli = %i, bs = %i\n", sbx, sby, pli, (OD_NBSIZES - 1));
+          for (i = 0; i < 1 << (OD_NBSIZES - 2); i++) {
+            for (j = 0; j < 1 << (OD_NBSIZES - 2); j++) {
+              printf("%s%i", j > 0 ? ", " : "",
+              enc->state.bsize[((sby << (OD_NBSIZES - 1) >> 1) + i)*enc->state.bstride
+               + (sbx <<  (OD_NBSIZES - 1) >> 1) + j]);
+            }
+            printf("\n");
+          }
+        }
         /*Save superblock skip value for use by CLP filter.*/
         if (pli == 0) {
           enc->state.sb_skip_flags[sby*nhsb + sbx] = skipped;
