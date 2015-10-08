@@ -132,7 +132,7 @@ void laplace_encode(od_ec_enc *enc, od_pvq_codeword_ctx *adapt, int x, int ex_q8
     od_ec_encode_cdf_unscaled(enc, sym, cdf, OD_MINI(k + 1, 16));
     if (k > 16)
     {
-      int inc = 32;
+      int inc = 128;
       if (cdf[15] + inc > 32767) {
         for (j = 0; j < 16; j++) {
           adapt->laplace_cdf[ctx][j] = (adapt->laplace_cdf[ctx][j] >> 1) + j + 1;
