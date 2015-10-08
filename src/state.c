@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "x86/x86int.h"
 #endif
 #include "block_size.h"
+#include "laplace_code.h"
 
 /* OD_DC_RES[i] adjusts the quantization of DC for the ith plane.
    These values are based on manual tuning to optimize PSNR-HVS, while also
@@ -506,6 +507,15 @@ void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   OD_CDFS_INIT(state->clpf_cdf, state->clpf_increment >> 2);
   state->q_increment = 128;
   OD_CDFS_INIT(state->q_cdf, state->q_increment >> 2);
+  /*OD_CDFS_INIT(state->laplace_cdf, 32);*/
+  for (i=0;i<128;i++) {
+    int offset;
+    int j;
+    offset = LAPLACE_OFFSET[i];
+    for (j = 0; j < 16; j++) {
+      state->pvq_codeword_ctx.laplace_cdf[i][j] = EXP_CDF_TABLE[i][j] - offset;
+    }
+  }
 }
 
 void od_state_set_mv_res(od_state *state, int mv_res) {

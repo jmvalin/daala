@@ -175,7 +175,7 @@ int run_pvq(od_coeff *X,int len,int N,int fuzz){
     adapt[OD_ADAPT_SUM_EX_Q8] = pvq_adapt.mean_sum_ex_q8;
     adapt[OD_ADAPT_COUNT_Q8] = pvq_adapt.mean_count_q8;
     adapt[OD_ADAPT_COUNT_EX_Q8] = pvq_adapt.mean_count_ex_q8;
-    laplace_encode_vector(&enc,&X[i*N],N,K,adapt,adapt);
+    laplace_encode_vector(&enc,NULL,&X[i*N],N,K,adapt,adapt);
     pvq_adapt.k = adapt[OD_ADAPT_K_Q8];
     pvq_adapt.sum_ex_q8 = adapt[OD_ADAPT_SUM_EX_Q8];
     pvq_adapt.count_q8 = adapt[OD_ADAPT_COUNT_Q8];

@@ -125,6 +125,7 @@ struct od_pvq_codeword_ctx {
   int                 pvq_k1_increment;
   /* CDFs are size 16 despite the fact that we're using less than that. */
   uint16_t        pvq_k1_cdf[4][16];
+  uint16_t laplace_cdf[128][16];
 };
 
 struct od_adapt_ctx {

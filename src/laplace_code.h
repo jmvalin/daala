@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "entdec.h"
 # include "filter.h"
 # include "adapt.h"
+#include "state.h"
 
 #if OD_ACCOUNTING
 # define laplace_decode_special(dec, decay, max, str) laplace_decode_special_(dec, decay, max, str)
@@ -44,8 +45,8 @@ extern const uint16_t EXP_CDF_TABLE[][16];
 extern const uint16_t LAPLACE_OFFSET[];
 
 void laplace_encode_special(od_ec_enc *enc, int x, unsigned decay, int max);
-void laplace_encode(od_ec_enc *enc, int x, int ex_q8, int k);
-void laplace_encode_vector(od_ec_enc *enc, const od_coeff *y, int n, int k,
+void laplace_encode(od_ec_enc *enc, od_pvq_codeword_ctx *adapt, int x, int ex_q8, int k);
+void laplace_encode_vector(od_ec_enc *enc, od_pvq_codeword_ctx *adapt, const od_coeff *y, int n, int k,
                                   int32_t *curr, const int32_t *means);
 
 int laplace_decode_special_(od_ec_dec *dec, unsigned decay, int max OD_ACC_STR);

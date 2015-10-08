@@ -97,7 +97,7 @@ void laplace_encode_special(od_ec_enc *enc, int x, unsigned decay, int max) {
  * @param [in]     ExQ8 expectation of the absolute value of x in Q8
  * @param [in]     K    maximum value of |x|
  */
-void laplace_encode(od_ec_enc *enc, int x, int ex_q8, int k) {
+void laplace_encode(od_ec_enc *enc, od_pvq_codeword_ctx *adapt, int x, int ex_q8, int k) {
   int j;
   int shift;
   int xs;
@@ -105,6 +105,7 @@ void laplace_encode(od_ec_enc *enc, int x, int ex_q8, int k) {
   int sym;
   int decay;
   int offset;
+  int ctx;
   /* shift down x if expectation is too high */
   shift = od_ilog(ex_q8) - 11;
   if (shift < 0) shift = 0;
@@ -113,14 +114,33 @@ void laplace_encode(od_ec_enc *enc, int x, int ex_q8, int k) {
   k = (k + (1 << shift >> 1)) >> shift;
   xs = (x + (1 << shift >> 1)) >> shift;
   decay = OD_MINI(254, 256*ex_q8/(ex_q8 + 256));
+  ctx = ((decay + 1) >> 1);
+#if 0
   offset = LAPLACE_OFFSET[(decay + 1) >> 1];
   for (j = 0; j < 16; j++) {
     cdf[j] = EXP_CDF_TABLE[(decay + 1) >> 1][j] - offset;
   }
+#else
+  for (j = 0; j < 16; j++) {
+      cdf[j] = adapt->laplace_cdf[ctx][j];
+  }
+#endif
   sym = xs;
   if (sym > 15) sym = 15;
   /* Simple way of truncating the pdf when we have a bound */
-  if (k != 0) od_ec_encode_cdf_unscaled(enc, sym, cdf, OD_MINI(k + 1, 16));
+  if (k != 0) {
+    od_ec_encode_cdf_unscaled(enc, sym, cdf, OD_MINI(k + 1, 16));
+    if (k > 16)
+    {
+      int inc = 64;
+      if (cdf[15] + inc > 32767) {
+        for (j = 0; j < 16; j++) {
+          adapt->laplace_cdf[ctx][j] = (adapt->laplace_cdf[ctx][j] >> 1) + j + 1;
+        }
+      }
+      for (j = sym; j < 16; j++) adapt->laplace_cdf[ctx][j] += inc;
+    }
+  }
   if (shift) {
     int special;
     /* Because of the rounding, there's only half the number of possibilities
@@ -136,7 +156,7 @@ void laplace_encode(od_ec_enc *enc, int x, int ex_q8, int k) {
   if (xs >= 15) laplace_encode_special(enc, xs - 15, decay, k - 15);
 }
 
-static void laplace_encode_vector_delta(od_ec_enc *enc, const od_coeff *y, int n, int k,
+static void laplace_encode_vector_delta(od_ec_enc *enc, od_adapt_ctx *adapt, const od_coeff *y, int n, int k,
                                         int32_t *curr, const int32_t *means) {
   int i;
   int prev;
@@ -173,12 +193,12 @@ static void laplace_encode_vector_delta(od_ec_enc *enc, const od_coeff *y, int n
         laplace_encode_special(enc, count, decay, n - 1);
         first = 0;
       }
-      else laplace_encode(enc, count, coef*(n - prev)/k_left, n - prev - 1);
+      else laplace_encode(enc, adapt, count, coef*(n - prev)/k_left, n - prev - 1);
       sum_ex += 256*(n - prev);
       sum_c += count*k_left;
       od_ec_enc_bits(enc, y[i] < 0, 1);
       for (j = 0; j < mag - 1; j++) {
-        laplace_encode(enc, 0, coef*(n - i)/(k_left - 1 - j), n - i - 1);
+        laplace_encode(enc, adapt, 0, coef*(n - i)/(k_left - 1 - j), n - i - 1);
         sum_ex += 256*(n - i);
       }
       k_left -= mag;
@@ -208,7 +228,7 @@ static void laplace_encode_vector_delta(od_ec_enc *enc, const od_coeff *y, int n
  * @param [out]    curr  Adaptation context output, may alias means.
  * @param [in]     means Adaptation context input.
  */
-void laplace_encode_vector(od_ec_enc *enc, const od_coeff *y, int n, int k,
+void laplace_encode_vector(od_ec_enc *enc, od_pvq_codeword_ctx *adapt, const od_coeff *y, int n, int k,
                            int32_t *curr, const int32_t *means) {
   int i;
   int sum_ex;
@@ -219,7 +239,7 @@ void laplace_encode_vector(od_ec_enc *enc, const od_coeff *y, int n, int k,
   int ran_delta;
   ran_delta = 0;
   if (k <= 1) {
-    laplace_encode_vector_delta(enc, y, n, k, curr, means);
+    laplace_encode_vector_delta(enc, adapt, y, n, k, curr, means);
     return;
   }
   sum_ex = 0;
@@ -234,7 +254,7 @@ void laplace_encode_vector(od_ec_enc *enc, const od_coeff *y, int n, int k,
     int x;
     if (kn == 0) break;
     if (kn <= 1 && i != n - 1) {
-      laplace_encode_vector_delta(enc, y + i, n - i, kn, curr, means);
+      laplace_encode_vector_delta(enc, adapt, y + i, n - i, kn, curr, means);
       ran_delta = 1;
       break;
     }
@@ -245,7 +265,7 @@ void laplace_encode_vector(od_ec_enc *enc, const od_coeff *y, int n, int k,
     if (ex > kn*256) ex = kn*256;
     sum_ex += (2*256*kn + (n - i))/(2*(n - i));
     /* No need to encode the magnitude for the last bin. */
-    if (i != n - 1) laplace_encode(enc, x, ex, kn);
+    if (i != n - 1) laplace_encode(enc, adapt, x, ex, kn);
     if (x != 0) od_ec_enc_bits(enc, y[i] < 0, 1);
     kn -= x;
   }

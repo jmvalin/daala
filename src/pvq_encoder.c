@@ -63,7 +63,7 @@ static void od_encode_pvq_codeword(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
     int *pvq_adapt;
     int adapt_curr[OD_NSB_ADAPT_CTXS] = { 0 };
     pvq_adapt = adapt->pvq_adapt + 4*(2*bs + noref);
-    laplace_encode_vector(ec, in, n - !noref, k, adapt_curr,
+    laplace_encode_vector(ec, adapt, in, n - !noref, k, adapt_curr,
      pvq_adapt);
     if (adapt_curr[OD_ADAPT_K_Q8] > 0) {
       pvq_adapt[OD_ADAPT_K_Q8] += (256*adapt_curr[OD_ADAPT_K_Q8]
