@@ -114,7 +114,7 @@ void laplace_encode(od_ec_enc *enc, od_pvq_codeword_ctx *adapt, int x, int ex_q8
   k = (k + (1 << shift >> 1)) >> shift;
   xs = (x + (1 << shift >> 1)) >> shift;
   decay = OD_MINI(254, 256*ex_q8/(ex_q8 + 256));
-  ctx = 2*((decay + 2) >> 2);
+  ctx = OD_MINI(254, 4*((decay + 4) >> 3));
 #if 0
   offset = LAPLACE_OFFSET[(decay + 1) >> 1];
   for (j = 0; j < 16; j++) {
