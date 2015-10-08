@@ -2162,6 +2162,7 @@ static void od_encode_mvs(daala_enc_ctx *enc, int num_refs) {
           cdf = od_mv_split_flag_cdf(&enc->state, vx, vy, level);
           od_encode_cdf_adapt(&enc->ec, mvp->valid,
            cdf, 2, enc->state.adapt.split_flag_increment);
+          /*printf("%d %d %d\n", level, od_mv_split_flag_ctx(enc->state.mv_grid, vx, vy, level), mvp->valid);*/
           if (mvp->valid) {
             od_encode_mv(enc, num_refs, mvp, vx, vy, level, mv_res,
              width, height);
@@ -2184,6 +2185,7 @@ static void od_encode_mvs(daala_enc_ctx *enc, int num_refs) {
           cdf = od_mv_split_flag_cdf(&enc->state, vx, vy, level);
           od_encode_cdf_adapt(&enc->ec, mvp->valid,
            cdf, 2, enc->state.adapt.split_flag_increment);
+          /*printf("%d %d %d\n", level, od_mv_split_flag_ctx(enc->state.mv_grid, vx, vy, level), mvp->valid);*/
           if (mvp->valid) {
             od_encode_mv(enc, num_refs, mvp, vx, vy, level, mv_res,
              width, height);
