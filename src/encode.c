@@ -1554,6 +1554,10 @@ static void od_encode_mv(daala_enc_ctx *enc, int num_refs, od_mv_grid_pt *mvg,
   int id;
   int equal_mvs;
   int ref_pred;
+  int shift = 3-mv_res;
+  int offset = (1 << shift) - 1;
+  int qx;
+  int qy;
   if (num_refs > 1) {
     /* Code reference index. */
     ref_pred = od_mc_get_ref_predictor(&enc->state, vx, vy, level);
@@ -1567,22 +1571,30 @@ static void od_encode_mv(daala_enc_ctx *enc, int num_refs, od_mv_grid_pt *mvg,
    mv_res, mvg->ref);
   ox = (mvg->mv[0] >> mv_res) - pred[0];
   oy = (mvg->mv[1] >> mv_res) - pred[1];
+  qy = (abs(oy) + offset) >> shift;
+  qx = (abs(ox) + offset) >> shift;
   /*Interleave positive and negative values.*/
   model = &enc->state.adapt.mv_model;
-  id = OD_MINI(abs(oy), 3)*4 + OD_MINI(abs(ox), 3);
+  id = OD_MINI(qy, 3)*4 + OD_MINI(qx, 3);
   od_encode_cdf_adapt(&enc->ec, id, enc->state.adapt.mv_small_cdf[equal_mvs],
    16, enc->state.adapt.mv_small_increment);
   /*printf("%d %d\n", equal_mvs*2+(level!=0), id!=0);*/
-  if (abs(ox) >= 3) {
-    generic_encode(&enc->ec, model, abs(ox) - 3, mv_range_x,
+  if (qx >= 3) {
+    generic_encode(&enc->ec, model, qx - 3, mv_range_x,
      &enc->state.adapt.mv_ex[level], 6);
   }
-  if (abs(oy) >= 3) {
-    generic_encode(&enc->ec, model, abs(oy) - 3, mv_range_y,
+  if (qy >= 3) {
+    generic_encode(&enc->ec, model, qy - 3, mv_range_y,
      &enc->state.adapt.mv_ey[level], 6);
   }
-  if (abs(ox)) od_ec_enc_bits(&enc->ec, ox < 0, 1);
-  if (abs(oy)) od_ec_enc_bits(&enc->ec, oy < 0, 1);
+  if (qx) {
+    if (shift) od_ec_enc_bits(&enc->ec, (ox - 1) & offset, shift);
+    od_ec_enc_bits(&enc->ec, ox < 0, 1);
+  }
+  if (qy) {
+    if (shift) od_ec_enc_bits(&enc->ec, (oy - 1) & offset, shift);
+    od_ec_enc_bits(&enc->ec, oy < 0, 1);
+  }
 }
 
 static void od_img_copy_pad(daala_enc_ctx *enc, od_img *img) {
