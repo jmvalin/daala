@@ -6191,9 +6191,9 @@ void od_mv_est(od_mv_est_ctx *est, int lambda) {
   for (i = 0; i < 5; i++) {
     for (j = 0; j < 16; j++) {
       est->mv_small_rate_est[i][j] = (int)((1 << OD_BITRES)
-       *(OD_LOG2(est->enc->state.adapt.mv_small_cdf[99][15])
-       - (OD_LOG2(est->enc->state.adapt.mv_small_cdf[99][j]
-       - (j > 0 ? est->enc->state.adapt.mv_small_cdf[99][j - 1] : 0)))) + 0.5);
+       *(OD_LOG2(est->enc->state.adapt.mv_small_cdf[i][15])
+       - (OD_LOG2(est->enc->state.adapt.mv_small_cdf[i][j]
+       - (j > 0 ? est->enc->state.adapt.mv_small_cdf[i][j - 1] : 0)))) + 0.5);
     }
   }
   /*If the luma plane is decimated for some reason, then our distortions will
