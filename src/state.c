@@ -435,7 +435,7 @@ static const uint16_t OD_MV_SPLIT_FLAG_PROBZ_Q15[OD_MC_LEVEL_MAX][9] = {
   { 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384 }
 };
 
-static const int first[5] = {7, 15, 24, 31, 65};
+static const int first[5] = {5, 14, 30, 30, 70};
 void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   int i;
   int bs;
