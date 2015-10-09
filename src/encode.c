@@ -1570,8 +1570,14 @@ static void od_encode_mv(daala_enc_ctx *enc, int num_refs, od_mv_grid_pt *mvg,
   /*Interleave positive and negative values.*/
   model = &enc->state.adapt.mv_model;
   id = OD_MINI(abs(oy), 3)*4 + OD_MINI(abs(ox), 3);
-  od_encode_cdf_adapt(&enc->ec, id, enc->state.adapt.mv_small_cdf[equal_mvs],
-   16, enc->state.adapt.mv_small_increment);
+  od_encode_cdf_adapt(&enc->ec, id!=0, enc->state.adapt.mv_small_cdf[equal_mvs],
+   2, enc->state.adapt.mv_small_increment);
+  if (id != 0) {
+    od_encode_cdf_adapt(&enc->ec, id-1, enc->state.adapt.mv_small_cdf[5+equal_mvs],
+     15, enc->state.adapt.mv_small_increment);
+
+  }
+  /*printf("%d %d\n", equal_mvs*2+(level!=0), id!=0);*/
   if (abs(ox) >= 3) {
     generic_encode(&enc->ec, model, abs(ox) - 3, mv_range_x,
      &enc->state.adapt.mv_ex[level], 6);

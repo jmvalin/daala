@@ -250,7 +250,11 @@ static void od_decode_mv(daala_dec_ctx *dec, int num_refs, od_mv_grid_pt *mvg,
    mv_res, mvg->ref);
   model = &dec->state.adapt.mv_model;
   id = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.mv_small_cdf[equal_mvs],
-   16, dec->state.adapt.mv_small_increment, "mv:low");
+   2, dec->state.adapt.mv_small_increment, "mv:low");
+  if (id) {
+    id += od_decode_cdf_adapt(&dec->ec, dec->state.adapt.mv_small_cdf[5+equal_mvs],
+      15, dec->state.adapt.mv_small_increment, "mv:low");
+  }
   oy = id >> 2;
   ox = id & 0x3;
   if (ox == 3) {
