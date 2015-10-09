@@ -435,6 +435,7 @@ static const uint16_t OD_MV_SPLIT_FLAG_PROBZ_Q15[OD_MC_LEVEL_MAX][9] = {
   { 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384 }
 };
 
+static const int first[5] = {5, 14, 30, 30, 70};
 void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   int i;
   int bs;
@@ -469,6 +470,18 @@ void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   state->mv_small_increment = 128;
   OD_CDFS_INIT_FIRST(state->mv_small_cdf, state->mv_small_increment,
    10*state->mv_small_increment);
+  for (i = 0; i < 100; i++) {
+    int j;
+    for (j = 0; j < 16; j++) {
+      state->mv_small_cdf[i][j] = (10 + j)*state->mv_small_increment;
+    }
+  }
+  for (i = 0; i < 5; i++) {
+    int j;
+    for (j = 0; j < 16; j++) {
+      state->mv_small_cdf[i][j] = (first[i] + j)*state->mv_small_increment;
+    }
+  }
   state->split_flag_increment = 128;
   for (level = 0; level < OD_MC_LEVEL_MAX; level++) {
     for (i = 0; i < 9; i++) {
