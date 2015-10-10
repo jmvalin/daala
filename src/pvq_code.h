@@ -45,7 +45,7 @@ void od_encode_quantizer_scaling(daala_enc_ctx *enc, int q_scaling, int bx,
 int od_pvq_encode(daala_enc_ctx *enc, od_coeff *predt, od_coeff *cblock,
                    od_coeff *scalar_out, int scale, int pli, int bs,
                    const double *beta, int robust, int is_keyframe,
-                   int q_scaling, int bx, int by);
+                   int q_scaling, int bx, int by, int rdo_only);
 
 void od_pvq_decode(daala_dec_ctx *dec, od_coeff *ref, od_coeff *out, int scale,
                    int pli, int bs, const double *beta, int robust,

@@ -310,7 +310,7 @@ static double od_pvq_rate(int qg, int icgr, int theta, int ts,
 static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
  od_coeff *y, int *itheta, int *max_theta, int *vk,
  double beta, double *skip_diff, int robust, int is_keyframe, int pli,
- const od_adapt_ctx *adapt, int bs) {
+ const od_adapt_ctx *adapt, int bs, int rdo_only) {
   double g;
   double gr;
   double x[MAXN];
@@ -344,6 +344,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
   int cfl_enabled;
   int skip;
   double gain_weight;
+  int dont_code=0;
   lambda = OD_PVQ_LAMBDA;
   /* Give more weight to gain error when calculating the total distortion. */
   gain_weight = 1.4;
@@ -394,7 +395,8 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
     *max_theta = 0;
     noref = 0;
   }
-  if (n <= 128 && !od_vector_is_null(r0, n) && corr > 0) {
+  if (n > 32 && rdo_only) dont_code=1;
+  if (!dont_code && !od_vector_is_null(r0, n) && corr > 0) {
     /* Perform theta search only if prediction is useful. */
     theta = acos(corr);
     m = od_compute_householder(r, n, gr, &s);
@@ -447,7 +449,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
   /* Don't bother with no-reference version if there's a reasonable
      correlation. The only exception is luma on a keyframe because
      H/V prediction is unreliable. */
-  if (n <= 128 &&  ((is_keyframe && pli == 0) || corr < .5 || cg < 2.)) {
+  if (!dont_code &&  ((is_keyframe && pli == 0) || corr < .5 || cg < 2.)) {
     double x1[MAXN];
     for (i = 0; i < n; i++) x1[i] = x0[i];
     /* Search for the best gain (haven't determined reasonable range yet). */
@@ -648,7 +650,8 @@ int od_pvq_encode(daala_enc_ctx *enc,
                    int is_keyframe,
                    int q_scaling,
                    int bx,
-                   int by){
+                   int by,
+                   int rdo_only){
   int theta[PVQ_MAX_PARTITIONS];
   int max_theta[PVQ_MAX_PARTITIONS];
   int qg[PVQ_MAX_PARTITIONS];
@@ -700,7 +703,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
     qg[i] = pvq_theta(out + off[i], in + off[i], ref + off[i], size[i],
      q, y + off[i], &theta[i], &max_theta[i],
      &k[i], beta[i], &skip_diff, robust, is_keyframe, pli, &enc->state.adapt,
-     bs);
+     bs, rdo_only);
   }
   od_encode_checkpoint(enc, &buf);
   if (is_keyframe) out[0] = 0;
