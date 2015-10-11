@@ -1849,16 +1849,16 @@ void od_dering(int16_t *y, int ystride, int16_t *x, int xstride, int ln,
         int best_dir = 0;
         for (i = 0; i < 8; i++) cost2[i] = cost[by][bx][i];
         if (by > 0) {
-          for (i = 0; i < 8; i++) cost2[i] += cost[by - 1][bx][i] >> 3;
+          for (i = 0; i < 8; i++) cost2[i] += cost[by - 1][bx][i] >> 4;
         }
         if (bx > 0) {
-          for (i = 0; i < 8; i++) cost2[i] += cost[by][bx - 1][i] >> 3;
+          for (i = 0; i < 8; i++) cost2[i] += cost[by][bx - 1][i] >> 4;
         }
         if (by < nvb - 1) {
-          for (i = 0; i < 8; i++) cost2[i] += cost[by + 1][bx][i] >> 3;
+          for (i = 0; i < 8; i++) cost2[i] += cost[by + 1][bx][i] >> 4;
         }
         if (bx < nhb - 1) {
-          for (i = 0; i < 8; i++) cost2[i] += cost[by][bx + 1][i] >> 3;
+          for (i = 0; i < 8; i++) cost2[i] += cost[by][bx + 1][i] >> 4;
         }
         for (i = 0; i < 8; i++) {
           if (cost2[i] > best_cost) {
