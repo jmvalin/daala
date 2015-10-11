@@ -416,7 +416,11 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
         double cos_dist;
         double cost;
         double dist_theta;
+        double null_cost;
         double qtheta = od_pvq_compute_theta(j, ts);
+        null_cost = gain_weight*(qcg - cg)*(qcg - cg) + qcg*cg*(2 - 2*cos(theta - qtheta));
+        null_cost -= .5*lambda*(i == icgr);
+        if (null_cost > best_cost) continue;
         k = od_pvq_compute_k(qcg, j, qtheta, 0, n, beta, robust || is_keyframe);
         /* PVQ search, using a gain of qcg*cg*sin(theta)*sin(qtheta) since
            that's the factor by which cos_dist is multiplied to get the
@@ -455,7 +459,11 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
       double cos_dist;
       double cost;
       double qcg;
+      double null_cost;
       qcg = i;
+      null_cost = gain_weight*(qcg - cg)*(qcg - cg);
+      null_cost -= .5*lambda*(i == icgr);
+      if (null_cost > best_cost) continue;
       k = od_pvq_compute_k(qcg, -1, -1, 1, n, beta, robust || is_keyframe);
       cos_dist = pvq_search_rdo_double(x1, n, k, y_tmp, qcg*cg);
       /* See Jmspeex' Journal of Dubious Theoretical Results. */
