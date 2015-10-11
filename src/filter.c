@@ -1618,9 +1618,9 @@ void od_apply_postfilter_frame_sbs(od_coeff *c0, int stride, int nhsb,
    in a particular direction. Since each direction have the same sum(x^2) term,
    that term is never computed. See Section 2, step 2, of:
    http://jmvalin.ca/notes/intra_paint.pdf */
-static int od_dir_find8(const int16_t *img, int stride, int32_t *var) {
+static int od_dir_find8(const int16_t *img, int stride, int32_t *var,
+ int32_t *cost) {
   int i;
-  int cost[8] = {0};
   int partial[8][15] = {{0}};
   int best_cost = 0;
   int best_dir = 0;
@@ -1808,6 +1808,7 @@ void od_dering(int16_t *y, int ystride, int16_t *x, int xstride, int ln,
   int varsum = 0;
   int32_t var[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
   int thresh[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
+  int cost[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS][8] = {{{0}}};
   n = 1 << ln;
   bsize = 3 - xdec;
   nhb = nvb = n >> bsize;
@@ -1837,8 +1838,35 @@ void od_dering(int16_t *y, int ystride, int16_t *x, int xstride, int ln,
     for (by = 0; by < nvb; by++) {
       for (bx = 0; bx < nhb; bx++) {
         dir[by][bx] = od_dir_find8(&x[8*by*xstride + 8*bx], xstride,
-         &var[by][bx]);
+         &var[by][bx], &cost[by][bx][0]);
         varsum += var[by][bx];
+      }
+    }
+    for (by = 0; by < nvb; by++) {
+      for (bx = 0; bx < nhb; bx++) {
+        int32_t cost2[8];
+        int best_cost = 0;
+        int best_dir = 0;
+        for (i = 0; i < 8; i++) cost2[i] = cost[by][bx][i];
+        if (by > 0) {
+          for (i = 0; i < 8; i++) cost2[i] += cost[by - 1][bx][i] >> 3;
+        }
+        if (bx > 0) {
+          for (i = 0; i < 8; i++) cost2[i] += cost[by][bx - 1][i] >> 3;
+        }
+        if (by < nvb - 1) {
+          for (i = 0; i < 8; i++) cost2[i] += cost[by + 1][bx][i] >> 3;
+        }
+        if (bx < nhb - 1) {
+          for (i = 0; i < 8; i++) cost2[i] += cost[by][bx + 1][i] >> 3;
+        }
+        for (i = 0; i < 8; i++) {
+          if (cost2[i] > best_cost) {
+            best_cost = cost2[i];
+            best_dir = i;
+          }
+        }
+        dir[by][bx] = best_dir;
       }
     }
     od_compute_thresh(thresh, threshold, var, varsum, nhb, nvb);
