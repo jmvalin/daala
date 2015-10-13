@@ -518,7 +518,7 @@ bool TestPanel::open(const wxString &path) {
     close();
     return false;
   }
-  dering_len = nhsb*nvsb;
+  dering_len = 2*nhsb*2*nvsb;
   dering = (unsigned char *)malloc(dering_len);
   if (!dd.setDeringFlagsBuffer(dering, dering_len)) {
     fprintf(stderr,"Could not set dering flags buffer\n");
@@ -693,9 +693,9 @@ void TestPanel::render() {
       if (show_dering) {
         int sbx;
         int sby;
-        sbx = i >> OD_LOG_BSIZE0 + OD_NBSIZES - 1;
-        sby = j >> OD_LOG_BSIZE0 + OD_NBSIZES - 1;
-        if (!dering[sby*nhsb + sbx]) {
+        sbx = i >> OD_LOG_BSIZE0 + OD_NBSIZES - 2;
+        sby = j >> OD_LOG_BSIZE0 + OD_NBSIZES - 2;
+        if (!dering[sby*2*nhsb + sbx]) {
           yval = 0;
         }
       }

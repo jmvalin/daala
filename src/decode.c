@@ -197,7 +197,7 @@ int daala_decode_ctl(daala_dec_ctx *dec, int req, void *buf, size_t buf_sz) {
       OD_RETURN_CHECK(dec, OD_EFAULT);
       OD_RETURN_CHECK(buf, OD_EFAULT);
       OD_RETURN_CHECK(
-       buf_sz == sizeof(unsigned char)*dec->state.nvsb*dec->state.nhsb,
+       buf_sz == sizeof(unsigned char)*2*dec->state.nvsb*2*dec->state.nhsb,
        OD_EINVAL);
       dec->user_dering = (unsigned char *)buf;
       return OD_SUCCESS;
@@ -807,7 +807,7 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
     for (i = 0; i < 1 << bs; i++) {
       for (j = 0; j < 1 << bs; j++) {
         dec->state.bskip[pli][((by << bs) + i)*dec->state.skip_stride
-         + (bx << bs) + j] = (skip == 2) && !ctx->is_keyframe;
+         + (bx << bs) + j] = (skip == 2);
       }
     }
 
@@ -1033,28 +1033,38 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
         state->etmp[pli][i] = state->ctmp[pli][i];
       }
     }
-    for (sby = 0; sby < nvsb; sby++) {
-      for (sbx = 0; sbx < nhsb; sbx++) {
+    for (sby = 0; sby < 2*nvsb; sby++) {
+      for (sbx = 0; sbx < 2*nhsb; sbx++) {
         int filtered;
         int c;
         int up;
         int left;
-        if (state->sb_skip_flags[sby*nhsb + sbx]) {
-          state->dering_flags[sby*nhsb + sbx] = 0;
+        int i;
+        int j;
+        state->dering_flags[sby*2*nhsb + sbx] = 0;
+        for (i = 0; i < 1 << 3; i++) {
+          for (j = 0; j < 1 << 3; j++) {
+            if (!dec->state.bskip[0][((sby << 3) + i)*dec->state.skip_stride
+             + (sbx << 3) + j]) {
+              state->dering_flags[sby*2*nhsb + sbx] = 1;
+            }
+          }
+        }
+        if (!state->dering_flags[sby*2*nhsb + sbx]) {
           continue;
         }
         up = 0;
         if (sby > 0) {
-          up = state->dering_flags[(sby - 1)*nhsb + sbx];
+          up = state->dering_flags[(sby - 1)*2*nhsb + sbx];
         }
         left = 0;
         if (sbx > 0) {
-          left = state->dering_flags[sby*nhsb + (sbx - 1)];
+          left = state->dering_flags[sby*2*nhsb + (sbx - 1)];
         }
         c = (up << 1) + left;
         filtered = od_decode_cdf_adapt(&dec->ec, state->adapt.clpf_cdf[c], 2,
          state->adapt.clpf_increment, "clp");
-        state->dering_flags[sby*nhsb + sbx] = filtered;
+        state->dering_flags[sby*2*nhsb + sbx] = filtered;
         if (filtered) {
           for (pli = 0; pli < nplanes; pli++) {
             int16_t buf[OD_BSIZE_MAX*OD_BSIZE_MAX];
@@ -1066,22 +1076,22 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
             ydec = dec->output_img.planes[pli].ydec;
             w = frame_width >> xdec;
             h = frame_height >> ydec;
-            ln = OD_LOG_BSIZE_MAX - xdec;
+            ln = OD_LOG_BSIZE_MAX - 1 - xdec;
             n = 1 << ln;
             OD_ASSERT(xdec == ydec);
             /*buf is used for output so that we don't use filtered pixels in
               the input to the filter, but because we look past block edges,
               we do this anyway on the edge pixels. Unfortunately, this limits
               potential parallelism.*/
-            od_dering(buf, OD_BSIZE_MAX, &state->etmp[pli][(sby << ln)*w +
-             (sbx << ln)], w, ln, sbx, sby, nhsb, nvsb, dec->quantizer[pli],
+            od_dering(buf, OD_BSIZE_MAX/2, &state->etmp[pli][(sby << ln)*w +
+             (sbx << ln)], w, ln, sbx, sby, 2*nhsb, 2*nvsb, dec->quantizer[pli],
              xdec, dir, pli, &dec->state.bskip[pli]
-             [(sby << (OD_NBSIZES - 1 - ydec))*dec->state.skip_stride
-             + (sbx << (OD_NBSIZES - 1 - xdec))], dec->state.skip_stride);
+             [(sby << (OD_NBSIZES - 2 - ydec))*dec->state.skip_stride
+             + (sbx << (OD_NBSIZES - 2 - xdec))], dec->state.skip_stride);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {
-                output[y*w + x] = buf[y*OD_BSIZE_MAX + x];
+                output[y*w + x] = buf[y*OD_BSIZE_MAX/2 + x];
               }
             }
           }
@@ -1089,17 +1099,17 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
       }
     }
     if (dec->user_dering != NULL) {
-      for (sby = 0; sby < nvsb; sby++) {
-        for (sbx = 0; sbx < nhsb; sbx++) {
-          dec->user_dering[sby*nhsb + sbx] =
-           state->dering_flags[sby*nhsb + sbx];
+      for (sby = 0; sby < 2*nvsb; sby++) {
+        for (sbx = 0; sbx < 2*nhsb; sbx++) {
+          dec->user_dering[sby*2*nhsb + sbx] =
+           state->dering_flags[sby*2*nhsb + sbx];
         }
       }
     }
   }
   else {
     if (dec->user_dering != NULL) {
-      OD_CLEAR(dec->user_dering, nhsb*nvsb);
+      OD_CLEAR(dec->user_dering, 2*nhsb*2*nvsb);
     }
   }
   for (pli = 0; pli < nplanes; pli++) {
