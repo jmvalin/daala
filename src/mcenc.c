@@ -3358,7 +3358,7 @@ static int od_mv_dddr_cmp(int32_t dd1, int dr1,
 static int od_mv_dddr_cmp(int32_t dd1, int dr1,
  int32_t dd2, int dr2) {
   double diff;
-  double lambda = .7;
+  double lambda = 1.7;
   diff = (dd2-dd1) - lambda*(dr1-dr2);
   if (diff < 0) return 1;
   else if (diff > 0) return -1;
