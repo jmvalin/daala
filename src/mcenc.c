@@ -3339,6 +3339,7 @@ static const od_mv_err_node *OD_ERRDOM[OD_MC_LEVEL_MAX] = {
   OD_ERRDOM6
 };
 
+#if 0
 /*Returns a negative value, 0, or a positive value, depending on whether
   -dd1/dr1 is less, equal or greater than -dd2/dr2.*/
 static int od_mv_dddr_cmp(int32_t dd1, int dr1,
@@ -3353,6 +3354,17 @@ static int od_mv_dddr_cmp(int32_t dd1, int dr1,
   diff = dd2*(int64_t)dr1 - dd1*(int64_t)dr2;
   return OD_SIGNI(diff);
 }
+#else
+static int od_mv_dddr_cmp(int32_t dd1, int dr1,
+ int32_t dd2, int dr2) {
+  double diff;
+  double lambda = 1;
+  diff = (dd2-dd1) - lambda*(dr1-dr2);
+  if (diff < 0) return 1;
+  else if (diff > 0) return -1;
+  else return 0;
+}
+#endif
 
 /*Compare two nodes on the decimation heap.*/
 static int od_mv_dec_cmp(od_mv_node *n1, od_mv_node *n2) {
