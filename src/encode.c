@@ -1173,12 +1173,15 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
 #endif
       skip = 1;
       for (i = 0; i < n; i++) {
-        for (j = 0; j < n; j++) {
-          d[bo + i*w + j] = md[bo + i*w + j];
-        }
+        for (j = 0; j < n; j++) c[bo + i*w + j] = mc_orig[n*i + j];
       }
-      od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
-      (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
+      /*od_apply_qm(d + bo, w, d + bo, w, bs, xdec, 1, qm);
+      (*enc->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);*/
+    }
+  }
+  if (skip && has_late_skip_rdo) {
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) c[bo + i*w + j] = mc_orig[n*i + j];
     }
   }
   return skip;

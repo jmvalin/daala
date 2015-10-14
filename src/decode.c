@@ -616,6 +616,13 @@ static void od_block_decode(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int bs,
     /*Apply the inverse transform.*/
     (*dec->state.opt_vtbl.idct_2d[bs])(c + bo, w, d + bo, w);
   }
+  if (skip==2 && !ctx->is_keyframe) {
+    int i;
+    int j;
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) c[bo + i*w + j] = mc[bo + i*w + j];
+    }
+  }
 }
 
 #if !OD_DISABLE_HAAR_DC
