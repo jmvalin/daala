@@ -218,7 +218,7 @@ struct od_state{
       The `bstride` member has the distance between vertically adjacent
       entries (horizontally adjacent entries are adjacent in memory). */
   unsigned char *bsize;
-  int *brate;
+  int *brate[OD_NPLANES_MAX];
   int                 bstride;
   unsigned char *bskip[3];
   int                 skip_stride;

@@ -917,8 +917,10 @@ static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
       /* We attempt to consider the basis magnitudes here, though that's not
          perfect for block size 16x16 and above since only some edges are
          filtered then. */
-      mag *= OD_BASIS_MAG[0][bs][i << (bs - 1)]*
-       OD_BASIS_MAG[0][bs][j << (bs - 1)];
+      if (bs >= 0) {
+        mag *= OD_BASIS_MAG[0][bs][i << (bs - 1)]*
+          OD_BASIS_MAG[0][bs][j << (bs - 1)];
+      }
       mag *= mag;
       sum += et[8*i + j]*(double)et[8*i + j]*mag;
     }
@@ -1428,7 +1430,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
         for (j = 0; j < nb; j++) {
           int idx;
           idx = ((by << bsi >> 1) + i)*enc->state.bstride + (bx << bsi >> 1) + j;
-          enc->state.brate[idx] += bits_q3;
+          enc->state.brate[pli][idx] += bits_q3;
         }
       }
     }
@@ -1527,7 +1529,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
           for (j = 0; j < nb; j++) {
             int idx;
             idx = ((by << bsi >> 1) + i)*enc->state.bstride + (bx << bsi >> 1) + j;
-            enc->state.brate[idx] += bits_q3;
+            enc->state.brate[pli][idx] += bits_q3;
           }
         }
       }
@@ -2844,12 +2846,12 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration) {
     od_predict_frame(enc);
     od_encode_mvs(enc, mbctx.num_refs);
   }
-  {
+  for (pli = 0; pli < nplanes; pli++){
     int i;
     int j;
     for (i = 0; i < 4*enc->state.nvsb; i++) {
       for (j = 0; j < 4*enc->state.nhsb; j++) {
-        enc->state.brate[i*enc->state.bstride + j] = 0;
+        enc->state.brate[pli][i*enc->state.bstride + j] = 0;
       }
     }
   }
@@ -2858,12 +2860,13 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration) {
   if (enc->complexity >= 2) od_split_superblocks_rdo(enc, &mbctx);
   else od_split_superblocks(enc, mbctx.is_keyframe);
   od_encode_coefficients(enc, &mbctx, OD_ENCODE_REAL);
-  if (!mbctx.is_keyframe) {
+  for (pli = 0; pli < nplanes; pli++){
     int i;
     int j;
     for (i = 0; i < 4*enc->state.nvsb; i++) {
       for (j = 0; j < 4*enc->state.nhsb; j++) {
-        printf("%d ", enc->state.brate[i*enc->state.bstride + j]);
+
+        printf("%d ", enc->state.brate[pli][i*enc->state.bstride + j]);
       }
       printf("\n");
     }

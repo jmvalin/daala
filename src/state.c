@@ -323,10 +323,12 @@ static int od_state_init_impl(od_state *state, const daala_info *info) {
   if (OD_UNLIKELY(!state->bsize)) {
     return OD_EFAULT;
   }
-  state->brate = (unsigned char *)malloc(
-   sizeof(*state->brate)*(state->nhsb + 2)*4*(state->nvsb + 2)*4);
-  if (OD_UNLIKELY(!state->brate)) {
-    return OD_EFAULT;
+  for (pli = 0; pli < nplanes; pli++) {
+    state->brate[pli] = (unsigned char *)malloc(
+      sizeof(state->brate[pli][0])*(state->nhsb + 2)*4*(state->nvsb + 2)*4);
+    if (OD_UNLIKELY(!state->brate[pli])) {
+      return OD_EFAULT;
+    }
   }
   state->bstride = (state->nhsb + 2)*4;
   state->bsize += 4*state->bstride + 4;
