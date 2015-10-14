@@ -1407,6 +1407,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     int skip;
     int i;
     int j;
+    int tell;
     bs -= xdec;
     /*Construct the luma predictors for chroma planes.*/
     if (ctx->l != NULL) {
@@ -1415,7 +1416,22 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
        ctx->d[0] + (by << (2 + bsi))*frame_width + (bx << (2 + bsi)),
        frame_width, xdec, ydec, bs, obs);
     }
+    tell = od_ec_enc_tell_frac(&enc->ec);
     skip = od_block_encode(enc, ctx, bs, pli, bx, by, rdo_only);
+    tell = (int)od_ec_enc_tell_frac(&enc->ec) - tell;
+    if (!rdo_only) {
+      int bits_q3;
+      int nb;
+      nb = 1 << OD_MAXI(0, bsi - 1);
+      bits_q3 = (64*tell + nb*nb/2)/(nb*nb);
+      for (i = 0; i < nb; i++) {
+        for (j = 0; j < nb; j++) {
+          int idx;
+          idx = ((by << bsi >> 1) + i)*enc->state.bstride + (bx << bsi >> 1) + j;
+          enc->state.brate[idx] += bits_q3;
+        }
+      }
+    }
     for (i = 0; i < 1 << bs; i++) {
       for (j = 0; j < 1 << bs; j++) {
         enc->state.bskip[pli][((by << bs) + i)*enc->state.skip_stride
@@ -1488,6 +1504,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     if (!ctx->is_keyframe) od_prefilter_split(ctx->mc + bo, w, bs, f);
     skip_split = 1;
     if (pli == 0) {
+      int tell_flag;
+      tell_flag = od_ec_enc_tell_frac(&enc->ec);
       /* Code the "split this block" symbol (4). */
       od_encode_cdf_adapt(&enc->ec, 4,
        enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 5,
@@ -1497,6 +1515,22 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
         od_encode_quantizer_scaling(enc, ctx->q_scaling, bx, by, 0);
       }
 #endif
+      if (!rdo_only) {
+        int i;
+        int j;
+        int bits_q3;
+        int nb;
+        tell_flag = (int)od_ec_enc_tell_frac(&enc->ec) - tell_flag;
+        nb = 1 << OD_MAXI(0, bsi - 1);
+        bits_q3 = (64*tell_flag + nb*nb/2)/(nb*nb);
+        for (i = 0; i < nb; i++) {
+          for (j = 0; j < nb; j++) {
+            int idx;
+            idx = ((by << bsi >> 1) + i)*enc->state.bstride + (bx << bsi >> 1) + j;
+            enc->state.brate[idx] += bits_q3;
+          }
+        }
+      }
     }
     if (ctx->is_keyframe) {
       od_quantize_haar_dc_level(enc, ctx, pli, 2*bx, 2*by, bsi - 1, xdec,
@@ -2810,11 +2844,30 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration) {
     od_predict_frame(enc);
     od_encode_mvs(enc, mbctx.num_refs);
   }
+  {
+    int i;
+    int j;
+    for (i = 0; i < 4*enc->state.nvsb; i++) {
+      for (j = 0; j < 4*enc->state.nhsb; j++) {
+        enc->state.brate[i*enc->state.bstride + j] = 0;
+      }
+    }
+  }
   /* Enable block size RDO for all but complexity 0 and 1. We might want to
      revise that choice if we get a better open-loop block size algorithm. */
   if (enc->complexity >= 2) od_split_superblocks_rdo(enc, &mbctx);
   else od_split_superblocks(enc, mbctx.is_keyframe);
   od_encode_coefficients(enc, &mbctx, OD_ENCODE_REAL);
+  if (!mbctx.is_keyframe) {
+    int i;
+    int j;
+    for (i = 0; i < 4*enc->state.nvsb; i++) {
+      for (j = 0; j < 4*enc->state.nhsb; j++) {
+        printf("%d ", enc->state.brate[i*enc->state.bstride + j]);
+      }
+      printf("\n");
+    }
+  }
   ref_img = enc->state.ref_imgs + enc->state.ref_imgi[OD_FRAME_SELF];
 #if defined(OD_DUMP_IMAGES) || defined(OD_DUMP_RECONS)
   /*Dump YUV*/
