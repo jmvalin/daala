@@ -143,7 +143,7 @@ const int OD_QM8_Q4_FLAT[] = {
   16, 16, 16, 16, 16, 16, 16, 16,
   16, 16, 16, 16, 16, 16, 16, 16
 };
-# if 0
+# if 1
 /* M1: MPEG2 matrix for inter (which has a dead zone). */
 const int OD_QM8_Q4[] = {
   16, 17, 18, 19, 20, 21, 22, 23,
@@ -181,7 +181,7 @@ const int OD_QM8_Q4[] = {
   42, 37, 40, 45, 51, 58, 66, 73
 };
 # endif
-# if 1
+# if 0
 /* M4: a compromise equal to .5*(M3 + .5*(M2+transpose(M2))) */
 const int OD_QM8_Q4_HVS[] = {
   16, 16, 18, 21, 24, 28, 32, 36,
