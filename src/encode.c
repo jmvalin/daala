@@ -1527,7 +1527,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       dist_split = od_compute_dist(enc, c_orig, split, n, bs);
       dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs);
       lambda = od_bs_rdo_lambda(enc->quantizer[pli]);
-      if (skip_split || dist_nosplit + lambda*rate_nosplit < dist_split
+      if (dist_nosplit + lambda*rate_nosplit < dist_split
        + lambda*rate_split) {
         /* This rollback call leaves the entropy coder in an inconsistent state
            because the bytes in the buffer are not being copied back. This is
