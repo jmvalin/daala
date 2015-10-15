@@ -262,6 +262,7 @@ void od_apply_qm(od_coeff *out, int out_stride, od_coeff *in, int in_stride,
  int bs, int dec, int inverse, const int *qm) {
   int i;
   int j;
+  return;
   for (i = 0; i < 4 << bs; i++) {
     for (j = 0; j < 4 << bs; j++) {
       double mag;
