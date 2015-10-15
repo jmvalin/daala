@@ -145,7 +145,7 @@ const int OD_QM8_Q4_FLAT[] = {
 };
 # if 1
 /* M1: MPEG2 matrix for inter (which has a dead zone). */
-const int OD_QM8_Q4[] = {
+const int OD_QM8_Q4_HVS[] = {
   16, 17, 18, 19, 20, 21, 22, 23,
   17, 18, 19, 20, 21, 22, 23, 24,
   18, 19, 20, 21, 22, 23, 24, 25,
@@ -157,7 +157,7 @@ const int OD_QM8_Q4[] = {
 # endif
 # if 0
 /* M2: MPEG2 matrix for intra (no dead zone). */
-const int OD_QM8_Q4[] = {
+const int OD_QM8_Q4_HVS[] = {
   16, 16, 19, 22, 22, 26, 26, 27,
   16, 16, 22, 22, 26, 27, 27, 29,
   19, 22, 26, 26, 27, 29, 29, 35,
@@ -170,7 +170,7 @@ const int OD_QM8_Q4[] = {
 # endif
 # if 0
 /* M3: Taken from dump_psnrhvs. */
-const int OD_QM8_Q4[] = {
+const int OD_QM8_Q4_HVS[] = {
   16, 16, 17, 20, 24, 29, 36, 42,
   16, 17, 17, 19, 22, 26, 31, 37,
   17, 17, 21, 23, 26, 30, 34, 40,
