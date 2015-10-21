@@ -1713,7 +1713,6 @@ void od_new_clp(int16_t *y, int ystride, int16_t *in,
  int ln, int threshold, int dir) {
   int i;
   int j;
-  return;
   for (i = 0; i < 1 << ln; i++) {
     for (j = 0; j < 1 << ln; j++) {
       int x;
@@ -1941,7 +1940,7 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
       if (skip) thresh[by][bx] = 0;
     }
   }
-#if 0
+#if 1
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       (*state->opt_vtbl.filter_dering_direction[bsize - OD_LOG_BSIZE0])(
@@ -1964,7 +1963,11 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
        thresh[by][bx], dir[by][bx]);
     }
   }
-#else
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      in[i*OD_FILT_BSTRIDE + j] = y[i*ystride + j];
+    }
+  }
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       od_new_clp(&y[(by*ystride << bsize) + (bx << bsize)], ystride,
