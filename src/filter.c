@@ -1714,31 +1714,38 @@ void od_new_clp(int16_t *y, int ystride, int16_t *in,
   int i;
   int j;
   /* Don't filter if sub-block is skipped. */
-  if (threshold == 0) return;
-  for (i = 0; i < 1 << ln; i++) {
-    for (j = 0; j < 1 << ln; j++) {
-      int x;
-      int x0;
-      int x1;
-      int x2;
-      int x3;
-      x = in[i*OD_FILT_BSTRIDE + j];
-      x0 = in[i*OD_FILT_BSTRIDE + j + 1];
-      x1 = in[i*OD_FILT_BSTRIDE + j - 1];
-      x2 = in[(i + 1)*OD_FILT_BSTRIDE + j];
-      x3 = in[(i - 1)*OD_FILT_BSTRIDE + j];
-      /* We use 16 here because the pixels are shifted up by 4. */
-      if ((x0 > x + 16) + (x1 > x + 16) + (x2 > x + 16) + (x3 > x + 16)) {
-        x += 16;
+  if (threshold == 0) {
+    for (i = 0; i < 1 << ln; i++) {
+      for (j = 0; j < 1 << ln; j++) {
+        y[i*ystride + j] = in[i*OD_FILT_BSTRIDE + j];
       }
-      if ((x0 < x - 16) + (x1 < x - 16) + (x2 < x - 16) + (x3 < x - 16)) {
-        x -= 16;
+    }
+  }
+  else {
+    for (i = 0; i < 1 << ln; i++) {
+      for (j = 0; j < 1 << ln; j++) {
+        int x;
+        int x0;
+        int x1;
+        int x2;
+        int x3;
+        x = in[i*OD_FILT_BSTRIDE + j];
+        x0 = in[i*OD_FILT_BSTRIDE + j + 1];
+        x1 = in[i*OD_FILT_BSTRIDE + j - 1];
+        x2 = in[(i + 1)*OD_FILT_BSTRIDE + j];
+        x3 = in[(i - 1)*OD_FILT_BSTRIDE + j];
+        /* We use 16 here because the pixels are shifted up by 4. */
+        if ((x0 > x + 16) + (x1 > x + 16) + (x2 > x + 16) + (x3 > x + 16)) {
+          x += 16;
+        }
+        if ((x0 < x - 16) + (x1 < x - 16) + (x2 < x - 16) + (x3 < x - 16)) {
+          x -= 16;
+        }
+        y[i*ystride + j] = x;
       }
-      y[i*ystride + j] = x;
     }
   }
 }
-
 /* Smooth in the direction detected. */
 void od_filter_dering_direction_c(int16_t *y, int ystride, int16_t *in,
  int ln, int threshold, int dir) {
