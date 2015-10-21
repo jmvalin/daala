@@ -1950,7 +1950,7 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
       if (skip) thresh[by][bx] = 0;
     }
   }
-#if 0
+#if 1
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       (*state->opt_vtbl.filter_dering_direction[bsize - OD_LOG_BSIZE0])(
