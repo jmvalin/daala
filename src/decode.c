@@ -257,7 +257,7 @@ static void od_decode_mv(daala_dec_ctx *dec, int num_refs, od_mv_grid_pt *mvg,
     mvg->ref = OD_FRAME_PREV;
   }
   equal_mvs = od_state_get_predictor(&dec->state, pred, vx, vy, level,
-   mv_res, mvg->ref);
+   mv_res, mvg->ref, NULL, NULL);
   model = &dec->state.adapt.mv_model;
   id = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.mv_small_cdf[equal_mvs],
    16, dec->state.adapt.mv_small_increment, "mv:low");
