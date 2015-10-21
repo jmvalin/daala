@@ -1710,9 +1710,11 @@ static int od_dir_find8(const int16_t *img, int stride, int32_t *var) {
  (OD_BSIZE_MAX + 2*OD_FILT_BORDER))
 
 void od_new_clp(int16_t *y, int ystride, int16_t *in,
- int ln, int threshold, int dir) {
+ int ln, int threshold) {
   int i;
   int j;
+  /* Don't filter if sub-block is skipped. */
+  if (threshold == 0) return;
   for (i = 0; i < 1 << ln; i++) {
     for (j = 0; j < 1 << ln; j++) {
       int x;
@@ -1725,6 +1727,7 @@ void od_new_clp(int16_t *y, int ystride, int16_t *in,
       x1 = in[i*OD_FILT_BSTRIDE + j - 1];
       x2 = in[(i + 1)*OD_FILT_BSTRIDE + j];
       x3 = in[(i - 1)*OD_FILT_BSTRIDE + j];
+      /* We use 16 here because the pixels are shifted up by 4. */
       if ((x0 > x + 16) + (x1 > x + 16) + (x2 > x + 16) + (x3 > x + 16)) {
         x += 16;
       }
@@ -1940,7 +1943,7 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
       if (skip) thresh[by][bx] = 0;
     }
   }
-#if 1
+#if 0
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       (*state->opt_vtbl.filter_dering_direction[bsize - OD_LOG_BSIZE0])(
@@ -1968,11 +1971,12 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
       in[i*OD_FILT_BSTRIDE + j] = y[i*ystride + j];
     }
   }
+#else
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       od_new_clp(&y[(by*ystride << bsize) + (bx << bsize)], ystride,
        &in[(by*OD_FILT_BSTRIDE << bsize) + (bx << bsize)], 3 - xdec,
-       thresh[by][bx], dir[by][bx]);
+       thresh[by][bx]);
     }
   }
 #endif
