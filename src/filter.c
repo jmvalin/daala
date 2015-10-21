@@ -1713,6 +1713,7 @@ void od_new_clp(int16_t *y, int ystride, int16_t *in,
  int ln, int threshold, int dir) {
   int i;
   int j;
+  return;
   for (i = 0; i < 1 << ln; i++) {
     for (j = 0; j < 1 << ln; j++) {
       int x;
