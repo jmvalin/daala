@@ -2645,12 +2645,13 @@ int od_state_get_predictor(od_state *state,
   }
   od_compute_median(pred, a, an, mv_res);
   equal_mvs = 0;
-  for (ci = 0; ci < ncns; ci++) {
-    if (pred[0] == OD_DIV_POW2_RE(cneighbors[ci]->mv[0], mv_res) &&
-     pred[1] == OD_DIV_POW2_RE(cneighbors[ci]->mv[1], mv_res)) {
+  for (ci = 0; ci < an; ci++) {
+    if (pred[0] == OD_DIV_POW2_RE(a[ci][0], mv_res) &&
+     pred[1] == OD_DIV_POW2_RE(a[ci][1], mv_res)) {
       equal_mvs++;
     }
   }
+  OD_ASSERT(an == 0 || equal_mvs > 0);
   if (nb_preds != NULL) {
     all_preds[0][0] = pred[0];
     all_preds[0][1] = pred[1];
