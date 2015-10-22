@@ -1735,7 +1735,7 @@ void od_new_clp(int16_t *y, int ystride, int16_t *in,
         x2 = in[(i + 1)*OD_FILT_BSTRIDE + j];
         x3 = in[(i - 1)*OD_FILT_BSTRIDE + j];
         /* We use 16 here because the pixels are shifted up by 4. */
-#if 0
+#if 1
         if ((x0 > x + 15) + (x1 > x + 15) + (x2 > x + 15) + (x3 > x + 15) > 2) {
           x += 16;
         }
