@@ -1965,7 +1965,7 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
        thresh[by][bx], dir[by][bx]);
     }
   }
-  for (i = 0; i < n; i++) {
+  /*for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) {
       in[i*OD_FILT_BSTRIDE + j] = y[i*ystride + j];
     }
@@ -1978,7 +1978,7 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
        &x[(by*xstride << bsize) + (bx << bsize)], xstride,
        thresh[by][bx], dir[by][bx]);
     }
-  }
+  }*/
   for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) {
       in[i*OD_FILT_BSTRIDE + j] = y[i*ystride + j];
