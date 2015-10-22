@@ -147,8 +147,10 @@ struct od_adapt_ctx {
   uint16_t        mv_ref_cdf[5][16];
   int                 mv_ex[OD_MC_NLEVELS];
   int                 mv_ey[OD_MC_NLEVELS];
-  uint16_t        mv_small_cdf[5][16];
+  uint16_t        mv_small_cdf[5][15];
   int                 mv_small_increment;
+  uint16_t            mv_pred_cdf[5][5];
+  int                 mv_pred_increment;
   uint16_t        split_flag_cdf[OD_MC_LEVEL_MAX][9][2];
   int                 split_flag_increment;
 

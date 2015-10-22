@@ -6071,6 +6071,7 @@ void od_mv_subpel_refine(od_mv_est_ctx *est, int cost_thresh) {
   od_state_set_mv_res(state, best_mv_res);
 }
 
+uint16_t mv_small_cdf_init[16] = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
 void od_mv_est(od_mv_est_ctx *est, int lambda) {
   od_state *state;
   od_img_plane *iplane;
@@ -6100,9 +6101,9 @@ void od_mv_est(od_mv_est_ctx *est, int lambda) {
   for (i = 0; i < 5; i++) {
     for (j = 0; j < 16; j++) {
       est->mv_small_rate_est[i][j] = (int)((1 << OD_BITRES)
-       *(OD_LOG2(est->enc->state.adapt.mv_small_cdf[i][15])
-       - (OD_LOG2(est->enc->state.adapt.mv_small_cdf[i][j]
-       - (j > 0 ? est->enc->state.adapt.mv_small_cdf[i][j - 1] : 0)))) + 0.5);
+       *(OD_LOG2(mv_small_cdf_init[15])
+       - (OD_LOG2(mv_small_cdf_init[j]
+       - (j > 0 ? mv_small_cdf_init[j - 1] : 0)))) + 0.5);
     }
   }
   /*If the luma plane is decimated for some reason, then our distortions will
