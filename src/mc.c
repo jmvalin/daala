@@ -2660,13 +2660,14 @@ int od_state_get_predictor(od_state *state,
       int j;
       int equal = 0;
       for (j = 0; j < *nb_preds; j++) {
-        if (all_preds[j][0] == a[ci][0] && all_preds[j][1] == a[ci][1]) {
+        if (all_preds[j][0] == OD_DIV_POW2_RE(a[ci][0], mv_res) &&
+         all_preds[j][1] == OD_DIV_POW2_RE(a[ci][1], mv_res)) {
           equal = 1;
         }
       }
       if (!equal) {
-        all_preds[*nb_preds][0] = a[ci][0];
-        all_preds[*nb_preds][1] = a[ci][1];
+        all_preds[*nb_preds][0] = OD_DIV_POW2_RE(a[ci][0], mv_res);
+        all_preds[*nb_preds][1] = OD_DIV_POW2_RE(a[ci][1], mv_res);
         (*nb_preds)++;
       }
     }
