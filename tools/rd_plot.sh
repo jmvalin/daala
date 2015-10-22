@@ -23,8 +23,8 @@ if [ ! -x "$GNUPLOT" ]; then
 fi
 
 #Uncomment to generate eps files for use with LaTeX
-#CMDS="$CMDS set term eps size 6, 4.5;"
-CMDS="$CMDS set term png size 1024,768;"
+CMDS="$CMDS set term eps size 6, 4.5;"
+#CMDS="$CMDS set term png size 1024,768;"
 CMDS="$CMDS set log x;"
 CMDS="$CMDS set xlabel 'Bits/Pixel';"
 CMDS="$CMDS set ylabel 'dB';"
@@ -39,11 +39,11 @@ for FILE in "$@"; do
   PREFIX=","
 done
 
-SUFFIX="psnr.png"
+SUFFIX="psnr.eps"
 $GNUPLOT -e "$CMDS set output \"$IMAGE$SUFFIX\"; plot $PSNR;"     2> /dev/null
-SUFFIX="psnrhvs.png"
+SUFFIX="psnrhvs.eps"
 $GNUPLOT -e "$CMDS set output \"$IMAGE$SUFFIX\"; plot $PSNRHVS;"  2> /dev/null
-SUFFIX="ssim.png"
+SUFFIX="ssim.eps"
 $GNUPLOT -e "$CMDS set output \"$IMAGE$SUFFIX\"; plot $SSIM;"     2> /dev/null
-SUFFIX="fastssim.png"
+SUFFIX="fastssim.eps"
 $GNUPLOT -e "$CMDS set output \"$IMAGE$SUFFIX\"; plot $FASTSSIM;" 2> /dev/null

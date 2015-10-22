@@ -1735,7 +1735,7 @@ void od_new_clp(int16_t *y, int ystride, int16_t *in,
         x2 = in[(i + 1)*OD_FILT_BSTRIDE + j];
         x3 = in[(i - 1)*OD_FILT_BSTRIDE + j];
         /* We use 16 here because the pixels are shifted up by 4. */
-#if 1
+#if 0
         if ((x0 > x + 15) + (x1 > x + 15) + (x2 > x + 15) + (x3 > x + 15) > 2) {
           x += 16;
         }
@@ -1956,7 +1956,7 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
       if (skip) thresh[by][bx] = 0;
     }
   }
-#if 0
+#if 1
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       (*state->opt_vtbl.filter_dering_direction[bsize - OD_LOG_BSIZE0])(
@@ -1984,7 +1984,7 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
       in[i*OD_FILT_BSTRIDE + j] = y[i*ystride + j];
     }
   }
-#else
+/*#else*/
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       od_new_clp(&y[(by*ystride << bsize) + (bx << bsize)], ystride,
