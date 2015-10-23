@@ -246,6 +246,8 @@ static void od_decode_mv(daala_dec_ctx *dec, int num_refs, od_mv_grid_pt *mvg,
   int id;
   int equal_mvs;
   int ref_pred;
+  int all_preds[4][2];
+  int nb_preds;
   if (num_refs > 1) {
     ref_pred = od_mc_get_ref_predictor(&dec->state, vx, vy, level);
     OD_ASSERT(ref_pred >= 0);
@@ -257,29 +259,33 @@ static void od_decode_mv(daala_dec_ctx *dec, int num_refs, od_mv_grid_pt *mvg,
     mvg->ref = OD_FRAME_PREV;
   }
   equal_mvs = od_state_get_predictor(&dec->state, pred, vx, vy, level,
-   mv_res, mvg->ref, NULL, NULL);
+   mv_res, mvg->ref, all_preds, &nb_preds);
   model = &dec->state.adapt.mv_model;
   id = od_decode_cdf_adapt(&dec->ec, dec->state.adapt.mv_pred_cdf[equal_mvs],
-   2, dec->state.adapt.mv_pred_increment, "mv:pred");
-  if (id != 0) {
+   5, dec->state.adapt.mv_pred_increment, "mv:pred");
+  if (id == 0) {
     id = 1 + od_decode_cdf_adapt(&dec->ec,
      dec->state.adapt.mv_small_cdf[equal_mvs], 15,
      dec->state.adapt.mv_small_increment, "mv:low");
+    oy = id >> 2;
+    ox = id & 0x3;
+    if (ox == 3) {
+      ox += generic_decode(&dec->ec, model, width << (3 - mv_res),
+        &dec->state.adapt.mv_ex[level], 6, "mv:high:x");
+    }
+    if (oy == 3) {
+      oy += generic_decode(&dec->ec, model, height << (3 - mv_res),
+        &dec->state.adapt.mv_ey[level], 6, "mv:high:y");
+    }
+    if (ox && od_ec_dec_bits(&dec->ec, 1, "mv:sign:x")) ox = -ox;
+    if (oy && od_ec_dec_bits(&dec->ec, 1, "mv:sign:y")) oy = -oy;
+    mvg->mv[0] = (pred[0] + ox) << mv_res;
+    mvg->mv[1] = (pred[1] + oy) << mv_res;
   }
-  oy = id >> 2;
-  ox = id & 0x3;
-  if (ox == 3) {
-    ox += generic_decode(&dec->ec, model, width << (3 - mv_res),
-     &dec->state.adapt.mv_ex[level], 6, "mv:high:x");
+  else {
+    mvg->mv[0] = all_preds[id - 1][0] << mv_res;
+    mvg->mv[1] = all_preds[id - 1][1] << mv_res;
   }
-  if (oy == 3) {
-    oy += generic_decode(&dec->ec, model, height << (3 - mv_res),
-     &dec->state.adapt.mv_ey[level], 6, "mv:high:y");
-  }
-  if (ox && od_ec_dec_bits(&dec->ec, 1, "mv:sign:x")) ox = -ox;
-  if (oy && od_ec_dec_bits(&dec->ec, 1, "mv:sign:y")) oy = -oy;
-  mvg->mv[0] = (pred[0] + ox) << mv_res;
-  mvg->mv[1] = (pred[1] + oy) << mv_res;
 }
 
 /*Block-level decoder context information.
