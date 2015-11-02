@@ -1921,6 +1921,7 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
        thresh[by][bx], dir[by][bx]);
     }
   }
+#if 0
   for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) {
       in[i*OD_FILT_BSTRIDE + j] = y[i*ystride + j];
@@ -1935,6 +1936,7 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
        thresh[by][bx], dir[by][bx]);
     }
   }
+#endif
 }
 
 /** Smoothes a block using bilinear interpolation from its four corners.
