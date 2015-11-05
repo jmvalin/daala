@@ -709,6 +709,9 @@ int od_pvq_encode(daala_enc_ctx *enc,
      (double)skip_cdf[0]);
     out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate);
   }
+  /* Excluding skip flag from the rate since it's minor and would be prone
+     to greedy decision issues. */
+  tell = od_ec_enc_tell_frac(&enc->ec);
   /* Code as if we're not skipping. */
   od_encode_cdf_adapt(&enc->ec, (out[0] != 0), skip_cdf,
    4 + (pli == 0 && bs > 0), enc->state.adapt.skip_increment);
@@ -718,9 +721,6 @@ int od_pvq_encode(daala_enc_ctx *enc,
      by >> (OD_NBSIZES - 1), 0);
   }
 #endif
-  /* Excluding skip flag from the rate since it's minor and would be prone
-     to greedy decision issues. */
-  tell = od_ec_enc_tell_frac(&enc->ec);
   cfl_encoded = 0;
   skip_rest = 1;
   skip_theta_value = is_keyframe ? -1 : 0;
@@ -764,6 +764,15 @@ int od_pvq_encode(daala_enc_ctx *enc,
     }
   }
   tell = od_ec_enc_tell_frac(&enc->ec) - tell;
+  {
+    double skip_rate;
+    int skip_flag;
+    skip_flag = 2 + (out[0] != 0);
+    skip_rate = -OD_LOG2((skip_cdf[skip_flag] - skip_cdf[skip_flag - 1])/
+      (double)skip_cdf[3]);
+    /*printf("%f\n", skip_rate);*/
+    tell -= (int)floor(.5+8*skip_rate);
+  }
   if (nb_bands == 0 || skip_diff <= OD_PVQ_LAMBDA/8*tell) {
     if (is_keyframe) out[0] = 0;
     else {
