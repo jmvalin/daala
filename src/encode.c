@@ -1088,24 +1088,32 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   if (ctx->use_haar_wavelet) {
     skip = od_wavelet_quantize(enc, bs + 2, scalar_out, dblock, predt,
      enc->quantizer[pli], pli);
+    if (!ctx->is_keyframe) {
+      generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli],
+       abs(scalar_out[0]), -1,
+       &enc->state.adapt.ex_dc[pli][bs][0], 2);
+      if (scalar_out[0]) {
+        od_ec_enc_bits(&enc->ec, scalar_out[0] < 0, 1);
+        skip = 0;
+      }
+
+    }
   }
   else {
     skip = od_pvq_encode(enc, predt, dblock, scalar_out, quant, pli, bs,
      OD_PVQ_BETA[use_masking][pli][bs], OD_ROBUST_STREAM, ctx->is_keyframe,
      ctx->q_scaling, bx, by);
+    if (!ctx->is_keyframe) {
+      if (scalar_out[0]) {
+        generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli],
+         abs(scalar_out[0]) - 1, -1,
+         &enc->state.adapt.ex_dc[pli][bs][0], 2);
+        od_ec_enc_bits(&enc->ec, scalar_out[0] < 0, 1);
+        skip = 0;
+      }
+    }
   }
   if (!ctx->is_keyframe) {
-    int has_dc_skip;
-    has_dc_skip = !ctx->is_keyframe && !ctx->use_haar_wavelet;
-    if (!has_dc_skip || scalar_out[0]) {
-      generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli],
-       abs(scalar_out[0]) - has_dc_skip, -1,
-       &enc->state.adapt.ex_dc[pli][bs][0], 2);
-    }
-    if (scalar_out[0]) {
-      od_ec_enc_bits(&enc->ec, scalar_out[0] < 0, 1);
-      skip = 0;
-    }
     scalar_out[0] = scalar_out[0]*dc_quant;
     scalar_out[0] += predt[0];
   }
