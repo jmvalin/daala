@@ -769,7 +769,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
     int skip_flag;
     skip_flag = 2 + (out[0] != 0);
     skip_rate = -OD_LOG2((skip_cdf[skip_flag] - skip_cdf[skip_flag - 1])/
-     (double)skip_cdf[3]);
+     (double)skip_cdf[3 + (pli == 0 && bs > 0)]);
     tell -= (int)floor(.5+8*skip_rate);
   }
   if (nb_bands == 0 || skip_diff <= OD_PVQ_LAMBDA/8*tell) {
