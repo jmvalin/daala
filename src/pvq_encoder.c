@@ -709,7 +709,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   if (is_keyframe) out[0] = 0;
   else {
     dc_rate = -OD_LOG2((double)(skip_cdf[1] - skip_cdf[0])/
-     (double)skip_cdf[0]);
+     (double)skip_cdf[0]) + 1.;
     out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate);
   }
   tell = od_ec_enc_tell_frac(&enc->ec);
@@ -779,7 +779,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
     if (is_keyframe) out[0] = 0;
     else {
       dc_rate = -OD_LOG2((double)(skip_cdf[3]-skip_cdf[2])/
-       (double)(skip_cdf[2]-skip_cdf[1]));
+       (double)(skip_cdf[2]-skip_cdf[1])) + 1.;
       out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate);
     }
     /* We decide to skip, roll back everything as it was before. */
