@@ -708,7 +708,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   od_encode_checkpoint(enc, &buf);
   if (is_keyframe) out[0] = 0;
   else {
-    dc_rate = -OD_LOG2((double)(skip_cdf[1] - skip_cdf[0])/
+    dc_rate = 2-OD_LOG2((double)(skip_cdf[1] - skip_cdf[0])/
      (double)skip_cdf[0]);
     out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate);
   }
@@ -778,7 +778,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   if (nb_bands == 0 || skip_diff <= OD_PVQ_LAMBDA/8*tell) {
     if (is_keyframe) out[0] = 0;
     else {
-      dc_rate = -OD_LOG2((double)(skip_cdf[3]-skip_cdf[2])/
+      dc_rate = 2-OD_LOG2((double)(skip_cdf[3]-skip_cdf[2])/
        (double)(skip_cdf[2]-skip_cdf[1]));
       out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate);
     }
