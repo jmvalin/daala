@@ -1183,10 +1183,10 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     }
     nx = OD_MINI(n, enc->state.info.pic_width - (bx << (2 + bs)));
     ny = OD_MINI(n, enc->state.info.pic_height - (by << (2 + bs)));
-    dist_noskip = od_compute_dist(enc, c_orig, c_noskip, nx, ny, n, bs);
+    dist_noskip = od_compute_dist(enc, c_orig, c_noskip, n, n, n, bs);
     lambda = od_bs_rdo_lambda(enc->state.quantizer[pli]);
     rate_noskip = od_ec_enc_tell_frac(&enc->ec) - tell;
-    dist_skip = od_compute_dist(enc, c_orig, mc_orig, nx, ny, n, bs);
+    dist_skip = od_compute_dist(enc, c_orig, mc_orig, n, n, n, bs);
     rate_skip = (1 << OD_BITRES)*od_encode_cdf_cost(2,
      enc->state.adapt.skip_cdf[2*bs + (pli != 0)],
      4 + (pli == 0 && bs > 0));
@@ -1571,8 +1571,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       rate_split = od_ec_enc_tell_frac(&enc->ec) - tell;
       nx = OD_MINI(n, enc->state.info.pic_width - (bx << (2 + bs)));
       ny = OD_MINI(n, enc->state.info.pic_height - (by << (2 + bs)));
-      dist_split = od_compute_dist(enc, c_orig, split, nx, ny, n, bs);
-      dist_nosplit = od_compute_dist(enc, c_orig, nosplit, nx, ny, n, bs);
+      dist_split = od_compute_dist(enc, c_orig, split, n, n, n, bs);
+      dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, n, n, bs);
       lambda = od_bs_rdo_lambda(enc->state.quantizer[pli]);
       if (skip_split || dist_nosplit + lambda*rate_nosplit < dist_split
        + lambda*rate_split) {
