@@ -1168,7 +1168,7 @@ int daala_decode_packet_in(daala_dec_ctx *dec, od_img *img,
     nplanes = dec->state.info.nplanes;
     for (pli = 0; pli < nplanes; pli++) {
       int i;
-      for (i = 0; i < OD_QM_SIZE; i++) {
+      for (i = 0; i < OD_QM_SIZE - 2*OD_NBSIZES; i++) {
         dec->state.pvq_qm_q4[pli][i] = od_ec_dec_bits(&dec->ec, 8, "qm");
       }
     }
