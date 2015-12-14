@@ -2388,6 +2388,60 @@ static int od_compute_superblock_q_scaling(daala_enc_ctx *enc, od_coeff *x,
   return 0;
 }
 
+void od_encode_superblock(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
+ int pli, int sbx, int sby, int rdo_only) {
+  int i;
+  int j;
+  int xdec;
+  int ydec;
+  od_coeff *c_orig;
+  int width;
+  od_rollback_buffer buf;
+  od_coeff hgrad;
+  od_coeff vgrad;
+  width = enc->state.frame_width;
+  hgrad = vgrad = 0;
+  c_orig = enc->c_orig[0];
+  xdec = enc->input_img[enc->curr_frame].planes[pli].xdec;
+  ydec = enc->input_img[enc->curr_frame].planes[pli].ydec;
+  mbctx->is_intra_sb = mbctx->is_intra_frame;
+  if (!mbctx->is_intra_frame) mbctx->is_intra_sb = rand() % 10 == 0;
+  mbctx->is_intra_sb = 1;
+  od_ec_enc_bits(&enc->ec, mbctx->is_intra_sb, 1);
+  if (pli == 0 || (rdo_only && mbctx->is_intra_sb)) {
+    for (i = 0; i < OD_BSIZE_MAX; i++) {
+      for (j = 0; j < OD_BSIZE_MAX; j++) {
+        c_orig[i*OD_BSIZE_MAX + j] =
+         mbctx->c[(OD_BSIZE_MAX*sby + i)*width + OD_BSIZE_MAX*sbx + j];
+      }
+    }
+  }
+  if (mbctx->is_intra_sb) {
+    if (rdo_only) {
+      od_encode_checkpoint(enc, &buf);
+    }
+    od_compute_dcts(enc, mbctx, pli, sbx, sby, OD_NBSIZES - 1, xdec,
+     ydec, mbctx->use_haar_wavelet && !rdo_only);
+    od_quantize_haar_dc_sb(enc, mbctx, pli, sbx, sby, xdec, ydec,
+     sby > 0 && sbx < enc->state.nhsb - 1, &hgrad, &vgrad);
+    if (rdo_only) {
+      od_encode_rollback(enc, &buf);
+      for (i = 0; i < OD_BSIZE_MAX; i++) {
+        for (j = 0; j < OD_BSIZE_MAX; j++) {
+          mbctx->c[(OD_BSIZE_MAX*sby + i)*width + OD_BSIZE_MAX*sbx + j] =
+           c_orig[i*OD_BSIZE_MAX + j];
+        }
+      }
+    }
+  }
+  if (pli == 0 && !OD_LOSSLESS(enc, pli)) {
+    mbctx->q_scaling =
+     od_compute_superblock_q_scaling(enc, c_orig, OD_BSIZE_MAX);
+  }
+  od_encode_recursive(enc, mbctx, pli, sbx, sby, OD_NBSIZES - 1, xdec,
+   ydec, rdo_only, hgrad, vgrad);
+}
+
 #define OD_ENCODE_REAL (0)
 #define OD_ENCODE_RDO (1)
 static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
@@ -2464,58 +2518,12 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
   for (sby = 0; sby < nvsb; sby++) {
     for (sbx = 0; sbx < nhsb; sbx++) {
       for (pli = 0; pli < nplanes; pli++) {
-        od_coeff *c_orig;
-        int i;
-        int j;
-        int width;
-        od_rollback_buffer buf;
-        od_coeff hgrad;
-        od_coeff vgrad;
-        width = enc->state.frame_width;
-        hgrad = vgrad = 0;
-        c_orig = enc->c_orig[0];
         mbctx->c = state->ctmp[pli];
         mbctx->d = state->dtmp;
         mbctx->mc = state->mctmp[pli];
         mbctx->md = state->mdtmp[pli];
         mbctx->l = state->lbuf[pli];
-        xdec = enc->input_img[enc->curr_frame].planes[pli].xdec;
-        ydec = enc->input_img[enc->curr_frame].planes[pli].ydec;
-        mbctx->is_intra_sb = mbctx->is_intra_frame;
-        if (!mbctx->is_intra_frame) mbctx->is_intra_sb = rand() % 10 == 0;
-        od_ec_enc_bits(&enc->ec, mbctx->is_intra_sb, 1);
-        if (pli == 0 || (rdo_only && mbctx->is_intra_sb)) {
-          for (i = 0; i < OD_BSIZE_MAX; i++) {
-            for (j = 0; j < OD_BSIZE_MAX; j++) {
-              c_orig[i*OD_BSIZE_MAX + j] =
-               mbctx->c[(OD_BSIZE_MAX*sby + i)*width + OD_BSIZE_MAX*sbx + j];
-            }
-          }
-        }
-        if (mbctx->is_intra_sb) {
-          if (rdo_only) {
-            od_encode_checkpoint(enc, &buf);
-          }
-          od_compute_dcts(enc, mbctx, pli, sbx, sby, OD_NBSIZES - 1, xdec,
-           ydec, mbctx->use_haar_wavelet && !rdo_only);
-          od_quantize_haar_dc_sb(enc, mbctx, pli, sbx, sby, xdec, ydec,
-           sby > 0 && sbx < nhsb - 1, &hgrad, &vgrad);
-          if (rdo_only) {
-            od_encode_rollback(enc, &buf);
-            for (i = 0; i < OD_BSIZE_MAX; i++) {
-              for (j = 0; j < OD_BSIZE_MAX; j++) {
-                mbctx->c[(OD_BSIZE_MAX*sby + i)*width + OD_BSIZE_MAX*sbx + j] =
-                 c_orig[i*OD_BSIZE_MAX + j];
-              }
-            }
-          }
-        }
-        if (pli == 0 && !OD_LOSSLESS(enc, pli)) {
-          mbctx->q_scaling =
-           od_compute_superblock_q_scaling(enc, c_orig, OD_BSIZE_MAX);
-        }
-        od_encode_recursive(enc, mbctx, pli, sbx, sby, OD_NBSIZES - 1, xdec,
-         ydec, rdo_only, hgrad, vgrad);
+        od_encode_superblock(enc, mbctx, pli, sbx, sby, rdo_only);
       }
     }
   }
