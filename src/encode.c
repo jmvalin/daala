@@ -702,7 +702,8 @@ struct od_mb_enc_ctx {
   od_coeff *md;
   od_coeff *mc;
   od_coeff *l;
-  int is_keyframe;
+  int is_intra_frame;
+  int is_intra_sb;
   int num_refs;
   int use_activity_masking;
   int qm;
@@ -728,7 +729,7 @@ static void od_encode_compute_pred(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   bo = (by << OD_LOG_BSIZE0)*w + (bx << OD_LOG_BSIZE0);
   /*We never use tf on the chroma planes, but if we do it will blow up, which
     is better than always using luma's tf.*/
-  if (ctx->is_keyframe) {
+  if (ctx->is_intra_sb) {
     if (pli == 0 || OD_DISABLE_CFL || ctx->use_haar_wavelet) {
       OD_CLEAR(pred, n*n);
       if (pli == 0 && !ctx->use_haar_wavelet) {
@@ -1112,7 +1113,8 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   lossless = OD_LOSSLESS(enc, pli);
   c_orig = enc->block_c_orig;
   mc_orig = enc->block_mc_orig;
-  has_late_skip_rdo = !ctx->is_keyframe && !ctx->use_haar_wavelet && bs > 0;
+  /* JMV: Not sure on this one. */
+  has_late_skip_rdo = !ctx->is_intra_sb && !ctx->use_haar_wavelet && bs > 0;
   if (has_late_skip_rdo) {
     for (i = 0; i < n; i++) {
       for (j = 0; j < n; j++) c_orig[n*i + j] = c[bo + i*w + j];
@@ -1125,21 +1127,21 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   }
   /* Apply forward transform. */
   if (ctx->use_haar_wavelet) {
-    if (rdo_only || !ctx->is_keyframe) {
+    if (rdo_only || !ctx->is_intra_sb) {
       od_haar(d + bo, w, c + bo, w, bs + 2);
     }
-    if (!ctx->is_keyframe) {
+    if (!ctx->is_intra_sb) {
       od_haar(md + bo, w, mc + bo, w, bs + 2);
     }
   }
   else {
-    if (rdo_only || !ctx->is_keyframe) {
+    if (rdo_only || !ctx->is_intra_sb) {
       int quantized_dc;
       quantized_dc = d[bo];
       (*enc->state.opt_vtbl.fdct_2d[bs])(d + bo, w, c + bo, w);
-      if (ctx->is_keyframe) d[bo] = quantized_dc;
+      if (ctx->is_intra_sb) d[bo] = quantized_dc;
     }
-    if (!ctx->is_keyframe) {
+    if (!ctx->is_intra_sb) {
       (*enc->state.opt_vtbl.fdct_2d[bs])(md + bo, w, mc + bo, w);
     }
   }
@@ -1169,7 +1171,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
      enc->state.pvq_qm_q4[pli][od_qm_get_index(bs, 0)] >> 4);
   }
   /* This quantization may be overridden in the PVQ code for full RDO. */
-  if (!ctx->is_keyframe) {
+  if (!ctx->is_intra_sb) {
     if (abs(dblock[0] - predt[0]) < dc_quant*141/256) { /* 0.55 */
       scalar_out[0] = 0;
     }
@@ -1185,13 +1187,13 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     int off;
     off = od_qm_offset(bs, xdec);
     skip = od_pvq_encode(enc, predt, dblock, scalar_out, quant, pli, bs,
-     OD_PVQ_BETA[use_masking][pli][bs], OD_ROBUST_STREAM, ctx->is_keyframe,
+     OD_PVQ_BETA[use_masking][pli][bs], OD_ROBUST_STREAM, ctx->is_intra_sb,
      ctx->q_scaling, bx, by, enc->state.qm + off, enc->state.qm_inv
      + off);
   }
-  if (!ctx->is_keyframe) {
+  if (!ctx->is_intra_sb) {
     int has_dc_skip;
-    has_dc_skip = !ctx->is_keyframe && !ctx->use_haar_wavelet;
+    has_dc_skip = !ctx->is_intra_sb && !ctx->use_haar_wavelet;
     if (!has_dc_skip || scalar_out[0]) {
       generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli],
        abs(scalar_out[0]) - has_dc_skip, -1,
@@ -1216,7 +1218,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   }
   else {
     /*Safely initialize d since some coeffs are skipped by PVQ.*/
-    od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
+    od_init_skipped_coeffs(d, pred, ctx->is_intra_sb, bo, n, w);
     od_coding_order_to_raster(&d[bo], w, scalar_out, n);
   }
   /*Apply the inverse transform.*/
@@ -1325,7 +1327,7 @@ static void od_compute_dcts(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int pli,
     od_compute_dcts(enc, ctx, pli, bx + 1, by + 0, bsi, xdec, ydec, use_haar);
     od_compute_dcts(enc, ctx, pli, bx + 0, by + 1, bsi, xdec, ydec, use_haar);
     od_compute_dcts(enc, ctx, pli, bx + 1, by + 1, bsi, xdec, ydec, use_haar);
-    if (ctx->is_keyframe) {
+    if (ctx->is_intra_sb) {
       od_coeff x[4];
       int ln;
       ln = bsi - xdec + 2;
@@ -1519,7 +1521,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     for (i = 0; i < 1 << bs; i++) {
       for (j = 0; j < 1 << bs; j++) {
         enc->state.bskip[pli][((by << bs) + i)*enc->state.skip_stride
-         + (bx << bs) + j] = skip && !ctx->is_keyframe;
+         + (bx << bs) + j] = skip && !ctx->is_intra_sb;
       }
     }
     return skip;
@@ -1589,7 +1591,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     hfilter = (bx + 1) << (OD_LOG_BSIZE0 + bs) <= enc->state.info.pic_width;
     vfilter = (by + 1) << (OD_LOG_BSIZE0 + bs) <= enc->state.info.pic_height;
     od_prefilter_split(ctx->c + bo, w, bs, f, hfilter, vfilter);
-    if (!ctx->is_keyframe) {
+    if (!ctx->is_intra_sb) {
       od_prefilter_split(ctx->mc + bo, w, bs, f, hfilter, vfilter);
     }
     skip_split = 1;
@@ -1604,7 +1606,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       }
 #endif
     }
-    if (ctx->is_keyframe) {
+    if (ctx->is_intra_sb) {
       od_quantize_haar_dc_level(enc, ctx, pli, 2*bx, 2*by, bsi - 1, xdec,
        &hgrad, &vgrad);
     }
@@ -1652,7 +1654,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
         for (i = 0; i < 1 << bs; i++) {
           for (j = 0; j < 1 << bs; j++) {
             enc->state.bskip[pli][((by << bs) + i)*enc->state.skip_stride
-             + (bx << bs) + j] = skip_nosplit && !ctx->is_keyframe;
+             + (bx << bs) + j] = skip_nosplit && !ctx->is_intra_sb;
           }
         }
         skip_block = skip_nosplit;
@@ -1761,8 +1763,8 @@ static const unsigned char OD_YCbCr_MV[3] = {81, 90, 240};
 static const unsigned char OD_YCbCr_MV1[3] = {81, 0, 0};
 
 #define OD_SRCVAL_TO_8(x) (siplane->bitdepth == 8 ? src[(x)] : \
- (((int16_t *)src)[(x)] + (1 << siplane->bitdepth - 9) \
- >> siplane->bitdepth - 8))
+ ((((int16_t *)src)[(x)] + (1 << (siplane->bitdepth - 9))) \
+ >> (siplane->bitdepth - 8)))
 
 /*Upsamples the reconstructed image (any depth) to an 8-bit reference image.
   Output img is 2x larger in both horizontal and vertical dimensions.
@@ -2428,7 +2430,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
       od_apply_prefilter_frame_sbs(state->ctmp[pli],
        w, nhsb, nvsb, xdec, ydec);
     }
-    if (!mbctx->is_keyframe) {
+    if (!mbctx->is_intra_frame) {
       od_ref_plane_to_coeff(state,
        state->mctmp[pli], OD_LOSSLESS(enc, pli), rec, pli);
       if (!mbctx->use_haar_wavelet) {
@@ -2444,7 +2446,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
        to the reference. That way there's no extra information to code there.
        Even better would be to also avoid taking padding into account in the
        distortion computation. */
-    if (!mbctx->is_keyframe) {
+    if (!mbctx->is_intra_frame) {
       for (x = pic_width; x < plane_width; x++) {
         for (y = 0; y < plane_height; y++) {
           state->ctmp[pli][y*w + x] = state->mctmp[pli][y*w + x];
@@ -2477,7 +2479,8 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         mbctx->l = state->lbuf[pli];
         xdec = enc->input_img[enc->curr_frame].planes[pli].xdec;
         ydec = enc->input_img[enc->curr_frame].planes[pli].ydec;
-        if (pli == 0 || (rdo_only && mbctx->is_keyframe)) {
+        mbctx->is_intra_sb = mbctx->is_intra_frame;
+        if (pli == 0 || (rdo_only && mbctx->is_intra_sb)) {
           for (i = 0; i < OD_BSIZE_MAX; i++) {
             for (j = 0; j < OD_BSIZE_MAX; j++) {
               c_orig[i*OD_BSIZE_MAX + j] =
@@ -2485,7 +2488,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
             }
           }
         }
-        if (mbctx->is_keyframe) {
+        if (mbctx->is_intra_sb) {
           if (rdo_only) {
             od_encode_checkpoint(enc, &buf);
           }
@@ -2512,6 +2515,9 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
       }
     }
   }
+  /* FIXME: Remove this, it's only there to make sure we don't use is_intra_sb
+     when we shouldn't. */
+  mbctx->is_intra_sb = !mbctx->is_intra_frame;
 #if defined(OD_DUMP_IMAGES)
   if (!rdo_only) {
     /*Dump the lapped frame (before the postfilter has been applied)*/
@@ -2691,7 +2697,8 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     if (!rdo_only && state->quantizer[0] > 0) {
       for (sby = 0; sby < nvsb; sby++) {
         for (sbx = 0; sbx < nhsb; sbx++) {
-          if (mbctx->is_keyframe) {
+          /* JMV FIXME: Make this use the sb flag. */
+          if (mbctx->is_intra_frame) {
             od_smooth_recursive(state->ctmp[pli], enc->state.bsize,
              enc->state.bstride, sbx, sby, OD_NBSIZES - 1, w, xdec, ydec,
              OD_BLOCK_32X32, state->quantizer[pli], pli);
@@ -2953,7 +2960,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration,
   }
   enc->curr_display_order = enc->in_imgs_id[enc->curr_frame];
   /* Check if the frame should be a keyframe. */
-  mbctx.is_keyframe = (frame_type == OD_I_FRAME) ? 1 : 0;
+  mbctx.is_intra_frame = (frame_type == OD_I_FRAME) ? 1 : 0;
   /* B-frame cannot be a Golden frame.*/
   mbctx.is_golden_frame = (enc->ip_frame_count %
    (OD_GOLDEN_FRAME_INTERVAL/(enc->b_frames + 1)) == 0)
@@ -2980,7 +2987,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration,
   enc->state.ref_imgi[OD_FRAME_SELF] = refi;
   /*We must be a keyframe if we don't have a reference.*/
   if (enc->state.ref_imgi[OD_FRAME_PREV] < 0) {
-    mbctx.is_keyframe = 1;
+    mbctx.is_intra_frame = 1;
     frame_type = OD_I_FRAME;
   }
 #if defined(OD_DUMP_IMAGES) || defined(OD_DUMP_RECONS)
@@ -3005,9 +3012,9 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration,
   /*Write a bit to mark this as a data packet.*/
   od_ec_encode_bool_q15(&enc->ec, 0, 16384);
   /*Code the keyframe bit.*/
-  od_ec_encode_bool_q15(&enc->ec, mbctx.is_keyframe, 16384);
+  od_ec_encode_bool_q15(&enc->ec, mbctx.is_intra_frame, 16384);
   /*If not I frame, code the bit to tell whether it is P or B frame.*/
-  if (!mbctx.is_keyframe) {
+  if (!mbctx.is_intra_frame) {
     od_ec_encode_bool_q15(&enc->ec, frame_type == OD_B_FRAME, 16384);
   }
   /*Code the number of references.*/
@@ -3028,7 +3035,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration,
     enc->state.quantizer[pli] =
      od_codedquantizer_to_quantizer(enc->state.coded_quantizer[pli]);
   }
-  if (mbctx.is_keyframe) {
+  if (mbctx.is_intra_frame) {
     for (pli = 0; pli < nplanes; pli++) {
       int i;
       int q;
@@ -3059,7 +3066,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration,
   for (pli = 0; pli < nplanes; pli++) {
     /*Boost the keyframe quality slightly (one coded quantizer
       step is the minimum possible).*/
-    if ((mbctx.is_keyframe || mbctx.is_golden_frame)
+    if ((mbctx.is_intra_frame || mbctx.is_golden_frame)
      && enc->state.coded_quantizer[pli] != 0) {
       enc->state.coded_quantizer[pli] =
        OD_MAXI(1, enc->state.coded_quantizer[pli] - 3);
@@ -3078,10 +3085,10 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration,
        od_codedquantizer_to_quantizer(enc->state.coded_quantizer[pli]);
     }
   }
-  OD_LOG((OD_LOG_ENCODER, OD_LOG_INFO, "is_keyframe=%d", mbctx.is_keyframe));
+  OD_LOG((OD_LOG_ENCODER, OD_LOG_INFO, "is_keyframe=%d", mbctx.is_intra_frame));
   /*TODO: Increment frame count.*/
-  od_adapt_ctx_reset(&enc->state.adapt, mbctx.is_keyframe);
-  if (!mbctx.is_keyframe) {
+  od_adapt_ctx_reset(&enc->state.adapt, mbctx.is_intra_frame);
+  if (!mbctx.is_intra_frame) {
     int num_refs;
     num_refs = mbctx.num_refs;
     od_predict_frame(enc);
@@ -3095,7 +3102,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration,
        revise that choice if we get a better open-loop block size algorithm. */
     od_state_init_superblock_split(&enc->state, OD_LIMIT_BSIZE_MIN);
     if (enc->complexity >= 2) od_split_superblocks_rdo(enc, &mbctx);
-    else od_split_superblocks(enc, mbctx.is_keyframe);
+    else od_split_superblocks(enc, mbctx.is_intra_frame);
   }
   od_encode_coefficients(enc, &mbctx, OD_ENCODE_REAL);
   enc->packet_state = OD_PACKET_READY;
@@ -3191,7 +3198,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration,
   }
   fprintf(enc->bsize_dist_file, "\n");
 #endif
-  OD_ASSERT(mbctx.is_keyframe == (frame_type == OD_I_FRAME));
+  OD_ASSERT(mbctx.is_intra_frame == (frame_type == OD_I_FRAME));
   enc->in_imgs_id[enc->curr_frame] = -1;
   ++enc->enc_order_count;
   if (frame_type == OD_I_FRAME || frame_type == OD_P_FRAME) {
