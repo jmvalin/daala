@@ -1052,8 +1052,10 @@ static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
         double tmp;
         tmp = od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], n, bs);
         sum += tmp;
-        minval = OD_MINF(minval, tmp);
-        maxval = OD_MAXF(maxval, tmp);
+        if (n > 16) {
+          minval = OD_MINF(minval, tmp);
+          maxval = OD_MAXF(maxval, tmp);
+        }
       }
     }
     sum += maxval - minval;
@@ -1061,7 +1063,7 @@ static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
        distortion value. We tried a half-dozen values and picked the one where
        we liked the ntt-short1 curves best. The tuning is approximate since
        the different metrics go in different directions. */
-    sum *= 1.5;
+    sum *= n > 16 ? 1.5 : 1.7;
   }
   return sum;
 }
