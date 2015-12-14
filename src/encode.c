@@ -1042,12 +1042,21 @@ static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
     }
   }
   else {
+    double minval;
+    double maxval;
+    minval = 1e15;
+    maxval = 0;
     for (i = 0; i < n; i += 8) {
       int j;
       for (j = 0; j < n; j += 8) {
-        sum += od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], n, bs);
+        double tmp;
+        tmp = od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], n, bs);
+        sum += tmp;
+        minval = OD_MINF(minval, tmp);
+        maxval = OD_MAXF(maxval, tmp);
       }
     }
+    sum += maxval - minval;
     /* Compensate for the fact that the quantization matrix lowers the
        distortion value. We tried a half-dozen values and picked the one where
        we liked the ntt-short1 curves best. The tuning is approximate since
