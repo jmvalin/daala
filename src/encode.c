@@ -2480,6 +2480,8 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         xdec = enc->input_img[enc->curr_frame].planes[pli].xdec;
         ydec = enc->input_img[enc->curr_frame].planes[pli].ydec;
         mbctx->is_intra_sb = mbctx->is_intra_frame;
+        if (!mbctx->is_intra_frame) mbctx->is_intra_sb = rand() % 10 == 0;
+        od_ec_enc_bits(&enc->ec, mbctx->is_intra_sb, 1);
         if (pli == 0 || (rdo_only && mbctx->is_intra_sb)) {
           for (i = 0; i < OD_BSIZE_MAX; i++) {
             for (j = 0; j < OD_BSIZE_MAX; j++) {
