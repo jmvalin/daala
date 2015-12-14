@@ -1410,6 +1410,7 @@ static void od_quantize_haar_dc_sb(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   else if (by > 0) sb_dc_pred = sb_dc_mem[(by - 1)*nhsb + bx];
   else if (bx > 0) sb_dc_pred = sb_dc_mem[by*nhsb + bx - 1];
   else sb_dc_pred = 0;
+  sb_dc_pred = 0;
   dc0 = d[(by << ln)*w + (bx << ln)] - sb_dc_pred;
   quant = OD_DIV_R0(dc0, dc_quant);
   generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli], abs(quant), -1,
@@ -1420,6 +1421,7 @@ static void od_quantize_haar_dc_sb(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   sb_dc_mem[by*nhsb + bx] = sb_dc_curr;
   if (by > 0) *ovgrad = sb_dc_mem[(by - 1)*nhsb + bx] - sb_dc_curr;
   if (bx > 0) *ohgrad = sb_dc_mem[by*nhsb + bx - 1]- sb_dc_curr;
+  *ovgrad = *ohgrad = 0;
 }
 #endif
 

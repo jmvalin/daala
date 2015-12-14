@@ -682,6 +682,7 @@ static void od_decode_haar_dc_sb(daala_dec_ctx *dec, od_mb_dec_ctx *ctx,
   else if (by > 0) sb_dc_pred = sb_dc_mem[(by - 1)*nhsb + bx];
   else if (bx > 0) sb_dc_pred = sb_dc_mem[by*nhsb + bx - 1];
   else sb_dc_pred = 0;
+  sb_dc_pred = 0;
   quant = generic_decode(&dec->ec, &dec->state.adapt.model_dc[pli], -1,
    &dec->state.adapt.ex_sb_dc[pli], 2, "haardc:mag:top");
   if (quant) {
@@ -692,6 +693,7 @@ static void od_decode_haar_dc_sb(daala_dec_ctx *dec, od_mb_dec_ctx *ctx,
   sb_dc_mem[by*nhsb + bx] = sb_dc_curr;
   if (by > 0) *ovgrad = sb_dc_mem[(by - 1)*nhsb + bx] - sb_dc_curr;
   if (bx > 0) *ohgrad = sb_dc_mem[by*nhsb + bx - 1] - sb_dc_curr;
+  *ovgrad = *ohgrad = 0;
 }
 #endif
 
