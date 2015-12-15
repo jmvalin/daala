@@ -244,6 +244,8 @@ struct od_state{
   /*Array of flags to enable the dering filter per block.
     1 to enable (default), 0 to disable.*/
   unsigned char *dering_flags;
+  /*Whether the superblocks are intra coded.*/
+  unsigned char *intra_flags;
   /*This provides context for the quantizer CDF.*/
   unsigned char *sb_q_scaling;
   /*Magnitude compensated quantization matrices and their inverses.

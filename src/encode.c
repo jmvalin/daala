@@ -2513,9 +2513,19 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
   }
   for (sby = 0; sby < nvsb; sby++) {
     for (sbx = 0; sbx < nhsb; sbx++) {
-      mbctx->is_intra_sb = mbctx->is_intra_frame;
-      if (!mbctx->is_intra_frame) mbctx->is_intra_sb = (sbx + sby)%2 == 0;
-      od_ec_enc_bits(&enc->ec, mbctx->is_intra_sb, 1);
+      if (mbctx->is_intra_frame) {
+        mbctx->is_intra_sb = 1;
+      }
+      else {
+        if (rdo_only) {
+          mbctx->is_intra_sb = (unsigned)rand()%2 == 0;
+          enc->state.intra_flags[sby*enc->state.nhsb + sbx] = mbctx->is_intra_sb;
+        }
+        else {
+          mbctx->is_intra_sb = enc->state.intra_flags[sby*enc->state.nhsb + sbx];
+        }
+        od_ec_enc_bits(&enc->ec, mbctx->is_intra_sb, 1);
+      }
       for (pli = 0; pli < nplanes; pli++) {
         mbctx->c = state->ctmp[pli];
         mbctx->d = state->dtmp;

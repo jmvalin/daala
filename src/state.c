@@ -475,6 +475,10 @@ static int od_state_init_impl(od_state *state, const daala_info *info) {
       return OD_EFAULT;
     }
   }
+  state->intra_flags = (unsigned char *)malloc(state->nhsb*state->nvsb);
+  if (OD_UNLIKELY(!state->intra_flags)) {
+    return OD_EFAULT;
+  }
   state->sb_q_scaling = (unsigned char *)malloc(state->nhsb * state->nvsb);
   /*Init frame buffer related variables.*/
   state->out_buff_ptr = -1;
