@@ -684,7 +684,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   pvq_qm = &enc->state.pvq_qm_q4[pli][0];
   exg = &enc->state.adapt.pvq.pvq_exg[pli][bs][0];
   ext = enc->state.adapt.pvq.pvq_ext + bs*PVQ_MAX_PARTITIONS;
-  skip_cdf = enc->state.adapt.skip_cdf[2*bs + (pli != 0)];
+  skip_cdf = enc->state.adapt.skip_cdf[is_keyframe*OD_NB_SKIP_CTX + 2*bs + (pli != 0)];
   model = enc->state.adapt.pvq.pvq_param_model;
   nb_bands = OD_BAND_OFFSETS[bs][0];
   off = &OD_BAND_OFFSETS[bs][1];

@@ -1259,13 +1259,13 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     rate_noskip = od_ec_enc_tell_frac(&enc->ec) - tell;
     dist_skip = od_compute_dist(enc, c_orig, mc_orig, n, bs);
     rate_skip = (1 << OD_BITRES)*od_encode_cdf_cost(2,
-     enc->state.adapt.skip_cdf[2*bs + (pli != 0)],
+     enc->state.adapt.skip_cdf[ctx->is_intra_sb*OD_NB_SKIP_CTX + 2*bs + (pli != 0)],
      4 + (pli == 0 && bs > 0));
     if (dist_skip + lambda*rate_skip < dist_noskip + lambda*rate_noskip) {
       od_encode_rollback(enc, &pre_encode_buf);
       /* Code the "skip this block" symbol (2). */
       od_encode_cdf_adapt(&enc->ec, 2,
-       enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 4 + (pli == 0 && bs > 0),
+       enc->state.adapt.skip_cdf[ctx->is_intra_sb*OD_NB_SKIP_CTX + 2*bs + (pli != 0)], 4 + (pli == 0 && bs > 0),
        enc->state.adapt.skip_increment);
 #if OD_SIGNAL_Q_SCALING
       if (bs == (OD_NBSIZES - 1) && pli == 0) {
@@ -1600,7 +1600,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     if (pli == 0) {
       /* Code the "split this block" symbol (4). */
       od_encode_cdf_adapt(&enc->ec, 4,
-       enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 5,
+       enc->state.adapt.skip_cdf[ctx->is_intra_sb*OD_NB_SKIP_CTX + 2*bs + (pli != 0)], 5,
        enc->state.adapt.skip_increment);
 #if OD_SIGNAL_Q_SCALING
       if (bs == (OD_NBSIZES - 1)) {
@@ -2405,8 +2405,7 @@ void od_encode_superblock(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
   xdec = enc->input_img[enc->curr_frame].planes[pli].xdec;
   ydec = enc->input_img[enc->curr_frame].planes[pli].ydec;
   mbctx->is_intra_sb = mbctx->is_intra_frame;
-  if (!mbctx->is_intra_frame) mbctx->is_intra_sb = rand() % 10 == 0;
-  mbctx->is_intra_sb = 1;
+  if (!mbctx->is_intra_frame) mbctx->is_intra_sb = rand() % 2 == 0;
   od_ec_enc_bits(&enc->ec, mbctx->is_intra_sb, 1);
   if (pli == 0 || (rdo_only && mbctx->is_intra_sb)) {
     for (i = 0; i < OD_BSIZE_MAX; i++) {

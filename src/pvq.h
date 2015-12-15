@@ -93,13 +93,15 @@ struct od_pvq_codeword_ctx {
   uint16_t        pvq_k1_cdf[4][16];
 };
 
+#define OD_GAINTHETA_CTX (2*OD_NBSIZES*PVQ_MAX_PARTITIONS)
+
 struct od_pvq_adapt_ctx {
   od_pvq_codeword_ctx pvq_codeword_ctx;
   generic_encoder     pvq_param_model[3];
   int                 pvq_ext[OD_NBSIZES*PVQ_MAX_PARTITIONS];
   int                 pvq_exg[OD_NPLANES_MAX][OD_NBSIZES][PVQ_MAX_PARTITIONS];
   int                 pvq_gaintheta_increment;
-  uint16_t        pvq_gaintheta_cdf[2*OD_NBSIZES*PVQ_MAX_PARTITIONS][16];
+  uint16_t        pvq_gaintheta_cdf[OD_GAINTHETA_CTX][16];
   int                 pvq_skip_dir_increment;
   uint16_t        pvq_skip_dir_cdf[2*(OD_NBSIZES-1)][7];
 };

@@ -132,6 +132,7 @@ struct od_yuv_dumpfile{
 };
 # endif
 
+#define OD_NB_SKIP_CTX (2*OD_NBSIZES)
 
 struct od_adapt_ctx {
   /* Support for PVQ encode/decode */
@@ -153,7 +154,7 @@ struct od_adapt_ctx {
   int ex_g[OD_NPLANES_MAX][OD_NBSIZES];
 
   /* Joint skip flag for DC and AC */
-  uint16_t skip_cdf[OD_NBSIZES*2][5];
+  uint16_t skip_cdf[2*OD_NB_SKIP_CTX][5];
   int skip_increment;
   uint16_t haar_coeff_cdf[15*3*(OD_NBSIZES + 1)][16];
   int haar_coeff_increment;
