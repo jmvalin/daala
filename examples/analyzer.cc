@@ -114,6 +114,7 @@ public:
   bool setAccountingEnabled(bool enable);
   bool getAccountingStruct(od_accounting **acct);
   bool setDeringFlagsBuffer(unsigned char *buf, size_t buf_sz);
+  bool setIntraSBBuffer(unsigned char *buf, size_t buf_sz);
 };
 
 static void ogg_to_daala_packet(daala_packet *dp, ogg_packet *op) {
@@ -319,6 +320,14 @@ bool DaalaDecoder::setDeringFlagsBuffer(unsigned char *buf, size_t buf_sz) {
    OD_SUCCESS;
 }
 
+bool DaalaDecoder::setIntraSBBuffer(unsigned char *buf, size_t buf_sz) {
+  if (dctx == NULL) {
+    return false;
+  }
+  return daala_decode_ctl(dctx, OD_DECCTL_SET_INTRA_SB_BUFFER, buf, buf_sz) ==
+   OD_SUCCESS;
+}
+
 #define MIN_ZOOM (1)
 #define MAX_ZOOM (4)
 
@@ -358,6 +367,10 @@ private:
   unsigned char *dering;
   unsigned int dering_len;
 
+  bool show_intra;
+  unsigned int intra_sb_len;
+  unsigned char *intra_sb;
+
   int plane_mask;
   const wxString path;
 
@@ -396,6 +409,7 @@ public:
   void setShowBits(bool show_bits);
   void setShowDering(bool show_dering);
   void setShowPlane(bool show_plane, int mask);
+  void setShowIntra(bool show_intra);
 
   bool hasPadding();
 
@@ -450,6 +464,7 @@ enum {
   wxID_SHOW_BITS,
   wxID_FILTER_BITS,
   wxID_SHOW_DERING,
+  wxID_SHOW_INTRA,
   wxID_SHOW_Y,
   wxID_SHOW_U,
   wxID_SHOW_V,
@@ -471,6 +486,7 @@ BEGIN_EVENT_TABLE(TestFrame, wxFrame)
   EVT_MENU(wxID_SHOW_BITS, TestFrame::onBitsChange)
   EVT_MENU(wxID_FILTER_BITS, TestFrame::onFilterBits)
   EVT_MENU(wxID_SHOW_DERING, TestFrame::onFilter)
+  EVT_MENU(wxID_SHOW_INTRA, TestFrame::onFilter)
   EVT_MENU(wxID_SHOW_Y, TestFrame::onYChange)
   EVT_MENU(wxID_SHOW_U, TestFrame::onUChange)
   EVT_MENU(wxID_SHOW_V, TestFrame::onVChange)
@@ -485,7 +501,7 @@ TestPanel::TestPanel(wxWindow *parent, const wxString &path) : wxPanel(parent),
  flags(NULL), flags_len(0), show_skip(false), show_noref(false),
  show_padding(false), show_dering(false), acct(NULL), show_bits(false),
  show_bits_filter(_T("")), bpp_q3(NULL), dering(NULL), dering_len(0),
- plane_mask(OD_ALL_MASK),
+ intra_sb(NULL), intra_sb_len(0), show_intra(false), plane_mask(OD_ALL_MASK),
  path(path) {
 }
 
@@ -549,6 +565,13 @@ bool TestPanel::open(const wxString &path) {
     close();
     return false;
   }
+  intra_sb_len = sizeof(*intra_sb)*nhsb*nvsb;
+  intra_sb = (unsigned char *)malloc(intra_sb_len);
+  if (!dd.setIntraSBBuffer(intra_sb, intra_sb_len)) {
+    fprintf(stderr,"Could not set intra buffer\n");
+    close();
+    return false;
+  }
   if (!nextFrame()) {
     close();
     return false;
@@ -569,6 +592,8 @@ void TestPanel::close() {
   bpp_q3 = NULL;
   free(dering);
   dering = NULL;
+  free(intra_sb);
+  intra_sb = NULL;
 }
 
 int TestPanel::getDecodeWidth() const {
@@ -731,6 +756,15 @@ void TestPanel::render() {
           pmask = OD_ALL_MASK;
         }
       }
+      if (show_intra) {
+        int sbx;
+        int sby;
+        sbx = i >> OD_LOG_BSIZE_MAX;
+        sby = j >> OD_LOG_BSIZE_MAX;
+        if (intra_sb[sby*nhsb + sbx]) {
+          yval = 0;
+        }
+      }
       if (i == dd.getWidth() || j == dd.getHeight()) {
         /* Display a checkerboard pattern at the padding edge */
         yval = 255 * ((i + j) & 1);
@@ -835,6 +869,10 @@ void TestPanel::setShowPlane(bool show_plane, int mask) {
   } else {
     plane_mask &= ~mask;
   }
+}
+
+void TestPanel::setShowIntra(bool show_intra) {
+  this->show_intra = show_intra;
 }
 
 bool TestPanel::hasPadding() {
@@ -1067,6 +1105,7 @@ void TestPanel::restart() {
   dd.setAccountingEnabled(true);
   dd.getAccountingStruct(&acct);
   dd.setDeringFlagsBuffer(dering, dering_len);
+  dd.setIntraSBBuffer(intra_sb, intra_sb_len);
   nextFrame();
 }
 
@@ -1143,6 +1182,8 @@ TestFrame::TestFrame() : wxFrame(NULL, wxID_ANY, _T("Daala Stream Analyzer"),
    _("Filter bit accounting"));
   viewMenu->AppendCheckItem(wxID_SHOW_DERING, _T("&Deringing\tCtrl-D"),
    _("Show deringing filter"));
+  viewMenu->AppendCheckItem(wxID_SHOW_INTRA, _T("&Intra Blocks\tCtrl-I"),
+   _("Show intra blocks"));
   viewMenu->AppendSeparator();
   viewMenu->AppendCheckItem(wxID_SHOW_Y, _T("&Y plane\tCtrl-Y"),
    _("Show Y plane"));
@@ -1215,6 +1256,7 @@ void TestFrame::onFilter(wxCommandEvent &WXUNUSED(event)) {
   panel->setShowSkip(GetMenuBar()->IsChecked(wxID_SHOW_SKIP));
   panel->setShowNoRef(GetMenuBar()->IsChecked(wxID_SHOW_NOREF));
   panel->setShowDering(GetMenuBar()->IsChecked(wxID_SHOW_DERING));
+  panel->setShowIntra(GetMenuBar()->IsChecked(wxID_SHOW_INTRA));
   panel->render();
   panel->Refresh(false);
 }

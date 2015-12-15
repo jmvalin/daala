@@ -65,6 +65,9 @@ struct daala_dec_ctx {
   /*User provided buffer for storing the deringing filter flags per superblock.
     This is set via daala_decode_ctl with OD_DECCTL_SET_DERING_BUFFER.*/
   unsigned char *user_dering;
+  /*User provided buffer for storing the intra superblock flag.
+    This is set via daala_decode_ctl with OD_DECCTL_SET_INTRA_SB_BUFFER.*/
+  unsigned char *user_intra_sb;
 };
 
 /*Stub for the daala_setup_info.*/

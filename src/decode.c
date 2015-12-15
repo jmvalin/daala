@@ -68,6 +68,7 @@ static int od_dec_init(od_dec_ctx *dec, const daala_info *info,
   dec->user_mv_grid = NULL;
   dec->user_mc_img = NULL;
   dec->user_dering = NULL;
+  dec->user_intra_sb = NULL;
   data_sz = 0;
   output_bits = 8 + (info->bitdepth_mode - OD_BITDEPTH_MODE_8)*2;
   output_bytes = output_bits > 8 ? 2 : 1;
@@ -211,6 +212,15 @@ int daala_decode_ctl(daala_dec_ctx *dec, int req, void *buf, size_t buf_sz) {
       OD_RETURN_CHECK(
        buf_sz == sizeof(unsigned char)*nvdr*nhdr, OD_EINVAL);
       dec->user_dering = (unsigned char *)buf;
+      return OD_SUCCESS;
+    }
+    case OD_DECCTL_SET_INTRA_SB_BUFFER : {
+      OD_RETURN_CHECK(dec, OD_EFAULT);
+      OD_RETURN_CHECK(buf, OD_EFAULT);
+      OD_RETURN_CHECK(
+       buf_sz == sizeof(unsigned char)*dec->state.nhsb*dec->state.nvsb,
+       OD_EINVAL);
+      dec->user_intra_sb = (unsigned char *)buf;
       return OD_SUCCESS;
     }
     default: return OD_EIMPL;
@@ -1024,6 +1034,9 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
         xdec = dec->output_img[dec->curr_dec_frame].planes[pli].xdec;
         ydec = dec->output_img[dec->curr_dec_frame].planes[pli].ydec;
         mbctx->is_intra_sb = od_ec_dec_bits(&dec->ec, 1, "intra");
+        if (dec->user_intra_sb != NULL) {
+          dec->user_intra_sb[dec->state.nhsb*sby + sbx] = mbctx->is_intra_sb;
+        }
         if (mbctx->is_intra_sb) {
           od_decode_haar_dc_sb(dec, mbctx, pli, sbx, sby, xdec, ydec,
            sby > 0 && sbx < nhsb - 1, &hgrad, &vgrad);
