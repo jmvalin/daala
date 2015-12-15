@@ -262,7 +262,7 @@ static double od_pvq_rate(int qg, int icgr, int theta, int ts,
     od_pvq_codeword_ctx cd;
     int tell;
     od_ec_enc_init(&ec, 1000);
-    OD_COPY(&cd, &adapt->pvq.pvq_codeword_ctx, 1);
+    OD_COPY(&cd, &adapt->pvq.pvq_codeword_ctx[is_keyframe], 1);
     tell = od_ec_enc_tell_frac(&ec);
     od_encode_pvq_codeword(&ec, &cd, y0, n, k, theta == -1, bs);
     rate = (od_ec_enc_tell_frac(&ec)-tell)/8.;
@@ -577,7 +577,7 @@ static void pvq_encode_partition(od_ec_enc *ec,
      &tmp, 2);
     OD_IIR_DIADIC(*ext, theta << 16, 2);
   }
-  od_encode_pvq_codeword(ec, &adapt->pvq.pvq_codeword_ctx, in, n, k, theta == -1, bs);
+  od_encode_pvq_codeword(ec, &adapt->pvq.pvq_codeword_ctx[is_keyframe], in, n, k, theta == -1, bs);
 }
 
 /** Quantizes a scalar with rate-distortion optimization (RDO)

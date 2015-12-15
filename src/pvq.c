@@ -255,22 +255,25 @@ const double *const OD_PVQ_BETA[2][OD_NPLANES_MAX][OD_NBSIZES + 1] = {
 };
 
 void od_adapt_pvq_ctx_reset(od_pvq_adapt_ctx *state, int is_keyframe) {
-  od_pvq_codeword_ctx *ctx;
   int i;
   int pli;
   int bs;
-  ctx = &state->pvq_codeword_ctx;
+  int k;
   generic_model_init(&state->pvq_param_model[0]);
   generic_model_init(&state->pvq_param_model[1]);
   generic_model_init(&state->pvq_param_model[2]);
-  for (i = 0; i < 2*OD_NBSIZES; i++) {
-    ctx->pvq_adapt[4*i + OD_ADAPT_K_Q8] = 384;
-    ctx->pvq_adapt[4*i + OD_ADAPT_SUM_EX_Q8] = 256;
-    ctx->pvq_adapt[4*i + OD_ADAPT_COUNT_Q8] = 104;
-    ctx->pvq_adapt[4*i + OD_ADAPT_COUNT_EX_Q8] = 128;
+  for (k=0;k<2;k++) {
+    od_pvq_codeword_ctx *ctx;
+    ctx = &state->pvq_codeword_ctx[k];
+    for (i = 0; i < 2*OD_NBSIZES; i++) {
+      ctx->pvq_adapt[4*i + OD_ADAPT_K_Q8] = 384;
+      ctx->pvq_adapt[4*i + OD_ADAPT_SUM_EX_Q8] = 256;
+      ctx->pvq_adapt[4*i + OD_ADAPT_COUNT_Q8] = 104;
+      ctx->pvq_adapt[4*i + OD_ADAPT_COUNT_EX_Q8] = 128;
+    }
+    ctx->pvq_k1_increment = 128;
+    OD_CDFS_INIT(ctx->pvq_k1_cdf, ctx->pvq_k1_increment);
   }
-  ctx->pvq_k1_increment = 128;
-  OD_CDFS_INIT(ctx->pvq_k1_cdf, ctx->pvq_k1_increment);
   for (pli = 0; pli < OD_NPLANES_MAX; pli++) {
     for (bs = 0; bs < OD_NBSIZES; bs++)
     for (i = 0; i < PVQ_MAX_PARTITIONS; i++) {

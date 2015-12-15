@@ -96,7 +96,7 @@ struct od_pvq_codeword_ctx {
 #define OD_GAINTHETA_CTX (2*OD_NBSIZES*PVQ_MAX_PARTITIONS)
 
 struct od_pvq_adapt_ctx {
-  od_pvq_codeword_ctx pvq_codeword_ctx;
+  od_pvq_codeword_ctx pvq_codeword_ctx[2];
   generic_encoder     pvq_param_model[3];
   int                 pvq_ext[OD_NBSIZES*PVQ_MAX_PARTITIONS];
   int                 pvq_exg[OD_NPLANES_MAX][OD_NBSIZES][PVQ_MAX_PARTITIONS];
