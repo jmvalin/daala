@@ -711,6 +711,7 @@ struct od_mb_enc_ctx {
   int is_golden_frame;
   int frame_type;
   int q_scaling;
+  double rd_cost;
 };
 typedef struct od_mb_enc_ctx od_mb_enc_ctx;
 
@@ -1637,6 +1638,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       dist_split = od_compute_dist(enc, c_orig, split, n, bs);
       dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs);
       lambda = od_bs_rdo_lambda(enc->state.quantizer[pli]);
+      ctx->rd_cost = OD_MINF(dist_nosplit + lambda*rate_nosplit,
+       dist_split + lambda*rate_split);
       if (skip_split || dist_nosplit + lambda*rate_nosplit < dist_split
        + lambda*rate_split) {
         /* This rollback call leaves the entropy coder in an inconsistent state
@@ -1673,6 +1676,11 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
 #endif
       for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) ctx->mc[bo + i*w + j] = mc_orig[n*i + j];
+      }
+      if (rdo_only == 2) {
+        for (i = 0; i < n; i++) {
+          for (j = 0; j < n; j++) ctx->c[bo + i*w + j] = c_orig[n*i + j];
+        }
       }
     }
     return skip_block && rdo_only;
@@ -2399,6 +2407,11 @@ void od_encode_superblock(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
   od_rollback_buffer buf;
   od_coeff hgrad;
   od_coeff vgrad;
+  mbctx->c = enc->state.ctmp[pli];
+  mbctx->d = enc->state.dtmp;
+  mbctx->mc = enc->state.mctmp[pli];
+  mbctx->md = enc->state.mdtmp[pli];
+  mbctx->l = enc->state.lbuf[pli];
   width = enc->state.frame_width;
   hgrad = vgrad = 0;
   c_orig = enc->c_orig[0];
@@ -2518,7 +2531,41 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
       }
       else {
         if (rdo_only) {
-          mbctx->is_intra_sb = (unsigned)rand()%2 == 0;
+          double intra_rd;
+          double inter_rd;
+          od_rollback_buffer buf;
+          /* Try inter. */
+          mbctx->is_intra_sb = 0;
+          od_encode_checkpoint(enc, &buf);
+          od_encode_superblock(enc, mbctx, pli, sbx, sby, 2);
+          od_encode_rollback(enc, &buf);
+          inter_rd = mbctx->rd_cost;
+          {
+            int i;
+            int j;
+            for (i = 0; i < OD_BSIZE_GRID; i++) {
+              for (j = 0; j < OD_BSIZE_GRID; j++) {
+                state->bsize[(i + OD_BSIZE_GRID*sby)*state->bstride + j + OD_BSIZE_GRID*sbx] = OD_BLOCK_4X4;
+              }
+            }
+          }
+          /* Try intra. */
+          mbctx->is_intra_sb = 1;
+          od_encode_checkpoint(enc, &buf);
+          od_encode_superblock(enc, mbctx, pli, sbx, sby, 2);
+          od_encode_rollback(enc, &buf);
+          intra_rd = mbctx->rd_cost;
+          {
+            int i;
+            int j;
+            for (i = 0; i < OD_BSIZE_GRID; i++) {
+              for (j = 0; j < OD_BSIZE_GRID; j++) {
+                state->bsize[(i + OD_BSIZE_GRID*sby)*state->bstride + j + OD_BSIZE_GRID*sbx] = OD_BLOCK_4X4;
+              }
+            }
+          }
+          /* Now make the RDO decision. */
+          mbctx->is_intra_sb = intra_rd < inter_rd;
           enc->state.intra_flags[sby*enc->state.nhsb + sbx] = mbctx->is_intra_sb;
         }
         else {
@@ -2527,11 +2574,6 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         od_ec_enc_bits(&enc->ec, mbctx->is_intra_sb, 1);
       }
       for (pli = 0; pli < nplanes; pli++) {
-        mbctx->c = state->ctmp[pli];
-        mbctx->d = state->dtmp;
-        mbctx->mc = state->mctmp[pli];
-        mbctx->md = state->mdtmp[pli];
-        mbctx->l = state->lbuf[pli];
         od_encode_superblock(enc, mbctx, pli, sbx, sby, rdo_only);
       }
     }
