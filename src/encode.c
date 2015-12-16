@@ -2459,6 +2459,9 @@ double od_encode_superblock(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
       }
     }
     tell = od_ec_enc_tell_frac(&enc->ec) - tell;
+    /* Approximate intra signalling cost to be about 5 bits since it's very low
+       probability. */
+    if (mbctx->is_intra_sb) tell += 5 << OD_BITRES;
     dist = od_compute_dist(enc, c_orig, c_coded, OD_BSIZE_MAX, OD_NBSIZES - 1);
     lambda = od_bs_rdo_lambda(enc->state.quantizer[pli]);
     /*printf("(%f %f) ", dist, lambda*tell);*/
