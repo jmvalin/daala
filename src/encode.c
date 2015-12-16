@@ -2549,6 +2549,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           int width;
           od_rollback_buffer buf;
           od_coeff c_orig[4096];
+          pli = 0;
           width = enc->state.frame_width;
           mbctx->c = enc->state.ctmp[pli];
           for (i = 0; i < OD_BSIZE_MAX; i++) {
