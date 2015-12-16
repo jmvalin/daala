@@ -1029,7 +1029,10 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
   for (sby = 0; sby < nvsb; sby++) {
     for (sbx = 0; sbx < nhsb; sbx++) {
       if (mbctx->is_intra_frame) mbctx->is_intra_sb = 1;
-      else mbctx->is_intra_sb = od_ec_dec_bits(&dec->ec, 1, "intra");
+      else {
+        mbctx->is_intra_sb = od_decode_cdf_adapt(&dec->ec,
+         state->adapt.intra_cdf, 2, state->adapt.intra_increment, "intra");
+      }
       if (dec->user_intra_sb != NULL) {
         dec->user_intra_sb[dec->state.nhsb*sby + sbx] = mbctx->is_intra_sb;
       }

@@ -638,6 +638,8 @@ void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   }
   state->clpf_increment = 128;
   OD_CDFS_INIT(state->clpf_cdf, state->clpf_increment >> 2);
+  state->intra_increment = 128;
+  OD_SINGLE_CDF_INIT(state->intra_cdf, state->intra_increment);
   state->q_increment = 128;
   OD_CDFS_INIT(state->q_cdf, state->q_increment >> 2);
 }

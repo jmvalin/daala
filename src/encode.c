@@ -2608,7 +2608,8 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         else {
           mbctx->is_intra_sb = enc->state.intra_flags[sby*enc->state.nhsb + sbx];
         }
-        od_ec_enc_bits(&enc->ec, mbctx->is_intra_sb, 1);
+        od_encode_cdf_adapt(&enc->ec, mbctx->is_intra_sb,
+         state->adapt.intra_cdf, 2, state->adapt.intra_increment);
       }
       for (pli = 0; pli < nplanes; pli++) {
         od_encode_superblock(enc, mbctx, pli, sbx, sby, rdo_only);
