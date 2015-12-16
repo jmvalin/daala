@@ -2457,12 +2457,6 @@ double od_encode_superblock(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     dist = od_compute_dist(enc, c_orig, c_coded, OD_BSIZE_MAX, OD_NBSIZES - 1);
     lambda = od_bs_rdo_lambda(enc->state.quantizer[pli]);
     /*printf("(%f %f) ", dist, lambda*tell);*/
-    for (i = 0; i < OD_BSIZE_MAX; i++) {
-      for (j = 0; j < OD_BSIZE_MAX; j++) {
-         mbctx->c[(OD_BSIZE_MAX*sby + i)*width + OD_BSIZE_MAX*sbx + j] =
-           c_orig[i*OD_BSIZE_MAX + j];
-      }
-    }
     return dist + lambda*tell;
   }
   return -1;
@@ -2548,20 +2542,36 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
       }
       else {
         if (rdo_only) {
+          int i;
+          int j;
           double intra_rd;
           double inter_rd;
+          int width;
           od_rollback_buffer buf;
+          od_coeff c_orig[4096];
+          width = enc->state.frame_width;
+          mbctx->c = enc->state.ctmp[pli];
+          for (i = 0; i < OD_BSIZE_MAX; i++) {
+            for (j = 0; j < OD_BSIZE_MAX; j++) {
+              c_orig[i*OD_BSIZE_MAX + j] =
+               mbctx->c[(OD_BSIZE_MAX*sby + i)*width + OD_BSIZE_MAX*sbx + j];
+            }
+          }
           /* Try inter. */
           mbctx->is_intra_sb = 0;
           od_encode_checkpoint(enc, &buf);
           inter_rd = od_encode_superblock(enc, mbctx, pli, sbx, sby, 2);
           od_encode_rollback(enc, &buf);
           {
-            int i;
-            int j;
             for (i = 0; i < OD_BSIZE_GRID; i++) {
               for (j = 0; j < OD_BSIZE_GRID; j++) {
                 state->bsize[(i + OD_BSIZE_GRID*sby)*state->bstride + j + OD_BSIZE_GRID*sbx] = OD_BLOCK_4X4;
+              }
+            }
+            for (i = 0; i < OD_BSIZE_MAX; i++) {
+              for (j = 0; j < OD_BSIZE_MAX; j++) {
+                mbctx->c[(OD_BSIZE_MAX*sby + i)*width + OD_BSIZE_MAX*sbx + j] =
+                 c_orig[i*OD_BSIZE_MAX + j];
               }
             }
           }
@@ -2571,11 +2581,15 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           intra_rd = od_encode_superblock(enc, mbctx, pli, sbx, sby, 2);
           od_encode_rollback(enc, &buf);
           {
-            int i;
-            int j;
             for (i = 0; i < OD_BSIZE_GRID; i++) {
               for (j = 0; j < OD_BSIZE_GRID; j++) {
                 state->bsize[(i + OD_BSIZE_GRID*sby)*state->bstride + j + OD_BSIZE_GRID*sbx] = OD_BLOCK_4X4;
+              }
+            }
+            for (i = 0; i < OD_BSIZE_MAX; i++) {
+              for (j = 0; j < OD_BSIZE_MAX; j++) {
+                mbctx->c[(OD_BSIZE_MAX*sby + i)*width + OD_BSIZE_MAX*sbx + j] =
+                 c_orig[i*OD_BSIZE_MAX + j];
               }
             }
           }
