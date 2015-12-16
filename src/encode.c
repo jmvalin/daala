@@ -1411,7 +1411,6 @@ static void od_quantize_haar_dc_sb(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   else if (by > 0) sb_dc_pred = sb_dc_mem[(by - 1)*nhsb + bx];
   else if (bx > 0) sb_dc_pred = sb_dc_mem[by*nhsb + bx - 1];
   else sb_dc_pred = 0;
-  sb_dc_pred = 0;
   dc0 = d[(by << ln)*w + (bx << ln)] - sb_dc_pred;
   quant = OD_DIV_R0(dc0, dc_quant);
   generic_encode(&enc->ec, &enc->state.adapt.model_dc[pli], abs(quant), -1,
@@ -1422,7 +1421,6 @@ static void od_quantize_haar_dc_sb(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   sb_dc_mem[by*nhsb + bx] = sb_dc_curr;
   if (by > 0) *ovgrad = sb_dc_mem[(by - 1)*nhsb + bx] - sb_dc_curr;
   if (bx > 0) *ohgrad = sb_dc_mem[by*nhsb + bx - 1]- sb_dc_curr;
-  *ovgrad = *ohgrad = 0;
 }
 #endif
 
@@ -1495,7 +1493,7 @@ static void od_quantize_haar_dc_level(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
 /* Returns 1 if the block is skipped, zero otherwise. */
 static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
  int pli, int bx, int by, int bsi, int xdec, int ydec, int rdo_only,
- od_coeff hgrad, od_coeff vgrad) {
+ od_coeff hgrad, od_coeff vgrad, od_coeff *dc) {
   int obs;
   int bs;
   int frame_width;
@@ -1527,6 +1525,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
          + (bx << bs) + j] = skip && !ctx->is_intra_sb;
       }
     }
+    *dc = ctx->d[pli][(by << (2 + bs))*w + (bx << (2 + bs))];
     return skip;
   }
   else {
@@ -1547,6 +1546,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     int rate_split;
     int hfilter;
     int vfilter;
+    od_coeff tmp_dc;
     c_orig = enc->c_orig[bsi - 1];
     mc_orig = enc->mc_orig[bsi - 1];
     nosplit = enc->nosplit[bsi - 1];
@@ -1613,14 +1613,20 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       od_quantize_haar_dc_level(enc, ctx, pli, 2*bx, 2*by, bsi - 1, xdec,
        &hgrad, &vgrad);
     }
+    *dc = 0;
     skip_split &= od_encode_recursive(enc, ctx, pli, 2*bx + 0, 2*by + 0,
-     bsi - 1, xdec, ydec, rdo_only, hgrad, vgrad);
+     bsi - 1, xdec, ydec, rdo_only, hgrad, vgrad, &tmp_dc);
+    *dc += tmp_dc;
     skip_split &= od_encode_recursive(enc, ctx, pli, 2*bx + 1, 2*by + 0,
-     bsi - 1, xdec, ydec, rdo_only, hgrad, vgrad);
+     bsi - 1, xdec, ydec, rdo_only, hgrad, vgrad, &tmp_dc);
+    *dc += tmp_dc;
     skip_split &= od_encode_recursive(enc, ctx, pli, 2*bx + 0, 2*by + 1,
-     bsi - 1, xdec, ydec, rdo_only, hgrad, vgrad);
+     bsi - 1, xdec, ydec, rdo_only, hgrad, vgrad, &tmp_dc);
+    *dc += tmp_dc;
     skip_split &= od_encode_recursive(enc, ctx, pli, 2*bx + 1, 2*by + 1,
-     bsi - 1, xdec, ydec, rdo_only, hgrad, vgrad);
+     bsi - 1, xdec, ydec, rdo_only, hgrad, vgrad, &tmp_dc);
+    *dc += tmp_dc;
+    *dc /= 2;
     skip_block = skip_split;
     od_postfilter_split(ctx->c + bo, w, bs, f, enc->state.coded_quantizer[pli],
      &enc->state.bskip[pli][(by << bs)*enc->state.skip_stride + (bx << bs)],
@@ -2401,6 +2407,7 @@ double od_encode_superblock(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
   int tell;
   od_coeff hgrad;
   od_coeff vgrad;
+  od_coeff dc;
   mbctx->c = enc->state.ctmp[pli];
   mbctx->d = enc->state.dtmp;
   mbctx->mc = enc->state.mctmp[pli];
@@ -2438,7 +2445,10 @@ double od_encode_superblock(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
      od_compute_superblock_q_scaling(enc, c_orig, OD_BSIZE_MAX);
   }
   od_encode_recursive(enc, mbctx, pli, sbx, sby, OD_NBSIZES - 1, xdec,
-   ydec, rdo_only, hgrad, vgrad);
+   ydec, rdo_only, hgrad, vgrad, &dc);
+  if (!rdo_only && !mbctx->is_intra_sb) {
+    enc->state.sb_dc_mem[pli][sby*enc->state.nhsb + sbx] = dc;
+  }
   if (rdo_only && !mbctx->is_intra_frame) {
     double dist;
     double lambda;
@@ -2603,7 +2613,6 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
       for (pli = 0; pli < nplanes; pli++) {
         od_encode_superblock(enc, mbctx, pli, sbx, sby, rdo_only);
       }
-      if (!mbctx->is_intra_frame && rdo_only) printf("\n\n");
     }
   }
   /* FIXME: Remove this, it's only there to make sure we don't use is_intra_sb

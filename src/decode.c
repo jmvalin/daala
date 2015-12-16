@@ -692,7 +692,6 @@ static void od_decode_haar_dc_sb(daala_dec_ctx *dec, od_mb_dec_ctx *ctx,
   else if (by > 0) sb_dc_pred = sb_dc_mem[(by - 1)*nhsb + bx];
   else if (bx > 0) sb_dc_pred = sb_dc_mem[by*nhsb + bx - 1];
   else sb_dc_pred = 0;
-  sb_dc_pred = 0;
   quant = generic_decode(&dec->ec, &dec->state.adapt.model_dc[pli], -1,
    &dec->state.adapt.ex_sb_dc[pli], 2, "haardc:mag:top");
   if (quant) {
@@ -703,7 +702,6 @@ static void od_decode_haar_dc_sb(daala_dec_ctx *dec, od_mb_dec_ctx *ctx,
   sb_dc_mem[by*nhsb + bx] = sb_dc_curr;
   if (by > 0) *ovgrad = sb_dc_mem[(by - 1)*nhsb + bx] - sb_dc_curr;
   if (bx > 0) *ohgrad = sb_dc_mem[by*nhsb + bx - 1] - sb_dc_curr;
-  *ovgrad = *ohgrad = 0;
 }
 #endif
 
@@ -778,7 +776,8 @@ static void od_decode_quantizer_scaling(daala_dec_ctx *dec, int bx, int by,
 #endif
 
 static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
- int bx, int by, int bsi, int xdec, int ydec, od_coeff hgrad, od_coeff vgrad) {
+ int bx, int by, int bsi, int xdec, int ydec, od_coeff hgrad, od_coeff vgrad,
+ od_coeff *dc) {
   int obs;
   int bs;
   int w;
@@ -845,13 +844,14 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
          + (bx << bs) + j] = (skip == 2) && !ctx->is_intra_sb;
       }
     }
-
+    *dc = ctx->d[pli][(by << (2 + bs))*w + (bx << (2 + bs))];
   }
   else {
     int f;
     int bo;
     int hfilter;
     int vfilter;
+    od_coeff tmp_dc;
     bs = bsi - xdec;
     f = OD_FILT_SIZE(bs - 1, xdec);
     bo = (by << (OD_LOG_BSIZE0 + bs))*w + (bx << (OD_LOG_BSIZE0 + bs));
@@ -864,14 +864,20 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
       od_decode_haar_dc_level(dec, ctx, pli, 2*bx, 2*by, bsi - 1, xdec, &hgrad,
        &vgrad);
     }
+    *dc = 0;
     od_decode_recursive(dec, ctx, pli, 2*bx + 0, 2*by + 0, bsi - 1, xdec, ydec,
-     hgrad, vgrad);
+     hgrad, vgrad, &tmp_dc);
+    *dc += tmp_dc;
     od_decode_recursive(dec, ctx, pli, 2*bx + 1, 2*by + 0, bsi - 1, xdec, ydec,
-     hgrad, vgrad);
+     hgrad, vgrad, &tmp_dc);
+    *dc += tmp_dc;
     od_decode_recursive(dec, ctx, pli, 2*bx + 0, 2*by + 1, bsi - 1, xdec, ydec,
-     hgrad, vgrad);
+     hgrad, vgrad, &tmp_dc);
+    *dc += tmp_dc;
     od_decode_recursive(dec, ctx, pli, 2*bx + 1, 2*by + 1, bsi - 1, xdec, ydec,
-     hgrad, vgrad);
+     hgrad, vgrad, &tmp_dc);
+    *dc += tmp_dc;
+    *dc /= 2;
     bs = bsi - xdec;
     bo = (by << (OD_LOG_BSIZE0 + bs))*w + (bx << (OD_LOG_BSIZE0 + bs));
     od_postfilter_split(ctx->c + bo, w, bs, f, dec->state.coded_quantizer[pli],
@@ -1030,6 +1036,7 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
       for (pli = 0; pli < nplanes; pli++) {
         od_coeff hgrad;
         od_coeff vgrad;
+        od_coeff dc;
         hgrad = vgrad = 0;
         mbctx->c = state->ctmp[pli];
         mbctx->d = state->dtmp;
@@ -1043,7 +1050,11 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
            sby > 0 && sbx < nhsb - 1, &hgrad, &vgrad);
         }
         od_decode_recursive(dec, mbctx, pli, sbx, sby, OD_NBSIZES - 1, xdec,
-         ydec, hgrad, vgrad);
+         ydec, hgrad, vgrad, &dc);
+        if (!mbctx->is_intra_sb) {
+         dec->state.sb_dc_mem[pli][sby*dec->state.nhsb + sbx] = dc;
+        }
+
       }
     }
   }
