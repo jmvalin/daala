@@ -2399,7 +2399,6 @@ double od_encode_superblock(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
   od_coeff c_coded[4096];
   int width;
   int tell;
-  od_rollback_buffer buf;
   od_coeff hgrad;
   od_coeff vgrad;
   mbctx->c = enc->state.ctmp[pli];
@@ -2421,15 +2420,11 @@ double od_encode_superblock(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
   }
   if (rdo_only) tell = od_ec_enc_tell_frac(&enc->ec);
   if (mbctx->is_intra_sb) {
-    if (rdo_only) {
-      od_encode_checkpoint(enc, &buf);
-    }
     od_compute_dcts(enc, mbctx, pli, sbx, sby, OD_NBSIZES - 1, xdec,
      ydec, mbctx->use_haar_wavelet && !rdo_only);
     od_quantize_haar_dc_sb(enc, mbctx, pli, sbx, sby, xdec, ydec,
      sby > 0 && sbx < enc->state.nhsb - 1, &hgrad, &vgrad);
     if (rdo_only) {
-      od_encode_rollback(enc, &buf);
       for (i = 0; i < OD_BSIZE_MAX; i++) {
         for (j = 0; j < OD_BSIZE_MAX; j++) {
           mbctx->c[(OD_BSIZE_MAX*sby + i)*width + OD_BSIZE_MAX*sbx + j] =
