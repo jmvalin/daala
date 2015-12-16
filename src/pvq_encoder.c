@@ -562,7 +562,7 @@ static void pvq_encode_partition(od_ec_enc *ec,
   }
   /* Jointly code gain, theta and noref for small values. Then we handle
      larger gain and theta values. For noref, theta = -1. */
-  od_encode_cdf_adapt(ec, id, &adapt->pvq.pvq_gaintheta_cdf[cdf_ctx][0],
+  od_encode_cdf_adapt(ec, id, &adapt->pvq.pvq_gaintheta_cdf[is_keyframe*OD_GAINTHETA_CTX + cdf_ctx][0],
    8 + 7*code_skip, adapt->pvq.pvq_gaintheta_increment);
   if (qg > 0) {
     int tmp;
