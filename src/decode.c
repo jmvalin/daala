@@ -726,8 +726,8 @@ static void od_decode_haar_dc_level(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int 
   }
   /* Gives best results for subset1, more conservative than the
      theoretical /4 of a pure gradient. */
-  x[1] += *hgrad/4;
-  x[2] += *vgrad/4;
+  x[1] += *hgrad/3;
+  x[2] += *vgrad/3;
   *hgrad = x[1];
   *vgrad = x[2];
   OD_HAAR_KERNEL(x[0], x[1], x[2], x[3]);

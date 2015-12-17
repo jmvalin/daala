@@ -1452,8 +1452,8 @@ static void od_quantize_haar_dc_level(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   x[1] = ctx->d[pli][(by << ln)*w + ((bx + 1) << ln)];
   x[2] = ctx->d[pli][((by + 1) << ln)*w + (bx << ln)];
   x[3] = ctx->d[pli][((by + 1) << ln)*w + ((bx + 1) << ln)];
-  x[1] -= *hgrad/4;
-  x[2] -= *vgrad/4;
+  x[1] -= *hgrad/3;
+  x[2] -= *vgrad/3;
   for (i = 1; i < 4; i++) {
     int quant;
     int sign;
@@ -1482,8 +1482,8 @@ static void od_quantize_haar_dc_level(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   }
   /* Gives best results for subset1, more conservative than the
      theoretical /4 of a pure gradient. */
-  x[1] += *hgrad/4;
-  x[2] += *vgrad/4;
+  x[1] += *hgrad/3;
+  x[2] += *vgrad/3;
   *hgrad = x[1];
   *vgrad = x[2];
   OD_HAAR_KERNEL(x[0], x[1], x[2], x[3]);
