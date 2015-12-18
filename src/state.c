@@ -581,7 +581,7 @@ void od_state_clear(od_state *state) {
 
   These statistics should be regenerated if the number of levels or the size
    of the levels change.*/
-
+#if 0
 static const uint16_t OD_MV_SPLIT_FLAG_PROBZ_Q15[OD_MC_LEVEL_MAX][9] = {
   { 30512, 31715, 32546, 19755, 22768, 25170, 8822, 11180, 13710 },
   { 15025, 11377, 11630, 11771, 13799, 17357, 9106, 12384, 14943 },
@@ -590,6 +590,16 @@ static const uint16_t OD_MV_SPLIT_FLAG_PROBZ_Q15[OD_MC_LEVEL_MAX][9] = {
   { 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384 },
   { 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384 }
 };
+#else
+static const uint16_t OD_MV_SPLIT_FLAG_PROBZ_Q15[OD_MC_LEVEL_MAX][9] = {
+  { 17282, 26093, 30000, 5293, 11193, 22948, 1617, 2480, 5261},
+  { 13398, 13832, 17053, 6963, 8016, 15759, 1920, 2699, 6958},
+  { 12884, 14188, 17554, 7587, 9140, 14895, 3244, 3785, 4650},
+  { 12534, 11436, 14564, 9147, 9805, 17464, 4560, 7675, 11963},
+  { 16605, 20176, 26553, 10597, 10857, 13003, 6119, 9194, 7123},
+  { 9588, 8392, 13741, 11187, 13673, 18905, 13944, 11703, 30000}
+};
+#endif
 
 void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   int i;

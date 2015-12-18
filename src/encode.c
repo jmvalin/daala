@@ -2298,6 +2298,7 @@ static void od_split_superblocks(daala_enc_ctx *enc, int is_keyframe) {
     }
   }
 }
+extern int printout;
 
 static void od_encode_mvs(daala_enc_ctx *enc, int num_refs) {
   od_state *state;
@@ -2348,7 +2349,10 @@ static void od_encode_mvs(daala_enc_ctx *enc, int num_refs) {
          && grid[vy - mvb_sz][vx + mvb_sz].valid
          && grid[vy + mvb_sz][vx + mvb_sz].valid
          && grid[vy + mvb_sz][vx - mvb_sz].valid) {
+          printout=1;
           cdf = od_mv_split_flag_cdf(&enc->state, vx, vy, level);
+          printout=0;
+          printf("%d\n", mvp->valid);
           od_encode_cdf_adapt(&enc->ec, mvp->valid,
            cdf, 2, enc->state.adapt.split_flag_increment);
           if (mvp->valid) {
@@ -2370,7 +2374,10 @@ static void od_encode_mvs(daala_enc_ctx *enc, int num_refs) {
          && (vx - mvb_sz < 0 || grid[vy][vx - mvb_sz].valid)
          && (vy + mvb_sz > nvmvbs || grid[vy + mvb_sz][vx].valid)
          && (vx + mvb_sz > nhmvbs || grid[vy][vx + mvb_sz].valid)) {
+          printout=1;
           cdf = od_mv_split_flag_cdf(&enc->state, vx, vy, level);
+          printout=0;
+          printf("%d\n", mvp->valid);
           od_encode_cdf_adapt(&enc->ec, mvp->valid,
            cdf, 2, enc->state.adapt.split_flag_increment);
           if (mvp->valid) {
