@@ -784,7 +784,7 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
      the skip value to the PVQ decoder. */
   if (ctx->use_haar_wavelet) obs = bsi;
   else if (pli == 0) {
-    if (ctx->is_keyframe || bx << bsi << 2 < dec->state.info.pic_width >> xdec &&
+    if (bx << bsi << 2 < dec->state.info.pic_width >> xdec &&
      by << bsi << 2 < dec->state.info.pic_height >> xdec) {
       skip = od_decode_cdf_adapt(&dec->ec,
        dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4 + (bsi > 0),
@@ -827,7 +827,7 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
     }
     if (pli > 0 && !ctx->use_haar_wavelet) {
       /* Decode the skip for chroma. */
-      if (ctx->is_keyframe || bx << bs << 2 < dec->state.info.pic_width >> xdec &&
+      if (bx << bs << 2 < dec->state.info.pic_width >> xdec &&
        by << bs << 2 < dec->state.info.pic_height >> xdec) {
         skip = od_decode_cdf_adapt(&dec->ec,
          dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4,

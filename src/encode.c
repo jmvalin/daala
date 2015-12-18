@@ -1195,7 +1195,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
   else {
     int off;
     off = od_qm_offset(bs, xdec);
-    if (ctx->is_keyframe || bx << 2 < enc->state.info.pic_width >> xdec &&
+    if (bx << 2 < enc->state.info.pic_width >> xdec &&
      by << 2 < enc->state.info.pic_height >> xdec) {
       skip = od_pvq_encode(enc, predt, dblock, scalar_out, quant, pli, bs,
        OD_PVQ_BETA[use_masking][pli][bs], OD_ROBUST_STREAM, ctx->is_keyframe,
@@ -1285,7 +1285,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     if (dist_skip + lambda*rate_skip < dist_noskip + lambda*rate_noskip) {
       od_encode_rollback(enc, &pre_encode_buf);
       /* Code the "skip this block" symbol (2). */
-      if (ctx->is_keyframe || bx << 2 < enc->state.info.pic_width >> xdec &&
+      if (bx << 2 < enc->state.info.pic_width >> xdec &&
         by << 2 < enc->state.info.pic_height >> xdec) {
         od_encode_cdf_adapt(&enc->ec, 0,
          enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 4 + (pli == 0 && bs > 0),
@@ -1620,7 +1620,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     }
     skip_split = 1;
     if (pli == 0) {
-      if (ctx->is_keyframe || bx << bs << 2 < enc->state.info.pic_width >> xdec &&
+      if (bx << bs << 2 < enc->state.info.pic_width >> xdec &&
        by << bs << 2 < enc->state.info.pic_height >> xdec) {
         /* Code the "split this block" symbol (4). */
         od_encode_cdf_adapt(&enc->ec, 4,
