@@ -2246,7 +2246,7 @@ int od_mv_split_flag_ctx(od_mv_grid_pt **grid, int vx, int vy,int level) {
    == (v3->ref == OD_FRAME_NEXT ? v3->mv1[0] : v3->mv[0]))
    && ((v2->ref == OD_FRAME_NEXT ? v2->mv1[1] : v2->mv[1])
    == (v3->ref == OD_FRAME_NEXT ? v3->mv1[1] : v3->mv[1]));
-  return 3*(split1 || split2) + (same1 || same2);
+  return 3*(split1 && split2) + (same1 && same2);
 }
 
 uint16_t *od_mv_split_flag_cdf(od_state *state,
