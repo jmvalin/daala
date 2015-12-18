@@ -2469,6 +2469,13 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     }
   }
   for (sby = 0; sby < nvsb; sby++) {
+    int skip_line;
+    od_rollback_buffer line_buf;
+    skip_line = 1;
+    if (!mbctx->is_keyframe) {
+      od_encode_checkpoint(enc, &line_buf);
+      od_ec_encode_bool_q15(&enc->ec, 1, 3000);
+    }
     for (sbx = 0; sbx < nhsb; sbx++) {
       for (pli = 0; pli < nplanes; pli++) {
         od_coeff *c_orig;
@@ -2518,9 +2525,13 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           mbctx->q_scaling =
            od_compute_superblock_q_scaling(enc, c_orig, OD_BSIZE_MAX);
         }
-        od_encode_recursive(enc, mbctx, pli, sbx, sby, OD_NBSIZES - 1, xdec,
-         ydec, rdo_only, hgrad, vgrad);
+        skip_line &= od_encode_recursive(enc, mbctx, pli, sbx, sby,
+         OD_NBSIZES - 1, xdec, ydec, rdo_only, hgrad, vgrad);
       }
+    }
+    if (skip_line && !mbctx->is_keyframe) {
+      od_encode_rollback(enc, &line_buf);
+      od_ec_encode_bool_q15(&enc->ec, 0, 3000);
     }
   }
 #if defined(OD_DUMP_IMAGES)
