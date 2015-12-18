@@ -1201,10 +1201,8 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
        OD_PVQ_BETA[use_masking][pli][bs], OD_ROBUST_STREAM, ctx->is_keyframe,
        ctx->q_scaling, bx, by, enc->state.qm + off, enc->state.qm_inv
        + off);
-      if (!rdo_only) printf("%d %d code\n", bx, by);
     }
     else {
-      if (!rdo_only) printf("%d %d not\n", bx, by);
       if (ctx->is_keyframe) {
         for (i = 1; i < 1 << (2*bs + 4); i++) scalar_out[i] = 0;
       }
@@ -1292,10 +1290,6 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
         od_encode_cdf_adapt(&enc->ec, 0,
          enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 4 + (pli == 0 && bs > 0),
          enc->state.adapt.skip_increment);
-        if (!rdo_only) printf("%d %d code\n", bx, by);
-      }
-      else {
-        if (!rdo_only) printf("%d %d not\n", bx, by);
       }
 #if OD_SIGNAL_Q_SCALING
       if (bs == (OD_NBSIZES - 1) && pli == 0) {
@@ -1632,10 +1626,6 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
         od_encode_cdf_adapt(&enc->ec, 4,
          enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 5,
          enc->state.adapt.skip_increment);
-        if (!rdo_only) printf("%d %d code\n", bx << bs, by << bs);
-      }
-      else {
-        if (!rdo_only) printf("%d %d not\n", bx << bs, by << bs);
       }
 #if OD_SIGNAL_Q_SCALING
       if (bs == (OD_NBSIZES - 1)) {

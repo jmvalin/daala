@@ -789,11 +789,9 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
       skip = od_decode_cdf_adapt(&dec->ec,
        dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4 + (bsi > 0),
        dec->state.adapt.skip_increment, "skip");
-      printf("%d %d code\n", bx << bsi, by << bsi);
     }
     else {
       skip = 0;
-      printf("%d %d not\n", bx << bsi, by << bsi);
     }
 #if OD_SIGNAL_Q_SCALING
     if (bsi == OD_NBSIZES - 1) {
@@ -834,10 +832,8 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
         skip = od_decode_cdf_adapt(&dec->ec,
          dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4,
          dec->state.adapt.skip_increment, "skip");
-        printf("%d %d code\n", bx << bs, by << bs);
       }
       else {
-        printf("%d %d not\n", bx << bs, by << bs);
         skip = 0;
       }
     }
