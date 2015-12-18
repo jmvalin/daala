@@ -920,7 +920,7 @@ static void od_dec_mv_unpack(daala_dec_ctx *dec, int num_refs) {
           cdf = od_mv_split_flag_cdf(&dec->state, vx, vy, level);
           mvp = grid[vy] + vx;
           mvp->valid = od_decode_cdf_adapt(&dec->ec,
-           cdf, 2, dec->state.adapt.split_flag_increment, "mv:valid");
+           cdf, 2, dec->state.adapt.split_flag_increment, level==1 ? "mv:valid:1" : "mv:valid:odd");
           if (mvp->valid) {
             od_decode_mv(dec, num_refs, mvp, vx, vy, level, mv_res,
              width, height);
@@ -940,7 +940,7 @@ static void od_dec_mv_unpack(daala_dec_ctx *dec, int num_refs) {
           cdf = od_mv_split_flag_cdf(&dec->state, vx, vy, level);
           mvp = grid[vy] + vx;
           mvp->valid = od_decode_cdf_adapt(&dec->ec,
-           cdf, 2, dec->state.adapt.split_flag_increment, "mv:valid");
+           cdf, 2, dec->state.adapt.split_flag_increment, "mv:valid:even");
           if (mvp->valid) {
             od_decode_mv(dec, num_refs, mvp, vx, vy, level, mv_res,
              width, height);

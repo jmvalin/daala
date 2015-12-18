@@ -608,8 +608,8 @@ void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
     for (i = 0; i < 9; i++) {
       state->split_flag_cdf[level][i][0] = (uint16_t)(
        (uint32_t)OD_MV_SPLIT_FLAG_PROBZ_Q15[level][i]*
-       (state->split_flag_increment >> 1) >> 15);
-      state->split_flag_cdf[level][i][1] = state->split_flag_increment >> 1;
+       (state->split_flag_increment) >> 15);
+      state->split_flag_cdf[level][i][1] = state->split_flag_increment;
     }
   }
   state->haar_coeff_increment = 128;
