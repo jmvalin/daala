@@ -784,9 +784,17 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
      the skip value to the PVQ decoder. */
   if (ctx->use_haar_wavelet) obs = bsi;
   else if (pli == 0) {
-    skip = od_decode_cdf_adapt(&dec->ec,
-     dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4 + (bsi > 0),
-     dec->state.adapt.skip_increment, "skip");
+    if (ctx->is_keyframe || bx << bsi << 2 < dec->state.info.pic_width >> xdec &&
+     by << bsi << 2 < dec->state.info.pic_height >> xdec) {
+      skip = od_decode_cdf_adapt(&dec->ec,
+       dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4 + (bsi > 0),
+       dec->state.adapt.skip_increment, "skip");
+      printf("%d %d code\n", bx << bsi, by << bsi);
+    }
+    else {
+      skip = 0;
+      printf("%d %d not\n", bx << bsi, by << bsi);
+    }
 #if OD_SIGNAL_Q_SCALING
     if (bsi == OD_NBSIZES - 1) {
       od_decode_quantizer_scaling(dec, bx, by, skip == 0);
@@ -821,9 +829,17 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
     }
     if (pli > 0 && !ctx->use_haar_wavelet) {
       /* Decode the skip for chroma. */
-      skip = od_decode_cdf_adapt(&dec->ec,
-       dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4,
-       dec->state.adapt.skip_increment, "skip");
+      if (ctx->is_keyframe || bx << bs << 2 < dec->state.info.pic_width >> xdec &&
+       by << bs << 2 < dec->state.info.pic_height >> xdec) {
+        skip = od_decode_cdf_adapt(&dec->ec,
+         dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4,
+         dec->state.adapt.skip_increment, "skip");
+        printf("%d %d code\n", bx << bs, by << bs);
+      }
+      else {
+        printf("%d %d not\n", bx << bs, by << bs);
+        skip = 0;
+      }
     }
     od_block_decode(dec, ctx, bs, pli, bx, by, skip);
     for (i = 0; i < 1 << bs; i++) {
