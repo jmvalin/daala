@@ -165,6 +165,8 @@ struct daala_enc_ctx{
   int frames_in_out_buff;
   /** Keep the display order of frames in output image buffers. */
   int out_imgs_id[2];
+  /** Was the last frame a golden frame */
+  int last_was_golden;
 #endif
 #if defined(OD_DUMP_IMAGES)
   od_img vis_img;

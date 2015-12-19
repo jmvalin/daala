@@ -396,6 +396,7 @@ static int od_enc_init(od_enc_ctx *enc, const daala_info *info) {
   for (i = 0; i < 1 + OD_MAX_B_FRAMES; i++) {
     enc->in_imgs_id[i] = -1;
   }
+  enc->last_was_golden = 0;
 #if defined(OD_ENCODER_CHECK)
   enc->dec = daala_decode_create(info, NULL);
 #endif
@@ -3002,6 +3003,9 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration,
   /*TODO : Try golden frame as additional reference to
      the forward prediction of B-frame.*/
   mbctx.num_refs = (frame_type != OD_I_FRAME) ? OD_MAX_CODED_REFS : 0;
+  /* When coding a P-frame following a keyframe or a golden frame, we don't
+     need two references since they'd be the same. */
+  if (frame_type == OD_P_FRAME && enc->last_was_golden) mbctx.num_refs = 1;
   /* FIXME: This should be dynamic */
   mbctx.use_activity_masking = enc->use_activity_masking;
   mbctx.qm = enc->qm;
@@ -3206,6 +3210,7 @@ int daala_encode_img_in(daala_enc_ctx *enc, od_img *img, int duration,
   if (frame_type == OD_I_FRAME || frame_type == OD_P_FRAME) {
     ++enc->ip_frame_count;
   }
+  enc->last_was_golden = mbctx.is_golden_frame || mbctx.is_keyframe;
   return 0;
 }
 
