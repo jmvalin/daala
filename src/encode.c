@@ -2775,7 +2775,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
     if (!rdo_only && state->quantizer[0] > 0) {
       for (sby = 0; sby < nvsb; sby++) {
         for (sbx = 0; sbx < nhsb; sbx++) {
-          if (mbctx->is_keyframe) {
+          if (0&&mbctx->is_keyframe) {
             od_smooth_recursive(state->ctmp[pli], enc->state.bsize,
              enc->state.bstride, sbx, sby, OD_NBSIZES - 1, w, xdec, ydec,
              OD_BLOCK_32X32, state->quantizer[pli], pli);
