@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "filter.h"
 #include "state.h"
 #include "block_size.h"
+#include "edge_table.h"
 
 /*Pre-/post-filter pairs of various sizes.
   For a FIR, PR, LP filter bank, the pre-filter must have the structure:
@@ -148,6 +149,28 @@ const int direction_offsets_table[8][3] = {
   { 1*OD_FILT_BSTRIDE + 0,  2*OD_FILT_BSTRIDE + 1,  3*OD_FILT_BSTRIDE + 1  },
   { 1*OD_FILT_BSTRIDE + 0,  2*OD_FILT_BSTRIDE + 0,  3*OD_FILT_BSTRIDE + 0  },
   { 1*OD_FILT_BSTRIDE + 0,  2*OD_FILT_BSTRIDE - 1,  3*OD_FILT_BSTRIDE - 1  },
+};
+
+const int direction_edge8_offsets_table[8][3] = {
+  {-1*OD_EDGE8_STRIDE + 1, -2*OD_EDGE8_STRIDE + 2, -3*OD_EDGE8_STRIDE + 3  },
+  { 0*OD_EDGE8_STRIDE + 1, -1*OD_EDGE8_STRIDE + 2, -1*OD_EDGE8_STRIDE + 3  },
+  { 0*OD_EDGE8_STRIDE + 1,  0*OD_EDGE8_STRIDE + 2,  0*OD_EDGE8_STRIDE + 3  },
+  { 0*OD_EDGE8_STRIDE + 1,  1*OD_EDGE8_STRIDE + 2,  1*OD_EDGE8_STRIDE + 3  },
+  { 1*OD_EDGE8_STRIDE + 1,  2*OD_EDGE8_STRIDE + 2,  3*OD_EDGE8_STRIDE + 3  },
+  { 1*OD_EDGE8_STRIDE + 0,  2*OD_EDGE8_STRIDE + 1,  3*OD_EDGE8_STRIDE + 1  },
+  { 1*OD_EDGE8_STRIDE + 0,  2*OD_EDGE8_STRIDE + 0,  3*OD_EDGE8_STRIDE + 0  },
+  { 1*OD_EDGE8_STRIDE + 0,  2*OD_EDGE8_STRIDE - 1,  3*OD_EDGE8_STRIDE - 1  },
+};
+
+const int direction_edge4_offsets_table[8][3] = {
+  {-1*OD_EDGE4_STRIDE + 1, -2*OD_EDGE4_STRIDE + 2, -3*OD_EDGE4_STRIDE + 3  },
+  { 0*OD_EDGE4_STRIDE + 1, -1*OD_EDGE4_STRIDE + 2, -1*OD_EDGE4_STRIDE + 3  },
+  { 0*OD_EDGE4_STRIDE + 1,  0*OD_EDGE4_STRIDE + 2,  0*OD_EDGE4_STRIDE + 3  },
+  { 0*OD_EDGE4_STRIDE + 1,  1*OD_EDGE4_STRIDE + 2,  1*OD_EDGE4_STRIDE + 3  },
+  { 1*OD_EDGE4_STRIDE + 1,  2*OD_EDGE4_STRIDE + 2,  3*OD_EDGE4_STRIDE + 3  },
+  { 1*OD_EDGE4_STRIDE + 0,  2*OD_EDGE4_STRIDE + 1,  3*OD_EDGE4_STRIDE + 1  },
+  { 1*OD_EDGE4_STRIDE + 0,  2*OD_EDGE4_STRIDE + 0,  3*OD_EDGE4_STRIDE + 0  },
+  { 1*OD_EDGE4_STRIDE + 0,  2*OD_EDGE4_STRIDE - 1,  3*OD_EDGE4_STRIDE - 1  },
 };
 
 /** Strength of the bilinear smoothing for each plane. */
@@ -1713,7 +1736,7 @@ static int od_dir_find8(const int16_t *img, int stride, int32_t *var) {
 
 /* Smooth in the direction detected. */
 void od_filter_dering_direction_c(int16_t *y, int ystride, int16_t *in,
- int ln, int threshold, int dir) {
+ int ln, int threshold, int dir, int pos) {
   int i;
   int j;
   int k;
@@ -1728,10 +1751,20 @@ void od_filter_dering_direction_c(int16_t *y, int ystride, int16_t *in,
       for (k = 0; k < 3; k++) {
         od_coeff p0;
         od_coeff p1;
+        int c0;
+        int c1;
         p0 = in[i*OD_FILT_BSTRIDE + j + direction_offsets_table[dir][k]] - xx;
         p1 = in[i*OD_FILT_BSTRIDE + j - direction_offsets_table[dir][k]] - xx;
-        if (abs(p0) < threshold) sum += taps[k]*p0;
-        if (abs(p1) < threshold) sum += taps[k]*p1;
+        if (ln==3) {
+          c0 = od_edge_table_8[pos][(i+3)*OD_EDGE8_STRIDE + (j + 3) + direction_edge8_offsets_table[dir][k]];
+          c1 = od_edge_table_8[pos][(i+3)*OD_EDGE8_STRIDE + (j + 3) - direction_edge8_offsets_table[dir][k]];
+        }
+        else {
+          c0 = od_edge_table_4[pos][(i+3)*OD_EDGE4_STRIDE + (j + 3) + direction_edge4_offsets_table[dir][k]];
+          c1 = od_edge_table_4[pos][(i+3)*OD_EDGE4_STRIDE + (j + 3) - direction_edge4_offsets_table[dir][k]];
+        }
+        if (abs(p0) < threshold*(1+3*c0)) sum += taps[k]*p0;
+        if (abs(p1) < threshold*(1+3*c1)) sum += taps[k]*p1;
       }
       yy = xx + ((sum + 8) >> 4);
       y[i*ystride + j] = yy;
@@ -1740,13 +1773,13 @@ void od_filter_dering_direction_c(int16_t *y, int ystride, int16_t *in,
 }
 
 void od_filter_dering_direction_4x4_c(int16_t *y, int ystride, int16_t *in,
- int threshold, int dir) {
-  od_filter_dering_direction_c(y, ystride, in, 2, threshold, dir);
+ int threshold, int dir, int pos) {
+  od_filter_dering_direction_c(y, ystride, in, 2, threshold, dir, pos);
 }
 
 void od_filter_dering_direction_8x8_c(int16_t *y, int ystride, int16_t *in,
- int threshold, int dir) {
-  od_filter_dering_direction_c(y, ystride, in, 3, threshold, dir);
+ int threshold, int dir, int pos) {
+  od_filter_dering_direction_c(y, ystride, in, 3, threshold, dir, pos);
 }
 
 /* Smooth in the direction orthogonal to what was detected. */
@@ -1873,7 +1906,7 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
      value here comes from observing that on ntt-short, the best threshold for
      -v 5 appeared to be around 0.5*q, while the best threshold for -v 400
      was 0.25*q, i.e. 1-log(.5/.25)/log(400/5) = 0.84182 */
-  threshold = 1.0*pow(q, 0.84182);
+  threshold = .5*pow(q, 0.84182);
   if (pli == 0) {
     for (by = 0; by < nvb; by++) {
       for (bx = 0; bx < nhb; bx++) {
@@ -1917,12 +1950,27 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
   }
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
+      static const unsigned od_bsize_mask[OD_NBSIZES] = {0, 0, 1, 3, 7};
+      int bs;
+      unsigned xpos;
+      unsigned ypos;
+      unsigned pos;
+      bs = OD_BLOCK_SIZE8x8(state->bsize, state->bstride,
+       (sbx << OD_LOG_DERING_GRID >> 1) + bx,
+       (sby << OD_LOG_DERING_GRID >> 1) + by);
+      xpos = ((sbx << OD_LOG_DERING_GRID >> 1) + bx) & od_bsize_mask[bs];
+      ypos = ((sby << OD_LOG_DERING_GRID >> 1) + by) & od_bsize_mask[bs];
+      pos = ((xpos == 0) << 3) | ((xpos == od_bsize_mask[bs]) << 2) |
+       ((ypos == 0) << 1) | (ypos == od_bsize_mask[bs]);
+      /*if (pli==0) printf("%d ", pos);*/
       (*state->opt_vtbl.filter_dering_direction[bsize - OD_LOG_BSIZE0])(
        &y[(by*ystride << bsize) + (bx << bsize)], ystride,
        &in[(by*OD_FILT_BSTRIDE << bsize) + (bx << bsize)],
-       thresh[by][bx], dir[by][bx]);
+       thresh[by][bx], dir[by][bx], pos);
     }
+    /*if (pli==0) printf("\n");*/
   }
+  /*if (pli==0) printf("\n");*/
   for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) {
       in[i*OD_FILT_BSTRIDE + j] = y[i*ystride + j];
