@@ -1760,8 +1760,8 @@ void od_filter_dering_direction_c(int16_t *y, int ystride, int16_t *in,
           c0 = od_edge_table_4[pos][(i+3)*OD_EDGE4_STRIDE + (j + 3) + direction_edge4_offsets_table[dir][k]];
           c1 = od_edge_table_4[pos][(i+3)*OD_EDGE4_STRIDE + (j + 3) - direction_edge4_offsets_table[dir][k]];
         }
-        if (abs(p0) < threshold*(1+3*c0)) sum += taps[k]*p0;
-        if (abs(p1) < threshold*(1+3*c1)) sum += taps[k]*p1;
+        if (abs(p0) < threshold*(2*c0)) sum += taps[k]*p0;
+        if (abs(p1) < threshold*(2*c1)) sum += taps[k]*p1;
       }
       yy = xx + ((sum + 8) >> 4);
       y[i*ystride + j] = yy;
@@ -1813,7 +1813,7 @@ void od_filter_dering_orthogonal_c(int16_t *y, int ystride, int16_t *in,
       if (abs(p) < athresh) sum += p;
       p = in[i*OD_FILT_BSTRIDE + j - 2*offset] - yy;
       if (abs(p) < athresh) sum += p;
-      y[i*ystride + j] = yy + ((3*sum + 8) >> 4);
+      y[i*ystride + j] = yy + 0*((3*sum + 8) >> 4);
     }
   }
 }
@@ -1903,7 +1903,7 @@ void od_dering(od_state *state, int16_t *y, int ystride, int16_t *x, int
      value here comes from observing that on ntt-short, the best threshold for
      -v 5 appeared to be around 0.5*q, while the best threshold for -v 400
      was 0.25*q, i.e. 1-log(.5/.25)/log(400/5) = 0.84182 */
-  threshold = .5*pow(q, 0.84182);
+  threshold = pow(q, 0.84182);
   if (pli == 0) {
     for (by = 0; by < nvb; by++) {
       for (bx = 0; bx < nhb; bx++) {
