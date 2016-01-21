@@ -1109,7 +1109,7 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
              (sbx << ln)], w, ln, sbx, sby, nhdr, nvdr,
              dec->state.quantizer[pli], xdec, dir, pli, &dec->state.bskip[pli]
              [(sby << (OD_LOG_DERING_GRID - ydec))*dec->state.skip_stride
-             + (sbx << (OD_LOG_DERING_GRID - xdec))], dec->state.skip_stride);
+             + (sbx << (OD_LOG_DERING_GRID - xdec))], dec->state.skip_stride, 1);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {
