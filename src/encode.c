@@ -2658,7 +2658,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         unsigned char *bskip;
         int best_gi;
         int gi;
-        static const double gain_table[4] = {0, 0.33, 1, 1.67};
+        static const double gain_table[4] = {0, 0.5, 1, 2};
         double best_error;
         double lambda;
         state->dering_flags[sby*nhdr + sbx] = 0;
@@ -2698,15 +2698,15 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           }
           unfiltered_error = od_compute_dist(enc, orig, out, n, 3, pli);
         }
-        up = 0;
+        left = up = 0;
         if (sby > 0) {
-          up = !!state->dering_flags[(sby - 1)*nhdr + sbx];
+          left = up = state->dering_flags[(sby - 1)*nhdr + sbx];
         }
-        left = 0;
         if (sbx > 0) {
-          left = !!state->dering_flags[sby*nhdr + (sbx - 1)];
+          left = state->dering_flags[sby*nhdr + (sbx - 1)];
+          if (sby == 0) up = left;
         }
-        c = (up << 1) + left;
+        c = up + left;
         q2 = state->quantizer[0] * state->quantizer[0];
         lambda = OD_PVQ_LAMBDA*q2;
         best_error = unfiltered_error
@@ -2745,7 +2745,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
            gain_table[best_gi]);
         }
         filtered = best_gi;
-        printf("%d\n", filtered);
+        /*printf("%d\n", filtered);*/
         /*When use_dering is 0, force the deringing filter off.*/
         if (!enc->use_dering) {
           filtered = 0;
@@ -2770,7 +2770,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
              state->quantizer[pli], xdec, dir, pli, &enc->state.bskip[pli]
              [(sby << (OD_LOG_DERING_GRID - ydec))*enc->state.skip_stride
              + (sbx << (OD_LOG_DERING_GRID - xdec))], enc->state.skip_stride,
-             gain_table[best_gi]);
+             .6*gain_table[best_gi]);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {
