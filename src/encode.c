@@ -2658,7 +2658,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         unsigned char *bskip;
         int best_gi;
         int gi;
-        static const double gain_table[5] = {0.25, 0.5, 1, 1.5, 2};
+        static const double gain_table[4] = {0.33, 1, 1.5, 2.5};
         double best_error;
         state->dering_flags[sby*nhdr + sbx] = 0;
         bskip = enc->state.bskip[0] +
@@ -2699,7 +2699,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         }
         best_error = 1e30;
         best_gi = 0;
-        for (gi = 0; gi < 5; gi++) {
+        for (gi = 0; gi < 4; gi++) {
         od_dering(state, buf, n, &state->etmp[pli][(sby << ln)*w +
          (sbx << ln)], w, ln, sbx, sby, nhdr, nvdr, state->quantizer[0],
          xdec, dir, pli, &enc->state.bskip[pli]
@@ -2741,8 +2741,9 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         filtered_rate = od_encode_cdf_cost(1, state->adapt.clpf_cdf[c], 2);
         unfiltered_rate = od_encode_cdf_cost(0, state->adapt.clpf_cdf[c], 2);
         q2 = state->quantizer[0] * state->quantizer[0];
-        filtered = (filtered_error + OD_PVQ_LAMBDA*q2*filtered_rate) <
-         (unfiltered_error + OD_PVQ_LAMBDA*q2*unfiltered_rate);
+        filtered = (filtered_error + 0*q2*filtered_rate) <
+         (unfiltered_error + 0*q2*unfiltered_rate);
+        printf("%d\n", filtered ? 1+best_gi : 0);
         /*When use_dering is 0, force the deringing filter off.*/
         if (!enc->use_dering) {
           filtered = 0;
@@ -2751,6 +2752,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         od_encode_cdf_adapt(&enc->ec, filtered, state->adapt.clpf_cdf[c], 2,
          state->adapt.clpf_increment);
         if (filtered) {
+          od_ec_enc_bits(&enc->ec, 0, 2);
           for (y = 0; y < n; y++) {
             for (x = 0; x < n; x++) {
               output[y*w + x] = buf[y*n + x];
