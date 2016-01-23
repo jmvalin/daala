@@ -2658,7 +2658,9 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         unsigned char *bskip;
         int best_gi;
         int gi;
-        static const double gain_table[6] = {0, 0.5, 0.707, 1, 1.41, 2.};
+        static const double gain_table[OD_DERING_LEVELS] = {
+          0, 0.5, 0.707, 1, 1.41, 2
+        };
         double best_error;
         double lambda;
         state->dering_flags[sby*nhdr + sbx] = 0;
@@ -2710,9 +2712,10 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         q2 = state->quantizer[0] * state->quantizer[0];
         lambda = OD_PVQ_LAMBDA*q2;
         best_error = unfiltered_error
-         + lambda*od_encode_cdf_cost(0, state->adapt.clpf_cdf[c], 6);
+         + lambda*od_encode_cdf_cost(0, state->adapt.clpf_cdf[c],
+         OD_DERING_LEVELS);
         best_gi = 0;
-        for (gi = 1; gi < 6; gi++) {
+        for (gi = 1; gi < OD_DERING_LEVELS; gi++) {
           od_dering(state, buf, n, &state->etmp[pli][(sby << ln)*w +
            (sbx << ln)], w, ln, sbx, sby, nhdr, nvdr, state->quantizer[0],
            xdec, dir, pli, &enc->state.bskip[pli]
@@ -2729,7 +2732,8 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
               }
             }
             filtered_error = od_compute_dist(enc, orig, buf32, n, 3, pli)
-             + lambda*od_encode_cdf_cost(gi, state->adapt.clpf_cdf[c], 6);
+             + lambda*od_encode_cdf_cost(gi, state->adapt.clpf_cdf[c],
+             OD_DERING_LEVELS);
           }
           if (filtered_error < best_error) {
             best_error = filtered_error;
@@ -2751,8 +2755,8 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           filtered = 0;
         }
         state->dering_flags[sby*nhdr + sbx] = filtered;
-        od_encode_cdf_adapt(&enc->ec, filtered, state->adapt.clpf_cdf[c], 6,
-         state->adapt.clpf_increment);
+        od_encode_cdf_adapt(&enc->ec, filtered, state->adapt.clpf_cdf[c],
+         OD_DERING_LEVELS, state->adapt.clpf_increment);
         if (filtered) {
           for (y = 0; y < n; y++) {
             for (x = 0; x < n; x++) {

@@ -34,6 +34,8 @@ typedef int32_t od_coeff;
 /*There are 4 filter sizes total (4-point, 8-point, 16-point and 32-point).*/
 # define OD_NFILTER_SIZES (4)
 
+#define OD_DERING_LEVELS (6)
+
 /*This is the strength reduced version of ((_a)/(1 << (_b))).
   This will not work for _b == 0, however currently this is only used for
    b == 1 anyway.*/
