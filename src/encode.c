@@ -2709,6 +2709,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           if (sby == 0) up = left;
         }
         c = up + left;
+        if (!mbctx->is_keyframe) c = 0;
         q2 = state->quantizer[0] * state->quantizer[0];
         lambda = OD_PVQ_LAMBDA*q2;
         best_error = unfiltered_error
