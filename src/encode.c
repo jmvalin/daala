@@ -2704,7 +2704,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           double lambda;
           od_coeff out[OD_BSIZE_MAX*OD_BSIZE_MAX];
           q2 = state->quantizer[0] * state->quantizer[0];
-          lambda = 0.67*OD_PVQ_LAMBDA*q2;
+          lambda = OD_PVQ_LAMBDA*q2;
           for (y = 0; y < n; y++) {
             for (x = 0; x < n; x++) {
               out[y*n + x] = output[y*w + x];
