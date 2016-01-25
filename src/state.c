@@ -40,12 +40,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 /* Scaling compensation for the Haar equivalent basis function. Left is
    for horizontal/vertical. Right is for diagonal. */
 #if OD_DISABLE_FILTER || OD_DEBLOCKING
-const od_coeff OD_DC_QM[OD_NBSIZES - 1][2] = {
-  {16, 16}, {16, 16}, {16, 16}, {16, 16}
+const od_coeff OD_DC_QM[2][OD_NBSIZES - 1][2] = {
+  {{16, 16}, {16, 16}, {16, 16}, {16, 16}},
+  {{16, 16}, {16, 16}, {16, 16}, {16, 16}}
 };
 #else
-const od_coeff OD_DC_QM[OD_NBSIZES - 1][2] = {
-  {21, 25}, {18, 20}, {17, 18}, {17, 17}
+const od_coeff OD_DC_QM[2][OD_NBSIZES - 1][2] = {
+  {{25, 30}, {21, 27}, {17, 19}, {17, 18}},
+  {{21, 25}, {18, 20}, {17, 18}, {17, 17}}
 };
 #endif
 
