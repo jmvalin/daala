@@ -2639,22 +2639,18 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         int n;
         int16_t buf[OD_BSIZE_MAX*OD_BSIZE_MAX];
         od_coeff orig[OD_BSIZE_MAX*OD_BSIZE_MAX];
-        double unfiltered_error;
-        double filtered_error;
+        double dist;
         int ystride;
         int xstride;
         unsigned char *input;
         od_coeff *output;
-        int filtered;
-        int up;
-        int left;
         int c;
         int q2;
         int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
         int i;
         int j;
         unsigned char *bskip;
-        int best_gi;
+        int best_gain;
         int gi;
         double best_error;
         double lambda;
@@ -2687,30 +2683,37 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         od_ref_buf_to_coeff(state, orig, n, 0, input, xstride, ystride, n, n);
         {
           od_coeff out[OD_BSIZE_MAX*OD_BSIZE_MAX];
-          unfiltered_error = 0;
           for (y = 0; y < n; y++) {
             for (x = 0; x < n; x++) {
               out[y*n + x] = output[y*w + x];
             }
           }
-          unfiltered_error = od_compute_dist(enc, orig, out, n, 3, pli);
+          dist = od_compute_dist(enc, orig, out, n, 3, pli);
         }
-        left = up = 0;
-        if (sby > 0) {
-          left = up = state->dering_flags[(sby - 1)*nhdr + sbx];
+        /* Only keyframes have enough superblocks to be worth having a
+           context. */
+        if (mbctx->is_keyframe) {
+          int left;
+          int up;
+          left = up = 0;
+          if (sby > 0) {
+            left = up = state->dering_flags[(sby - 1)*nhdr + sbx];
+          }
+          if (sbx > 0) {
+            left = state->dering_flags[sby*nhdr + (sbx - 1)];
+            if (sby == 0) up = left;
+          }
+          c = up + left;
         }
-        if (sbx > 0) {
-          left = state->dering_flags[sby*nhdr + (sbx - 1)];
-          if (sby == 0) up = left;
-        }
-        c = up + left;
-        if (!mbctx->is_keyframe) c = 0;
+        else c = 0;
         q2 = state->quantizer[0] * state->quantizer[0];
+        /* Deringing seems to benefit from a lower lambda -- possibly to avoid
+           local minima. */
         lambda = 0.67*OD_PVQ_LAMBDA*q2;
-        best_error = unfiltered_error
+        best_error = dist
          + lambda*od_encode_cdf_cost(0, state->adapt.clpf_cdf[c],
          OD_DERING_LEVELS);
-        best_gi = 0;
+        best_gain = 0;
         for (gi = 1; gi < OD_DERING_LEVELS; gi++) {
           od_dering(state, buf, n, &state->etmp[pli][(sby << ln)*w +
            (sbx << ln)], w, ln, sbx, sby, nhdr, nvdr, state->quantizer[0],
@@ -2721,39 +2724,36 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           /* Optimize deringing for the block size decision metric. */
           {
             od_coeff buf32[OD_BSIZE_MAX*OD_BSIZE_MAX];
-            filtered_error = 0;
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {
                 buf32[y*n + x] = buf[y*n + x];
               }
             }
-            filtered_error = od_compute_dist(enc, orig, buf32, n, 3, pli)
+            dist = od_compute_dist(enc, orig, buf32, n, 3, pli)
              + lambda*od_encode_cdf_cost(gi, state->adapt.clpf_cdf[c],
              OD_DERING_LEVELS);
           }
-          if (filtered_error < best_error) {
-            best_error = filtered_error;
-            best_gi = gi;
+          if (dist < best_error) {
+            best_error = dist;
+            best_gain = gi;
           }
         }
-        if (best_gi > 0) {
+        if (best_gain > 0) {
           od_dering(state, buf, n, &state->etmp[pli][(sby << ln)*w +
            (sbx << ln)], w, ln, sbx, sby, nhdr, nvdr, state->quantizer[0],
            xdec, dir, pli, &enc->state.bskip[pli]
            [(sby << (OD_LOG_DERING_GRID - ydec))*enc->state.skip_stride
            + (sbx << (OD_LOG_DERING_GRID - xdec))], enc->state.skip_stride,
-           gain_table[best_gi]);
+           gain_table[best_gain]);
         }
-        filtered = best_gi;
-        /*printf("%d\n", filtered);*/
         /*When use_dering is 0, force the deringing filter off.*/
         if (!enc->use_dering) {
-          filtered = 0;
+          best_gain = 0;
         }
-        state->dering_flags[sby*nhdr + sbx] = filtered;
-        od_encode_cdf_adapt(&enc->ec, filtered, state->adapt.clpf_cdf[c],
+        state->dering_flags[sby*nhdr + sbx] = best_gain;
+        od_encode_cdf_adapt(&enc->ec, best_gain, state->adapt.clpf_cdf[c],
          OD_DERING_LEVELS, state->adapt.clpf_increment);
-        if (filtered) {
+        if (best_gain) {
           for (y = 0; y < n; y++) {
             for (x = 0; x < n; x++) {
               output[y*w + x] = buf[y*n + x];
@@ -2770,7 +2770,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
              state->quantizer[pli], xdec, dir, pli, &enc->state.bskip[pli]
              [(sby << (OD_LOG_DERING_GRID - ydec))*enc->state.skip_stride
              + (sbx << (OD_LOG_DERING_GRID - xdec))], enc->state.skip_stride,
-             .6*gain_table[best_gi]);
+             .6*gain_table[best_gain]);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {

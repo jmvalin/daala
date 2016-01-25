@@ -1083,8 +1083,8 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
           left = state->dering_flags[sby*nhdr + (sbx - 1)];
           if (sby == 0) up = left;
         }
-        c = up + left;
-        if (!mbctx->is_keyframe) c = 0;
+        if (mbctx->is_keyframe) c = up + left;
+        else c = 0;
         filtered = od_decode_cdf_adapt(&dec->ec, state->adapt.clpf_cdf[c],
          OD_DERING_LEVELS, state->adapt.clpf_increment, "clp");
         state->dering_flags[sby*nhdr + sbx] = filtered;
