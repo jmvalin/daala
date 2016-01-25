@@ -2695,7 +2695,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           }
           unfiltered_error = od_compute_dist(enc, orig, out, n, 3, pli);
         }
-        left = up = 2;
+        left = up = 0;
         if (sby > 0) {
           left = up = state->dering_flags[(sby - 1)*nhdr + sbx];
         }
@@ -2706,7 +2706,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         c = up + left;
         if (!mbctx->is_keyframe) c = 0;
         q2 = state->quantizer[0] * state->quantizer[0];
-        lambda = OD_PVQ_LAMBDA*q2;
+        lambda = 0.67*OD_PVQ_LAMBDA*q2;
         best_error = unfiltered_error
          + lambda*od_encode_cdf_cost(0, state->adapt.clpf_cdf[c],
          OD_DERING_LEVELS);

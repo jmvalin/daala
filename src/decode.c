@@ -1075,7 +1075,7 @@ static void od_decode_coefficients(od_dec_ctx *dec, od_mb_dec_ctx *mbctx) {
         if (!state->dering_flags[sby*nhdr + sbx]) {
           continue;
         }
-        left = up = 2;
+        left = up = 0;
         if (sby > 0) {
           left = up = state->dering_flags[(sby - 1)*nhdr + sbx];
         }
