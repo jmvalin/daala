@@ -2738,14 +2738,6 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
             best_gain = gi;
           }
         }
-        if (best_gain > 0) {
-          od_dering(state, buf, n, &state->etmp[pli][(sby << ln)*w +
-           (sbx << ln)], w, ln, sbx, sby, nhdr, nvdr, state->quantizer[0],
-           xdec, dir, pli, &enc->state.bskip[pli]
-           [(sby << (OD_LOG_DERING_GRID - ydec))*enc->state.skip_stride
-           + (sbx << (OD_LOG_DERING_GRID - xdec))], enc->state.skip_stride,
-           gain_table[best_gain]);
-        }
         /*When use_dering is 0, force the deringing filter off.*/
         if (!enc->use_dering) {
           best_gain = 0;
@@ -2754,23 +2746,20 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         od_encode_cdf_adapt(&enc->ec, best_gain, state->adapt.clpf_cdf[c],
          OD_DERING_LEVELS, state->adapt.clpf_increment);
         if (best_gain) {
-          for (y = 0; y < n; y++) {
-            for (x = 0; x < n; x++) {
-              output[y*w + x] = buf[y*n + x];
-            }
-          }
-          for (pli = 1; pli < nplanes; pli++) {
+          for (pli = 0; pli < nplanes; pli++) {
             xdec = enc->curr_img->planes[pli].xdec;
             ydec = enc->curr_img->planes[pli].ydec;
             w = frame_width >> xdec;
             ln = OD_LOG_DERING_GRID + OD_LOG_BSIZE0 - xdec;
             n = 1 << ln;
+            /* For now we just reduce the threshold on chroma by a fixed amount,
+               but we should make this adaptive. */
             od_dering(state, buf, n, &state->etmp[pli][(sby << ln)*w +
              (sbx << ln)], w, ln, sbx, sby, nhdr, nvdr,
              state->quantizer[pli], xdec, dir, pli, &enc->state.bskip[pli]
              [(sby << (OD_LOG_DERING_GRID - ydec))*enc->state.skip_stride
              + (sbx << (OD_LOG_DERING_GRID - xdec))], enc->state.skip_stride,
-             .6*gain_table[best_gain]);
+             gain_table[best_gain]*(pli==0 ? 1 : 0.6));
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {
