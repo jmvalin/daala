@@ -1642,6 +1642,10 @@ void od_apply_postfilter_frame_sbs(od_coeff *c0, int stride, int nhsb,
 #endif
 }
 
+const double gain_table[OD_DERING_LEVELS] = {
+  0, 0.5, 0.707, 1, 1.41, 2
+};
+
 /* Detect direction. 0 means 45-degree up-right, 2 is horizontal, and so on.
    The search minimizes the weighted variance along all the lines in a
    particular direction, i.e. the squared error between the input and a

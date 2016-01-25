@@ -2650,17 +2650,12 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
         int left;
         int c;
         int q2;
-        double filtered_rate;
-        double unfiltered_rate;
         int dir[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
         int i;
         int j;
         unsigned char *bskip;
         int best_gi;
         int gi;
-        static const double gain_table[OD_DERING_LEVELS] = {
-          0, 0.5, 0.707, 1, 1.41, 2
-        };
         double best_error;
         double lambda;
         state->dering_flags[sby*nhdr + sbx] = 0;

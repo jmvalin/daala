@@ -35,6 +35,7 @@ typedef int32_t od_coeff;
 # define OD_NFILTER_SIZES (4)
 
 #define OD_DERING_LEVELS (6)
+extern const double gain_table[OD_DERING_LEVELS];
 
 /*This is the strength reduced version of ((_a)/(1 << (_b))).
   This will not work for _b == 0, however currently this is only used for
