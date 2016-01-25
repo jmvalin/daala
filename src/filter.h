@@ -74,7 +74,7 @@ void od_apply_postfilter_frame(od_coeff *c, int w, int nhsb, int nvsb,
    all block sizes and for all planes.
    If this macro is changed, the values in od_basis_mag have to be
    regenerated.*/
-#define OD_FILT_SIZE(ln, xdec) (0)
+#define OD_FILT_SIZE(ln, xdec) (OD_MAXI(0, ((ln) > 0) - (xdec)))
 
 extern const int OD_FILT_SIZE[OD_NBSIZES];
 void od_prefilter_split(od_coeff *c0, int stride, int bs, int f, int hfilter,
