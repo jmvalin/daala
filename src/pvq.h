@@ -35,6 +35,8 @@ extern const int OD_QM8_Q4_HVS[];
 extern const uint16_t EXP_CDF_TABLE[][16];
 extern const uint16_t LAPLACE_OFFSET[];
 
+extern const uint8_t OD_BLOCK_SHIFTS[OD_NBSIZES];
+
 # define PVQ_MAX_PARTITIONS (9)
 
 # define OD_NOREF_ADAPT_SPEED (4)
@@ -54,8 +56,10 @@ extern const uint16_t LAPLACE_OFFSET[];
 /* Maximum size for coding a PVQ band. */
 #define OD_MAX_PVQ_SIZE (128)
 
-#define OD_QM_SCALE (1 << 15)
-#define OD_QM_SCALE_MAX (OD_QM_SCALE - 1)
+#define OD_QM_SHIFT (11)
+#define OD_QM_SCALE (1 << OD_QM_SHIFT)
+#define OD_QM_RND (1 << (OD_QM_SHIFT - 1))
+#define OD_QM_SCALE_MAX OD_QM_SCALE
 #define OD_QM_SCALE_1 (1./OD_QM_SCALE)
 #define OD_QM_INV_SCALE (1 << 12)
 #define OD_QM_INV_SCALE_1 (1./OD_QM_INV_SCALE)
@@ -122,7 +126,7 @@ void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
 double od_gain_expand(double cg, int q0, double beta);
 
 double od_pvq_compute_gain(od_coeff *x, int n, int q0, double *g, double beta,
- const int16_t *qm);
+ int bshift);
 int od_pvq_compute_max_theta(double qcg, double beta);
 double od_pvq_compute_theta(int t, int max_theta);
 int od_pvq_compute_k(double qcg, int itheta, double theta, int noref, int n,
