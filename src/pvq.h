@@ -134,5 +134,6 @@ int od_pvq_compute_k(double qcg, int itheta, double theta, int noref, int n,
 
 int od_vector_is_null(const od_coeff *x, int len);
 int od_qm_offset(int bs, int xydec);
-
+double od_pvq_compute_gain_orig(od_coeff *x, int n, int q0, double *g,
+ double beta, const int16_t *qm);
 #endif

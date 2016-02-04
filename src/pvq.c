@@ -468,6 +468,20 @@ double od_pvq_compute_gain(int16_t *x, int n, int q0, double *g, double beta,
   return od_gain_compand(*g, q0, beta);
 }
 
+double od_pvq_compute_gain_orig(od_coeff *x, int n, int q0, double *g,
+ double beta, const int16_t *qm){
+  int i;
+  double acc=0;
+  for (i = 0; i < n; i++) {
+    acc += x[i]*(double)x[i]*qm[i]*OD_QM_SCALE_1*
+     qm[i]*OD_QM_SCALE_1;
+  }
+  *g = sqrt(acc);
+  /* Normalize gain by quantization step size and apply companding
+     (if ACTIVITY != 1). */
+  return od_gain_compand(*g, q0, beta);
+}
+
 /** Compute theta quantization range from quantized/companded gain
  *
  * @param [in]      qcg    quantized companded gain value
