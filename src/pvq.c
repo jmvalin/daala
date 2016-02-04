@@ -565,6 +565,7 @@ void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
     yy += ypulse[i]*(int32_t)ypulse[i];
   if (yy == 0) scale = 0;
   else scale = g/sqrt(yy);
+  scale = floor(.5 + scale);
   if (noref) {
     for (i = 0; i < n; i++) {
       xcoeff[i] = (od_coeff)floor(.5
