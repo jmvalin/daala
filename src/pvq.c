@@ -394,7 +394,7 @@ int od_compute_householder(int16_t *r, int n, double gr, int *sign, int shift) {
   s = r[m] > 0 ? 1 : -1;
   /* This turns r into a Householder reflection vector that would reflect
    * the original r[] to e_m */
-  r[m] += gr*s / (double)(1 << shift);
+  r[m] += floor(.5 + gr*s / (double)(1 << shift));
   *sign = s;
   return m;
 }
@@ -413,7 +413,7 @@ void od_apply_householder(double *x, const int16_t *r, int n) {
   double l2r;
   l2r = 0;
   for (i = 0; i < n; i++) {
-    l2r += r[i]*r[i];
+    l2r += r[i]*(int32_t)r[i];
   }
   /* Apply Householder reflection */
   proj = 0;
