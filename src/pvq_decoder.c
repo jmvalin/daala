@@ -237,7 +237,7 @@ static void pvq_decode_partition(od_ec_dec *ec,
     OD_IIR_DIADIC(*exg, qg << 16, 2);
   }
   *skip = 0;
-  rshift = OD_MAXI(0, od_vector_log_mag(ref, n) - 15);
+  rshift = OD_MAXI(0, od_vector_log_mag(ref, n) - 14);
   rnd = 1 << ((OD_QM_SHIFT - 1) + rshift);
   for (i = 0; i < n; i++) {
     ref16[i] = (ref[i]*qm[i] + rnd) >> (OD_QM_SHIFT + rshift);
