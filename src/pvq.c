@@ -352,17 +352,17 @@ int od_qm_get_index(int bs, int band) {
 double od_pvq_sin(double x) {
   int x16;
   int ret;
-  x16 = OD_CLAMPI(0, (int)floor(.5 + 32768*x*(2./M_PI)), 65535);
-  ret = (int)floor(.5 + 32768*sin(x16*M_PI/65536.));
-  return OD_CLAMPI(0, ret, 32767)/32768.;
+  x16 = OD_CLAMPI(0, (int)floor(.5 + 16384*x*(2./M_PI)), 32768);
+  ret = (int)floor(.5 + 16384*sin(x16*M_PI/2./16384.));
+  return OD_CLAMPI(0, ret, 16384)/16384.;
 }
 
 double od_pvq_cos(double x) {
   int x16;
   int ret;
-  x16 = OD_CLAMPI(0, (int)floor(.5 + 32768*fabs(x)*(2./M_PI)), 32767);
-  ret = (int)floor(.5 + 32768*cos(x16*M_PI/65536.));
-  return OD_CLAMPI(0, ret, 32767)/32768.;
+  x16 = OD_CLAMPI(0, (int)floor(.5 + 16384*fabs(x)*(2./M_PI)), 16384);
+  ret = (int)floor(.5 + 16384*cos(x16*M_PI/2./16384.));
+  return OD_CLAMPI(0, ret, 16384)/16384.;
 }
 
 /* Computes an upper-bound on the number of bits required to store the L2 norm
