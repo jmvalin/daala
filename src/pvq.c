@@ -354,7 +354,7 @@ double od_pvq_sin(double x) {
   int ret;
   x16 = OD_CLAMPI(0, (int)floor(.5 + 32768*x*(2./M_PI)), 65536);
   ret = (int)floor(.5 + 32768*sin(x16*M_PI/65536.));
-  return OD_CLAMPI(0, ret, 32768)/32768.;
+  return OD_CLAMPI(0, ret, 32767)/32768.;
 }
 
 double od_pvq_cos(double x) {
@@ -362,7 +362,7 @@ double od_pvq_cos(double x) {
   int ret;
   x16 = OD_CLAMPI(0, (int)floor(.5 + 32768*fabs(x)*(2./M_PI)), 65536);
   ret = (int)floor(.5 + 32768*cos(x16*M_PI/65536.));
-  return OD_CLAMPI(0, ret, 32768)/32768.;
+  return OD_CLAMPI(0, ret, 32767)/32768.;
 }
 
 /* Computes an upper-bound on the number of bits required to store the L2 norm
