@@ -467,7 +467,9 @@ static double od_gain_compand(double g, int q0, double beta) {
  * @param [in]  beta  activity masking beta param (exponent)
  * @return            g^beta
  */
-int32_t od_gain_expand(double cg, int q0, double beta) {
+int32_t od_gain_expand(double cg0, int q0, double beta) {
+  double cg;
+  cg = cg0 * OD_CGAIN_SCALE_1;
   if (beta == 1) return (int32_t)floor(.5 + cg*q0);
   else if (beta == 1.5) {
     cg *= q0*OD_COMPAND_SCALE_1;
