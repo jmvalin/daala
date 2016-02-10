@@ -476,7 +476,8 @@ int32_t od_gain_expand(double cg0, int q0, double beta) {
     return (int32_t)floor(.5 + OD_COMPAND_SCALE*cg*sqrt(cg));
   }
   else {
-    return (int32_t)floor(.5 + OD_COMPAND_SCALE*pow(cg*q0*OD_COMPAND_SCALE_1, beta));
+    return (int32_t)floor(.5 + OD_COMPAND_SCALE*pow(cg*q0*OD_COMPAND_SCALE_1,
+     beta));
   }
 }
 
@@ -551,7 +552,10 @@ int od_pvq_compute_k(double qcg, int itheta, int32_t theta, int noref, int n,
   if (noref) {
     if (qcg == 0) return 0;
     if (n == 15 && qcg == OD_CGAIN_SCALE && beta > 1.25) return 1;
-    else return OD_MAXI(1, (int)floor(.5 + (qcg*OD_CGAIN_SCALE_1 - .2)*sqrt((n+3)/2)/beta));
+    else {
+      return OD_MAXI(1, (int)floor(.5 + (qcg*OD_CGAIN_SCALE_1 - .2)*
+       sqrt((n+3)/2)/beta));
+    }
   }
   else {
     if (itheta == 0) return 0;
@@ -565,8 +569,8 @@ int od_pvq_compute_k(double qcg, int itheta, int32_t theta, int noref, int n,
       return OD_MAXI(1, (int)floor(.5 + (itheta - .2)*sqrt((n + 2)/2)));
     }
     else {
-      return OD_MAXI(1, (int)floor(.5 + (qcg*OD_CGAIN_SCALE_1*od_pvq_sin(theta) - .2)*
-       sqrt((n + 2)/2)/beta));
+      return OD_MAXI(1, (int)floor(.5 + (qcg*OD_CGAIN_SCALE_1*od_pvq_sin(theta)
+       - .2)*sqrt((n + 2)/2)/beta));
     }
   }
 }

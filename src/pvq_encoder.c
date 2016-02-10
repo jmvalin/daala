@@ -476,13 +476,15 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
   if (n <= OD_MAX_PVQ_SIZE &&
    ((is_keyframe && pli == 0) || corr < .5 || cg < 2.*OD_CGAIN_SCALE)) {
     /* Search for the best gain (haven't determined reasonable range yet). */
-    for (i = OD_MAXI(1, (int)floor(cg*OD_CGAIN_SCALE_1)); i <= ceil(cg*OD_CGAIN_SCALE_1); i++) {
+    for (i = OD_MAXI(1, (int)floor(cg*OD_CGAIN_SCALE_1));
+     i <= ceil(cg*OD_CGAIN_SCALE_1); i++) {
       double cos_dist;
       double cost;
       double qcg;
       qcg = i*OD_CGAIN_SCALE;
       k = od_pvq_compute_k(qcg, -1, -1, 1, n, beta, robust || is_keyframe);
-      cos_dist = pvq_search_rdo_double(x16, n, k, y_tmp, qcg*cg*OD_CGAIN_SCALE_2);
+      cos_dist = pvq_search_rdo_double(x16, n, k, y_tmp,
+       qcg*cg*OD_CGAIN_SCALE_2);
       /* See Jmspeex' Journal of Dubious Theoretical Results. */
       dist = gain_weight*(qcg - cg)*(qcg - cg) + qcg*cg*(2 - 2*cos_dist);
       dist *= OD_CGAIN_SCALE_2;
