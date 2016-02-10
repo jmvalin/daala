@@ -453,9 +453,9 @@ void od_apply_householder(int16_t *out, const int16_t *x, const int16_t *r,
  * @return            g^(1/beta)
  */
 static double od_gain_compand(double g, int q0, double beta) {
-  if (beta == 1) return OD_CGAIN_SCALE_1*floor(.5+OD_CGAIN_SCALE*g/q0);
+  if (beta == 1) return floor(.5+OD_CGAIN_SCALE*g/q0);
   else {
-    return OD_CGAIN_SCALE_1*floor(.5+OD_CGAIN_SCALE*
+    return floor(.5+OD_CGAIN_SCALE*
      OD_COMPAND_SCALE*pow(g*OD_COMPAND_SCALE_1, 1./beta)/q0);
   }
 }
@@ -468,6 +468,7 @@ static double od_gain_compand(double g, int q0, double beta) {
  * @return            g^beta
  */
 int32_t od_gain_expand(double cg, int q0, double beta) {
+  cg *= OD_CGAIN_SCALE_1;
   if (beta == 1) return (int32_t)floor(.5 + cg*q0);
   else if (beta == 1.5) {
     cg *= q0*OD_COMPAND_SCALE_1;
@@ -548,8 +549,8 @@ int od_pvq_compute_k(double qcg, int itheta, int32_t theta, int noref, int n,
  double beta, int nodesync) {
   if (noref) {
     if (qcg == 0) return 0;
-    if (n == 15 && qcg == 1 && beta > 1.25) return 1;
-    else return OD_MAXI(1, (int)floor(.5 + (qcg - .2)*sqrt((n+3)/2)/beta));
+    if (n == 15 && qcg == OD_CGAIN_SCALE && beta > 1.25) return 1;
+    else return OD_MAXI(1, (int)floor(.5 + (qcg*OD_CGAIN_SCALE_1 - .2)*sqrt((n+3)/2)/beta));
   }
   else {
     if (itheta == 0) return 0;
@@ -563,7 +564,7 @@ int od_pvq_compute_k(double qcg, int itheta, int32_t theta, int noref, int n,
       return OD_MAXI(1, (int)floor(.5 + (itheta - .2)*sqrt((n + 2)/2)));
     }
     else {
-      return OD_MAXI(1, (int)floor(.5 + (qcg*od_pvq_sin(theta) - .2)*
+      return OD_MAXI(1, (int)floor(.5 + (qcg*OD_CGAIN_SCALE_1*od_pvq_sin(theta) - .2)*
        sqrt((n + 2)/2)/beta));
     }
   }
