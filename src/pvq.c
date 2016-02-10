@@ -468,14 +468,15 @@ static double od_gain_compand(double g, int q0, double beta) {
  * @return            g^beta
  */
 int32_t od_gain_expand(double cg, int q0, double beta) {
-  cg *= OD_CGAIN_SCALE_1;
-  if (beta == 1) return (int32_t)floor(.5 + cg*q0);
+  if (beta == 1) return (int32_t)floor(.5 + cg*OD_CGAIN_SCALE_1*q0);
   else if (beta == 1.5) {
     cg *= q0*OD_COMPAND_SCALE_1;
-    return (int32_t)floor(.5 + OD_COMPAND_SCALE*cg*sqrt(cg));
+    return (int32_t)floor(.5 + OD_COMPAND_SCALE*cg*OD_CGAIN_SCALE_1*
+     sqrt(cg*OD_CGAIN_SCALE_1));
   }
   else {
-    return (int32_t)floor(.5 + OD_COMPAND_SCALE*pow(cg*q0*OD_COMPAND_SCALE_1, beta));
+    return (int32_t)floor(.5 + OD_COMPAND_SCALE*pow(cg*OD_CGAIN_SCALE_1*
+     q0*OD_COMPAND_SCALE_1, beta));
   }
 }
 
