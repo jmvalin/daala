@@ -438,7 +438,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
         double cost;
         double dist_theta;
         int32_t qtheta = od_pvq_compute_theta(j, ts);
-        k = od_pvq_compute_k(qcg, j, qtheta, 0, n, beta, robust || is_keyframe);
+        k = od_pvq_compute_k(qcg*OD_CGAIN_SCALE, j, qtheta, 0, n, beta, robust || is_keyframe);
         /* PVQ search, using a gain of qcg*cg*sin(theta)*sin(qtheta) since
            that's the factor by which cos_dist is multiplied to get the
            distortion metric. */
@@ -476,7 +476,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
       double cost;
       double qcg;
       qcg = i;
-      k = od_pvq_compute_k(qcg, -1, -1, 1, n, beta, robust || is_keyframe);
+      k = od_pvq_compute_k(qcg*OD_CGAIN_SCALE, -1, -1, 1, n, beta, robust || is_keyframe);
       cos_dist = pvq_search_rdo_double(x16, n, k, y_tmp, qcg*cg);
       /* See Jmspeex' Journal of Dubious Theoretical Results. */
       dist = gain_weight*(qcg - cg)*(qcg - cg) + qcg*cg*(2 - 2*cos_dist);
