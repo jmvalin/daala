@@ -453,9 +453,9 @@ void od_apply_householder(int16_t *out, const int16_t *x, const int16_t *r,
  * @return            g^(1/beta)
  */
 static double od_gain_compand(double g, int q0, double beta) {
-  if (beta == 1) return OD_CGAIN_SCALE_1*floor(.5+OD_CGAIN_SCALE*g/q0);
+  if (beta == 1) return floor(.5+OD_CGAIN_SCALE*g/q0);
   else {
-    return OD_CGAIN_SCALE_1*floor(.5+OD_CGAIN_SCALE*
+    return floor(.5+OD_CGAIN_SCALE*
      OD_COMPAND_SCALE*pow(g*OD_COMPAND_SCALE_1, 1./beta)/q0);
   }
 }
