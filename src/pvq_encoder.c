@@ -374,8 +374,8 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
     corr += x16[i]*(int32_t)r16[i];
   }
   cfl_enabled = is_keyframe && pli != 0 && !OD_DISABLE_CFL;
-  cg  = od_pvq_compute_gain(x16, n, q0, &g, beta, xshift);
-  cgr = od_pvq_compute_gain(r16, n, q0, &gr, beta, rshift);
+  cg  = OD_CGAIN_SCALE_1*od_pvq_compute_gain(x16, n, q0, &g, beta, xshift);
+  cgr = OD_CGAIN_SCALE_1*od_pvq_compute_gain(r16, n, q0, &gr, beta, rshift);
   if (cfl_enabled) cgr = 1;
   /* gain_offset is meant to make sure one of the quantized gains has
      exactly the same gain as the reference. */
