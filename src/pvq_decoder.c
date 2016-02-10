@@ -291,7 +291,7 @@ static void pvq_decode_partition(od_ec_dec *ec,
   }
   else {
     int32_t g;
-    g = od_gain_expand(qg + gain_offset, q0, beta);
+    g = od_gain_expand(OD_CGAIN_SCALE*(qg + gain_offset), q0, beta);
     pvq_synthesis(out, y, ref16, n, gr, *noref, g, theta, qm_inv, rshift);
   }
   *skip = !!*skip;

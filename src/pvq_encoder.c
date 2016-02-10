@@ -514,7 +514,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
   }
   else {
     if (noref) gain_offset = 0;
-    g = od_gain_expand(qg + gain_offset, q0, beta);
+    g = od_gain_expand(OD_CGAIN_SCALE*(qg + gain_offset), q0, beta);
     od_pvq_synthesis_partial(out, y, r16, n, noref, g, theta, m, s,
      qm_inv);
   }
