@@ -261,7 +261,7 @@ static void pvq_decode_partition(od_ec_dec *ec,
     gain_offset = cgr-icgr;
     qcg = qg + gain_offset;
     /* read and decode first-stage PVQ error theta */
-    max_theta = od_pvq_compute_max_theta(qcg, beta);
+    max_theta = od_pvq_compute_max_theta(qcg*OD_CGAIN_SCALE, beta);
     if (itheta > 1 && (nodesync || max_theta > 3)) {
       int tmp;
       tmp = *ext;
