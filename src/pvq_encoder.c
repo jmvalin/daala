@@ -429,7 +429,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
       /* Quantized companded gain */
       qcg = i+gain_offset;
       /* Set angular resolution (in ra) to match the encoded gain */
-      ts = od_pvq_compute_max_theta(qcg, beta);
+      ts = od_pvq_compute_max_theta(qcg*OD_CGAIN_SCALE, beta);
       /* Search for the best angle within a reasonable range. */
       for (j = OD_MAXI(0, (int)floor(.5 + theta*OD_THETA_SCALE_1*2/M_PI*ts)
        - 2); j <= OD_MINI(ts - 1, (int)ceil(theta*OD_THETA_SCALE_1*2/M_PI*ts));
