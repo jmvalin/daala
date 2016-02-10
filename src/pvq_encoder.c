@@ -353,7 +353,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
   int rshift;
   int xrnd;
   int rrnd;
-  lambda = OD_PVQ_LAMBDA;
+  lambda = OD_PVQ_LAMBDA*OD_CGAIN_SCALE*OD_CGAIN_SCALE;
   /* Give more weight to gain error when calculating the total distortion. */
   gain_weight = 1.4;
   OD_ASSERT(n > 1);
@@ -376,11 +376,11 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
   cfl_enabled = is_keyframe && pli != 0 && !OD_DISABLE_CFL;
   cg  = od_pvq_compute_gain(x16, n, q0, &g, beta, xshift);
   cgr = od_pvq_compute_gain(r16, n, q0, &gr, beta, rshift);
-  if (cfl_enabled) cgr = 1;
+  if (cfl_enabled) cgr = OD_CGAIN_SCALE;
   /* gain_offset is meant to make sure one of the quantized gains has
      exactly the same gain as the reference. */
-  icgr = (int)floor(.5+cgr);
-  gain_offset = cgr-icgr;
+  icgr = (int)floor(.5 + cgr*OD_CGAIN_SCALE_1);
+  gain_offset = cgr - icgr*OD_CGAIN_SCALE;
   /* Start search with null case: gain=0, no pulse. */
   qg = 0;
   dist = gain_weight*cg*cg;
@@ -421,13 +421,13 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
     od_apply_householder(xr, x16, r16, n);
     for (i = m; i < n - 1; i++) xr[i] = xr[i + 1];
     /* Search for the best gain within a reasonable range. */
-    for (i = OD_MAXI(1, (int)floor(cg-gain_offset) - 1);
-     i <= (int)ceil(cg-gain_offset); i++) {
+    for (i = OD_MAXI(1, (int)floor((cg - gain_offset)*OD_CGAIN_SCALE_1) - 1);
+     i <= (int)ceil((cg - gain_offset)*OD_CGAIN_SCALE_1); i++) {
       int j;
       double qcg;
       int ts;
       /* Quantized companded gain */
-      qcg = i+gain_offset;
+      qcg = i*OD_CGAIN_SCALE + gain_offset;
       /* Set angular resolution (in ra) to match the encoded gain */
       ts = od_pvq_compute_max_theta(qcg, beta);
       /* Search for the best angle within a reasonable range. */
@@ -443,7 +443,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
            that's the factor by which cos_dist is multiplied to get the
            distortion metric. */
         cos_dist = pvq_search_rdo_double(xr, n - 1, k, y_tmp,
-         qcg*cg*od_pvq_sin(theta)*od_pvq_sin(qtheta));
+         qcg*cg*od_pvq_sin(theta)*od_pvq_sin(qtheta)*OD_CGAIN_SCALE_1*OD_CGAIN_SCALE_1);
         /* See Jmspeex' Journal of Dubious Theoretical Results. */
         dist_theta = 2 - 2*od_pvq_cos(theta - qtheta)
          + od_pvq_sin(theta)*od_pvq_sin(qtheta)*(2 - 2*cos_dist);
@@ -469,15 +469,15 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
      correlation. The only exception is luma on a keyframe because
      H/V prediction is unreliable. */
   if (n <= OD_MAX_PVQ_SIZE &&
-   ((is_keyframe && pli == 0) || corr < .5 || cg < 2.)) {
+   ((is_keyframe && pli == 0) || corr < .5 || cg < 2.*OD_CGAIN_SCALE)) {
     /* Search for the best gain (haven't determined reasonable range yet). */
-    for (i = OD_MAXI(1, (int)floor(cg)); i <= ceil(cg); i++) {
+    for (i = OD_MAXI(1, (int)floor(cg*OD_CGAIN_SCALE_1)); i <= ceil(cg*OD_CGAIN_SCALE_1); i++) {
       double cos_dist;
       double cost;
       double qcg;
-      qcg = i;
+      qcg = i*OD_CGAIN_SCALE;
       k = od_pvq_compute_k(qcg, -1, -1, 1, n, beta, robust || is_keyframe);
-      cos_dist = pvq_search_rdo_double(x16, n, k, y_tmp, qcg*cg);
+      cos_dist = pvq_search_rdo_double(x16, n, k, y_tmp, qcg*cg*OD_CGAIN_SCALE_1*OD_CGAIN_SCALE_1);
       /* See Jmspeex' Journal of Dubious Theoretical Results. */
       dist = gain_weight*(qcg - cg)*(qcg - cg) + qcg*cg*(2 - 2*cos_dist);
       /* Do approximate RDO. */
@@ -514,12 +514,12 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
   }
   else {
     if (noref) gain_offset = 0;
-    g = od_gain_expand(qg + gain_offset, q0, beta);
+    g = od_gain_expand(qg*OD_CGAIN_SCALE + gain_offset, q0, beta);
     od_pvq_synthesis_partial(out, y, r16, n, noref, g, theta, m, s,
      qm_inv);
   }
   *vk = k;
-  *skip_diff += skip_dist - best_dist;
+  *skip_diff += (skip_dist - best_dist)*OD_CGAIN_SCALE_1*OD_CGAIN_SCALE_1;
   /* Encode gain differently depending on whether we use prediction or not.
      Special encoding on inter frames where qg=0 is allowed for noref=0
      but not noref=1.*/
