@@ -428,7 +428,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
     for (i = m; i < n - 1; i++) xr[i] = xr[i + 1];
     /* Search for the best gain within a reasonable range. */
     for (i = OD_MAXI(1, ((cg - gain_offset) >> OD_CGAIN_SHIFT) - 1);
-     i <= (int)ceil((cg - gain_offset)*OD_CGAIN_SCALE_1); i++) {
+     i <= ((cg - gain_offset) >> OD_CGAIN_SHIFT) + 1; i++) {
       int j;
       int32_t qcg;
       int ts;
@@ -479,7 +479,7 @@ static int pvq_theta(od_coeff *out, od_coeff *x0, od_coeff *r0, int n, int q0,
    ((is_keyframe && pli == 0) || corr < .5 || cg < 2 << OD_CGAIN_SHIFT)) {
     /* Search for the best gain (haven't determined reasonable range yet). */
     for (i = OD_MAXI(1, cg >> OD_CGAIN_SHIFT);
-     i <= ceil(cg*OD_CGAIN_SCALE_1); i++) {
+     i <= (cg >> OD_CGAIN_SHIFT) + 1; i++) {
       double cos_dist;
       double cost;
       int32_t qcg;
