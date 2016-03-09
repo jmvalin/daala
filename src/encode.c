@@ -2743,7 +2743,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
              nhdr, nvdr, xdec, dir, pli, &enc->state.bskip[pli]
              [(sby << (OD_LOG_DERING_GRID - ydec))*enc->state.skip_stride
              + (sbx << (OD_LOG_DERING_GRID - xdec))], enc->state.skip_stride,
-             threshold, OD_DERING_CHECK_OVERLAP);
+             threshold, OD_DERING_CHECK_OVERLAP, OD_COEFF_SHIFT);
             /* Optimize deringing for the block size decision metric. */
             {
               od_coeff buf32[OD_BSIZE_MAX*OD_BSIZE_MAX];
@@ -2782,7 +2782,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
              nhdr, nvdr, xdec, dir, pli, &enc->state.bskip[pli]
              [(sby << (OD_LOG_DERING_GRID - ydec))*enc->state.skip_stride
              + (sbx << (OD_LOG_DERING_GRID - xdec))], enc->state.skip_stride,
-             threshold, OD_DERING_CHECK_OVERLAP);
+             threshold, OD_DERING_CHECK_OVERLAP, OD_COEFF_SHIFT);
             output = &state->ctmp[pli][(sby << ln)*w + (sbx << ln)];
             for (y = 0; y < n; y++) {
               for (x = 0; x < n; x++) {
