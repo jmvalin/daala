@@ -2638,7 +2638,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
        value here comes from observing that on ntt-short, the best threshold
        for -v 5 appeared to be around 0.5*q, while the best threshold for
        -v 400 was 0.25*q, i.e. 1-log(.5/.25)/log(400/5) = 0.84182 */
-    base_threshold = pow(state->quantizer[0], 0.84182);
+    base_threshold = 1.2*pow(state->quantizer[0], 0.84182);
     /* We copy ctmp to dtmp so we can use it as an unmodified input
        and avoid filtering some pixels twice. */
     for (pli = 0; pli < nplanes; pli++) {
