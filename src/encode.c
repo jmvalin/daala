@@ -1357,7 +1357,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
       for (j = 0; j < n; j++) c_noskip[n*i + j] = c[bo + i*w + j];
     }
     dist_noskip = od_compute_dist(enc, c_orig, c_noskip, n, bs, pli);
-    lambda = od_bs_rdo_lambda(enc->state.quantizer[pli]);
+    lambda = enc->lambda_adjust[pli]*od_bs_rdo_lambda(enc->state.quantizer[pli]);
     rate_noskip = od_ec_enc_tell_frac(&enc->ec) - tell;
     dist_skip = od_compute_dist(enc, c_orig, mc_orig, n, bs, pli);
     rate_skip = (1 << OD_BITRES)*od_encode_cdf_cost(0,
@@ -1527,7 +1527,7 @@ static void od_quantize_haar_dc_sb(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
 
 static void od_quantize_haar_dc_level(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   int pli, int bx, int by, int bsi, int xdec, od_coeff *hgrad,
-  od_coeff *vgrad) {
+  od_coeff *vgrad, double lambda) {
   od_coeff x[4];
   int ln;
   int ac_quant[2];
@@ -1568,7 +1568,7 @@ static void od_quantize_haar_dc_level(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
      -1, &enc->state.adapt.ex_dc[pli][bsi][i-1]);
     /* Count cost of sign bit. */
     if (quant == 0) cost += 1;
-    if (q*q - 2*q*(x[i] - quant*q) + q*q*OD_PVQ_LAMBDA*cost < 0) quant++;
+    if (q*q - 2*q*(x[i] - quant*q) + q*q*lambda*cost < 0) quant++;
 #else
     quant = OD_DIV_R0(x[i], q);
 #endif
@@ -1709,8 +1709,10 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
 #endif
     }
     if (ctx->is_keyframe) {
+      double lambda;
+      lambda = enc->lambda_adjust[pli]*OD_PVQ_LAMBDA;
       od_quantize_haar_dc_level(enc, ctx, pli, 2*bx, 2*by, bsi - 1, xdec,
-       &hgrad, &vgrad);
+       &hgrad, &vgrad, lambda);
     }
     skip_split &= od_encode_recursive(enc, ctx, pli, 2*bx + 0, 2*by + 0,
      bsi - 1, xdec, ydec, rdo_only, hgrad, vgrad);
@@ -1736,7 +1738,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
       rate_split = od_ec_enc_tell_frac(&enc->ec) - tell;
       dist_split = od_compute_dist(enc, c_orig, split, n, bs, pli);
       dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs, pli);
-      lambda = od_bs_rdo_lambda(enc->state.quantizer[pli]);
+      lambda = enc->lambda_adjust[pli]*
+       od_bs_rdo_lambda(enc->state.quantizer[pli]);
       if (skip_split || dist_nosplit + lambda*rate_nosplit < dist_split
        + lambda*rate_split) {
         /* This rollback call leaves the entropy coder in an inconsistent state
@@ -2308,7 +2311,8 @@ static void od_predict_frame(daala_enc_ctx *enc, int num_refs) {
    Hopefully when we fix that, we can remove the limit.*/
   od_mv_est(enc->mvest,
    OD_MAXI(((2320000 + (((1 << OD_COEFF_SHIFT) - 1) >> 1)) >> OD_COEFF_SHIFT)*
-   enc->state.quantizer[0] >> (22 - OD_LAMBDA_SCALE), 40), num_refs);
+   (int)(sqrt(enc->lambda_adjust[0])*enc->state.quantizer[0])
+   >> (22 - OD_LAMBDA_SCALE), 40), num_refs);
   od_state_mc_predict(&enc->state,
    enc->state.ref_imgs + enc->state.ref_imgi[OD_FRAME_SELF]);
   /*Do edge extension here because the block-size analysis needs to read
@@ -2726,7 +2730,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
           q2 = state->quantizer[0] * state->quantizer[0];
           /* Deringing seems to benefit from a lower lambda -- possibly to
              avoid local minima. Tested only a handful of lambdas so far. */
-          lambda = 0.67*OD_PVQ_LAMBDA*q2;
+          lambda = enc->lambda_adjust[pli]*0.67*OD_PVQ_LAMBDA*q2;
           for (y = 0; y < n; y++) {
             for (x = 0; x < n; x++) {
               out[y*n + x] = output[y*w + x];
@@ -2991,11 +2995,15 @@ static int od_encode_frame(daala_enc_ctx *enc, daala_image *img, int frame_type,
   od_ec_encode_bool_q15(&enc->ec, mbctx.use_haar_wavelet, 16384);
   od_ec_encode_bool_q15(&enc->ec, mbctx.is_golden_frame, 16384);
   for (pli = 0; pli < nplanes; pli++) {
+    int quantizer;
+    double quantizer_ratio;
+    quantizer = od_quantizer_from_quality(enc->quality[pli]);
     enc->state.coded_quantizer[pli] =
-     od_quantizer_to_codedquantizer(
-      od_quantizer_from_quality(enc->quality[pli]));
+     od_quantizer_to_codedquantizer(quantizer);
     enc->state.quantizer[pli] =
      od_codedquantizer_to_quantizer(enc->state.coded_quantizer[pli]);
+    quantizer_ratio = (double)quantizer/enc->state.quantizer[pli];
+    enc->lambda_adjust[pli] = quantizer_ratio*quantizer_ratio;
   }
   if (mbctx.is_keyframe) {
     for (pli = 0; pli < nplanes; pli++) {
