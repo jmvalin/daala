@@ -88,7 +88,7 @@ static void od_fill_dynamic_rqrt_table(double *table, const int table_size,
  * @return                  cosine distance between x and y (between 0 and 1)
  */
 static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
- od_coeff *ypulse, double g2) {
+ od_coeff *ypulse, double g2, double lambda0) {
   int i, j;
   double xy;
   double yy;
@@ -106,7 +106,7 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
     xx += x[j]*x[j];
   }
   norm_1 = 1./sqrt(1e-30 + xx);
-  lambda = OD_PVQ_LAMBDA/(1e-30 + g2);
+  lambda = lambda0/(1e-30 + g2);
   i = 0;
   if (k > 2) {
     double l1_norm;
@@ -280,7 +280,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
  int n, int q0, od_coeff *y, int *itheta, int *max_theta, int *vk,
  double beta, double *skip_diff, int robust, int is_keyframe, int pli,
  const od_adapt_ctx *adapt, const int16_t *qm,
- const int16_t *qm_inv) {
+ const int16_t *qm_inv, double lambda) {
   od_val32 g;
   od_val32 gr;
   od_coeff y_tmp[MAXN];
@@ -307,7 +307,6 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   od_val32 best_qtheta;
   od_val32 gain_offset;
   int noref;
-  double lambda;
   double skip_dist;
   int cfl_enabled;
   int skip;
@@ -316,7 +315,6 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   od_val16 r16[MAXN];
   int xshift;
   int rshift;
-  lambda = OD_PVQ_LAMBDA;
   /* Give more weight to gain error when calculating the total distortion. */
   gain_weight = 1.4;
   OD_ASSERT(n > 1);
@@ -432,7 +430,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
            that's the factor by which cos_dist is multiplied to get the
            distortion metric. */
         cos_dist = pvq_search_rdo_double(xr, n - 1, k, y_tmp,
-         qcg*(double)cg*sin_prod*OD_CGAIN_SCALE_2);
+         qcg*(double)cg*sin_prod*OD_CGAIN_SCALE_2, lambda);
         /* See Jmspeex' Journal of Dubious Theoretical Results. */
         dist_theta = 2 - 2.*od_pvq_cos(theta - qtheta)*OD_TRIG_SCALE_1
          + sin_prod*(2 - 2*cos_dist);
@@ -471,7 +469,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
       qcg = OD_SHL(i, OD_CGAIN_SHIFT);
       k = od_pvq_compute_k(qcg, -1, -1, 1, n, beta, robust || is_keyframe);
       cos_dist = pvq_search_rdo_double(x16, n, k, y_tmp,
-       qcg*(double)cg*OD_CGAIN_SCALE_2);
+       qcg*(double)cg*OD_CGAIN_SCALE_2, lambda);
       /* See Jmspeex' Journal of Dubious Theoretical Results. */
       dist = gain_weight*(qcg - cg)*(qcg - cg)
        + qcg*(double)cg*(2 - 2*cos_dist);
@@ -609,11 +607,11 @@ static void pvq_encode_partition(od_ec_enc *ec,
  * @param [in] delta0 rate increase for encoding a 1 instead of a 0
  * @retval quantized value
  */
-int od_rdo_quant(od_coeff x, int q, double delta0) {
+int od_rdo_quant(od_coeff x, int q, double delta0, double lambda) {
   int threshold;
   /* Optimal quantization threshold is 1/2 + lambda*delta_rate/2. See
      Jmspeex' Journal of Dubious Theoretical Results for details. */
-  threshold = 128 + OD_CLAMPI(0, (int)(256*OD_PVQ_LAMBDA*delta0/2), 128);
+  threshold = 128 + OD_CLAMPI(0, (int)(256*lambda*delta0/2), 128);
   if (abs(x) < q*threshold/256) {
     return 0;
   }
@@ -705,11 +703,13 @@ int od_pvq_encode(daala_enc_ctx *enc,
   int skip_theta_value;
   const unsigned char *pvq_qm;
   double dc_rate;
+  double lambda;
 #if !OD_SIGNAL_Q_SCALING
   OD_UNUSED(q_scaling);
   OD_UNUSED(bx);
   OD_UNUSED(by);
 #endif
+  lambda = OD_PVQ_LAMBDA*enc->lambda_adjust[0];
   pvq_qm = &enc->state.pvq_qm_q4[pli][0];
   exg = &enc->state.adapt.pvq.pvq_exg[pli][bs][0];
   ext = enc->state.adapt.pvq.pvq_ext + bs*PVQ_MAX_PARTITIONS;
@@ -747,14 +747,14 @@ int od_pvq_encode(daala_enc_ctx *enc,
     qg[i] = pvq_theta(out + off[i], in + off[i], ref + off[i], size[i],
      q, y + off[i], &theta[i], &max_theta[i],
      &k[i], beta[i], &skip_diff, robust, is_keyframe, pli, &enc->state.adapt,
-     qm + off[i], qm_inv + off[i]);
+     qm + off[i], qm_inv + off[i], lambda);
   }
   od_encode_checkpoint(enc, &buf);
   if (is_keyframe) out[0] = 0;
   else {
     dc_rate = -OD_LOG2((double)(skip_cdf[3] - skip_cdf[2])/
      (double)(skip_cdf[2] - skip_cdf[1]));
-    out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate);
+    out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate, lambda);
   }
   tell = od_ec_enc_tell_frac(&enc->ec);
   /* Code as if we're not skipping. */
@@ -818,12 +818,12 @@ int od_pvq_encode(daala_enc_ctx *enc,
     }
     tell -= (int)floor(.5+8*skip_rate);
   }
-  if (nb_bands == 0 || skip_diff <= OD_PVQ_LAMBDA/8*tell) {
+  if (nb_bands == 0 || skip_diff <= lambda/8*tell) {
     if (is_keyframe) out[0] = 0;
     else {
       dc_rate = -OD_LOG2((double)(skip_cdf[1] - skip_cdf[0])/
        (double)skip_cdf[0]);
-      out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate);
+      out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate, lambda);
     }
     /* We decide to skip, roll back everything as it was before. */
     od_encode_rollback(enc, &buf);

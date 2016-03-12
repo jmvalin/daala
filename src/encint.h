@@ -133,6 +133,7 @@ struct daala_enc_ctx{
   od_ec_enc ec;
   int packet_state;
   int quality[OD_NPLANES_MAX];
+  double lambda_adjust[OD_NPLANES_MAX];
   int complexity;
   int use_activity_masking;
   int use_dering;
