@@ -709,8 +709,8 @@ int main(int argc, char **argv) {
         break;
       }
       case 'v': {
-        video_q = atoi(optarg);
-        if (video_q < 0 || video_q > 511) {
+        video_q = floor(.5 + 16*atof(optarg));
+        if (video_q < 0 || video_q > 511*16) {
           fprintf(stderr, "Illegal video quality (use 0 through 511)\n");
           exit(1);
         }
