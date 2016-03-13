@@ -169,9 +169,9 @@ const int OD_QM8_Q4[] = {
   34, 37, 38, 40, 48, 58, 69, 83
 };
 # endif
-# if 0
+# if 1
 /* M3: Taken from dump_psnrhvs. */
-const int OD_QM8_Q4[] = {
+const int OD_QM8_Q4_HVS[] = {
   16, 16, 17, 20, 24, 29, 36, 42,
   16, 17, 17, 19, 22, 26, 31, 37,
   17, 17, 21, 23, 26, 30, 34, 40,
@@ -182,7 +182,7 @@ const int OD_QM8_Q4[] = {
   42, 37, 40, 45, 51, 58, 66, 73
 };
 # endif
-# if 1
+# if 0
 /* M4: a compromise equal to .5*(M3 + .5*(M2+transpose(M2))) */
 const int OD_QM8_Q4_HVS[] = {
   16, 16, 18, 21, 24, 28, 32, 36,
