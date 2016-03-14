@@ -1154,7 +1154,9 @@ static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
        we liked the ntt-short1 curves best. The tuning is approximate since
        the different metrics go in different directions. */
     /*Start interpolation at coded_quantizer 1.7=f(36) and end it at 1.2=f(47)*/
-    sum *= 1.2;
+    sum *= enc->state.coded_quantizer[pli] >= 47 ? 1.2 :
+     enc->state.coded_quantizer[pli] <= 36 ? 1.7 :
+     1.7 + (1.2 - 1.7)*(enc->state.coded_quantizer[pli] - 36)/(47 - 36);
   }
   return sum;
 }
@@ -3003,7 +3005,6 @@ static int od_encode_frame(daala_enc_ctx *enc, daala_image *img, int frame_type,
      od_codedquantizer_to_quantizer(enc->state.coded_quantizer[pli]);
     quantizer_ratio = (double)quantizer/enc->state.quantizer[pli];
     enc->lambda_adjust[pli] = quantizer_ratio*quantizer_ratio;
-    printf("%d %d %f\n", enc->state.coded_quantizer[pli], enc->state.quantizer[pli], enc->lambda_adjust[pli]);
   }
   if (mbctx.is_keyframe) {
     for (pli = 0; pli < nplanes; pli++) {

@@ -46,7 +46,7 @@ extern const uint16_t LAPLACE_OFFSET[];
    optimization for hybrid video coding." Circuits and Systems for Video
    Technology, IEEE Transactions on 19.2 (2009): 193-205.
    */
-# define OD_PVQ_LAMBDA (.187)
+# define OD_PVQ_LAMBDA (.207)
 
 #define OD_PVQ_SKIP_ZERO 1
 #define OD_PVQ_SKIP_COPY 2
