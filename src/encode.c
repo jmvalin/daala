@@ -1527,7 +1527,7 @@ static void od_quantize_haar_dc_sb(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
 
 static void od_quantize_haar_dc_level(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
   int pli, int bx, int by, int bsi, int xdec, od_coeff *hgrad,
-  od_coeff *vgrad) {
+  od_coeff *vgrad, double lambda) {
   od_coeff x[4];
   int ln;
   int ac_quant[2];
@@ -1568,7 +1568,7 @@ static void od_quantize_haar_dc_level(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
      -1, &enc->state.adapt.ex_dc[pli][bsi][i-1]);
     /* Count cost of sign bit. */
     if (quant == 0) cost += 1;
-    if (q*q - 2*q*(x[i] - quant*q) + q*q*OD_PVQ_LAMBDA*cost < 0) quant++;
+    if (q*q - 2*q*(x[i] - quant*q) + q*q*lambda*cost < 0) quant++;
 #else
     quant = OD_DIV_R0(x[i], q);
 #endif
@@ -1709,8 +1709,11 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
 #endif
     }
     if (ctx->is_keyframe) {
+      double lambda;
+      lambda = enc->lambda_adjust[pli]*
+       od_bs_rdo_lambda(enc->state.quantizer[pli]);
       od_quantize_haar_dc_level(enc, ctx, pli, 2*bx, 2*by, bsi - 1, xdec,
-       &hgrad, &vgrad);
+       &hgrad, &vgrad, lambda);
     }
     skip_split &= od_encode_recursive(enc, ctx, pli, 2*bx + 0, 2*by + 0,
      bsi - 1, xdec, ydec, rdo_only, hgrad, vgrad);
