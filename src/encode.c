@@ -1710,8 +1710,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     }
     if (ctx->is_keyframe) {
       double lambda;
-      lambda = enc->lambda_adjust[pli]*
-       od_bs_rdo_lambda(enc->state.quantizer[pli]);
+      lambda = enc->lambda_adjust[pli]*OD_PVQ_LAMBDA;
       od_quantize_haar_dc_level(enc, ctx, pli, 2*bx, 2*by, bsi - 1, xdec,
        &hgrad, &vgrad, lambda);
     }
