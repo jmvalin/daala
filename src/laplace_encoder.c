@@ -35,6 +35,54 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "logging.h"
 #include "odintrin.h"
 
+static void od_encode_pvq_split(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
+ int count, int sum, int ctx) {
+  int shift;
+  int rest;
+  if (sum == 0) return;
+  shift = OD_MAXI(0, OD_ILOG(sum) - 3);
+  if (shift) {
+    rest = count & ((1 << shift) - 1);
+    count >>= shift;
+    sum >>= shift;
+  }
+  od_encode_cdf_adapt(ec, count, adapt->pvq_split_cdf[7*ctx + sum - 1], sum + 1,
+   adapt->pvq_split_increment);
+  if (shift) od_ec_enc_bits(ec, rest, shift);
+}
+
+void od_encode_band_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
+ const int *y, int n, int k, int level) {
+  int mid;
+  int i;
+  int count_left;
+  if (n <= 1 || k == 0) return;
+  if (k == 1 && n <= 16) {
+    int cdf_id;
+    int pos;
+    cdf_id = od_pvq_k1_ctx(n, level == 0);
+    pos = 32;
+    for (i = 0; i < n; i++) {
+      if (y[i]) {
+        pos = i;
+        break;
+      }
+    }
+    OD_ASSERT(pos < n);
+    od_encode_cdf_adapt(ec, pos, adapt->pvq_k1_cdf[cdf_id], n,
+     adapt->pvq_k1_increment);
+  }
+  else {
+    mid = n >> 1;
+    count_left = 0;
+    for (i = 0; i < mid; i++) count_left += abs(y[i]);
+    od_encode_pvq_split(ec, adapt, k - count_left, k, od_pvq_size_ctx(n));
+    od_encode_band_pvq_splits(ec, adapt, y, mid, count_left, level + 1);
+    od_encode_band_pvq_splits(ec, adapt, y + mid, n - mid, k - count_left,
+     level + 1);
+  }
+}
+
 /** Encodes the tail of a Laplace-distributed variable, i.e. it doesn't
  * do anything special for the zero case.
  *
