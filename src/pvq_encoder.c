@@ -61,11 +61,12 @@ static void od_encode_all_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
   int i;
   int count;
   if (n <= 1) return;
-  mid = (n + 1) >> 1;
+  mid = n >> 1;
   count = 0;
   for (i = 0; i < mid; i++) {
     count += abs(y[i]);
   }
+  ctx = n&1;
   od_encode_pvq_split(ec, adapt, count, k, OD_ILOG(n-1) + 8*ctx);
   od_encode_all_pvq_splits(ec, adapt, y, mid, count, ctx);
   od_encode_all_pvq_splits(ec, adapt, y + mid, n - mid, k - count, ctx);
