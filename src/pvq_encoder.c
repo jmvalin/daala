@@ -47,16 +47,16 @@ static void od_encode_pvq_codeword(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
     int cdf_id;
     int i;
     int pos;
-    cdf_id = 2*(n == 15) + !noref;
+    cdf_id = 2*(n == 15 || n==14) + !noref;
     pos = 32;
-    for (i = 0; i < n - !noref; i++) {
+    for (i = 0; i < n; i++) {
       if (in[i]) {
         pos = i;
         break;
       }
     }
-    OD_ASSERT(pos < n - !noref);
-    od_encode_cdf_adapt(ec, pos, adapt->pvq_k1_cdf[cdf_id], n - !noref,
+    OD_ASSERT(pos < n);
+    od_encode_cdf_adapt(ec, pos, adapt->pvq_k1_cdf[cdf_id], n,
      adapt->pvq_k1_increment);
     od_ec_enc_bits(ec, in[pos] < 0, 1);
   }
@@ -65,7 +65,7 @@ static void od_encode_pvq_codeword(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
     int *pvq_adapt;
     int adapt_curr[OD_NSB_ADAPT_CTXS] = { 0 };
     pvq_adapt = adapt->pvq_adapt + 4*(2*bs + noref);
-    laplace_encode_vector(ec, in, n - !noref, k, adapt_curr,
+    laplace_encode_vector(ec, in, n, k, adapt_curr,
      pvq_adapt);
     if (adapt_curr[OD_ADAPT_K_Q8] > 0) {
       pvq_adapt[OD_ADAPT_K_Q8] += (256*adapt_curr[OD_ADAPT_K_Q8]
@@ -267,7 +267,8 @@ static double od_pvq_rate(int qg, int icgr, int theta, int ts,
     od_ec_enc_init(&ec, 1000);
     OD_COPY(&cd, &adapt->pvq.pvq_codeword_ctx, 1);
     tell = od_ec_enc_tell_frac(&ec);
-    od_encode_pvq_codeword(&ec, &cd, y0, n, k, theta == -1, bs);
+    od_encode_pvq_codeword(&ec, &cd, y0, n - (theta != -1), k, theta == -1,
+     bs);
     rate = (od_ec_enc_tell_frac(&ec)-tell)/8.;
     od_ec_enc_clear(&ec);
   }
@@ -621,7 +622,8 @@ static void pvq_encode_partition(od_ec_enc *ec,
      &tmp, 2);
     OD_IIR_DIADIC(*ext, theta << 16, 2);
   }
-  od_encode_pvq_codeword(ec, &adapt->pvq.pvq_codeword_ctx, in, n, k, theta == -1, bs);
+  od_encode_pvq_codeword(ec, &adapt->pvq.pvq_codeword_ctx, in,
+   n - (theta != -1), k, theta == -1, bs);
 }
 
 /** Quantizes a scalar with rate-distortion optimization (RDO)
