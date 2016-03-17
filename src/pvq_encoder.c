@@ -41,6 +41,36 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
    dot-product of the 1st band of chroma with the luma ref doesn't overflow.*/
 #define OD_CFL_FLIP_SHIFT (OD_LIMIT_BSIZE_MAX + 0)
 
+static void od_encode_pvq_split(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
+ int a, int sum, int ctx) {
+  int shift;
+  if (sum == 0) return;
+  shift = OD_MAXI(0, OD_ILOG(sum) - 4);
+  if (shift) {
+    od_ec_enc_bits(ec, a & ((1 << shift) - 1), shift);
+    a >>= shift;
+    sum >>= shift;
+  }
+  od_encode_cdf_adapt(ec, a, adapt->pvq_split_cdf[15*ctx + sum - 1], sum + 1,
+   adapt->pvq_split_increment);
+}
+
+static void od_encode_all_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
+ const int *y, int n, int k, int ctx) {
+  int mid;
+  int i;
+  int count;
+  if (n <= 1) return;
+  mid = (n + 1) >> 1;
+  count = 0;
+  for (i = 0; i < mid; i++) {
+    count += abs(y[i]);
+  }
+  od_encode_pvq_split(ec, adapt, count, k, OD_ILOG(n-1) + 8*ctx);
+  od_encode_all_pvq_splits(ec, adapt, y, mid, count, ctx);
+  od_encode_all_pvq_splits(ec, adapt, y + mid, n - mid, k - count, ctx);
+}
+
 static void od_encode_pvq_codeword(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
  const od_coeff *in, int n, int k, int noref, int bs) {
   if (k == 1 && n < 16) {
@@ -61,6 +91,11 @@ static void od_encode_pvq_codeword(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
     od_ec_enc_bits(ec, in[pos] < 0, 1);
   }
   else {
+#if 1
+    int i;
+    od_encode_all_pvq_splits(ec, adapt, in, n, k, 0);
+    for (i = 0; i < n; i++) if (in[i]) od_ec_enc_bits(ec, in[i] > 0, 1);
+#else
     int speed = 5;
     int *pvq_adapt;
     int adapt_curr[OD_NSB_ADAPT_CTXS] = { 0 };
@@ -79,6 +114,7 @@ static void od_encode_pvq_codeword(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
       pvq_adapt[OD_ADAPT_COUNT_EX_Q8] += (adapt_curr[OD_ADAPT_COUNT_EX_Q8]
        - pvq_adapt[OD_ADAPT_COUNT_EX_Q8]) >> speed;
     }
+#endif
   }
 }
 
