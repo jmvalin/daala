@@ -35,6 +35,51 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "pvq_decoder.h"
 #include "partition.h"
 
+#if OD_ACCOUNTING
+# define od_decode_pvq_split(ec, adapt, sum, ctx, str) od_decode_pvq_split_(ec, adapt, sum, ctx, str)
+#else
+# define od_decode_pvq_split(ec, adapt, sum, ctx, str) od_decode_pvq_split_(ec, adapt, sum, ctx)
+#endif
+
+static int od_decode_pvq_split_(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
+ int sum, int ctx OD_ACC_STR) {
+  int shift;
+  int a;
+  a = 0;
+  if (sum == 0) return 0;
+  shift = OD_MAXI(0, OD_ILOG(sum) - 4);
+  if (shift) {
+    a = od_ec_dec_bits(ec, shift, acc_str);
+  }
+  a += od_decode_cdf_adapt(ec, adapt->pvq_split_cdf[15*ctx
+   + (sum >> shift) - 1], (sum >> shift) + 1,
+   adapt->pvq_split_increment, acc_str) << shift;
+  if (a > sum) {
+    a = sum;
+    ec->error = 1;
+  }
+  return a;
+}
+
+void od_decode_all_pvq_splits(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
+  od_coeff *y, int n, int k, int ctx) {
+  int mid;
+  int i;
+  int count;
+  if (n == 1) {
+    y[0] = k;
+    return;
+  }
+  if (k == 0) {
+    for (i = 0; i < n; i++) y[i] = 0;
+    return;
+  }
+  mid = (n + 1) >> 1;
+  count = od_decode_pvq_split(ec, adapt, k, OD_ILOG(n-1) + 8*ctx, "pvq:split");
+  od_decode_all_pvq_splits(ec, adapt, y, mid, count, ctx);
+  od_decode_all_pvq_splits(ec, adapt, y + mid, n - mid, k - count, ctx);
+}
+
 static void od_decode_pvq_codeword(od_ec_dec *ec, od_pvq_codeword_ctx *ctx,
  od_coeff *y, int n, int k, int noref, int bs) {
   if (k == 1 && n < 16) {
@@ -48,6 +93,13 @@ static void od_decode_pvq_codeword(od_ec_dec *ec, od_pvq_codeword_ctx *ctx,
     if (od_ec_dec_bits(ec, 1, "pvq:k1")) y[pos] = -y[pos];
   }
   else {
+#if 1
+    int i;
+    od_decode_all_pvq_splits(ec, ctx, y, n, k, 0);
+    for (i = 0; i < n; i++) {
+      if (y[i] && od_ec_dec_bits(ec, 1, "pvq:sign")) y[i] = -y[i];
+    }
+#else
     int speed = 5;
     int *pvq_adapt;
     int adapt_curr[OD_NSB_ADAPT_CTXS] = { 0 };
@@ -66,6 +118,7 @@ static void od_decode_pvq_codeword(od_ec_dec *ec, od_pvq_codeword_ctx *ctx,
       pvq_adapt[OD_ADAPT_COUNT_EX_Q8] += (adapt_curr[OD_ADAPT_COUNT_EX_Q8]
        - pvq_adapt[OD_ADAPT_COUNT_EX_Q8]) >> speed;
     }
+#endif
   }
 }
 

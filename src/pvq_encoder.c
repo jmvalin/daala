@@ -94,7 +94,7 @@ static void od_encode_pvq_codeword(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
 #if 1
     int i;
     od_encode_all_pvq_splits(ec, adapt, in, n, k, 0);
-    for (i = 0; i < n; i++) if (in[i]) od_ec_enc_bits(ec, in[i] > 0, 1);
+    for (i = 0; i < n; i++) if (in[i]) od_ec_enc_bits(ec, in[i] < 0, 1);
 #else
     int speed = 5;
     int *pvq_adapt;
