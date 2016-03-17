@@ -101,7 +101,9 @@ struct od_pvq_codeword_ctx {
   int                 pvq_adapt[2*OD_NBSIZES*OD_NSB_ADAPT_CTXS];
   int                 pvq_k1_increment;
   /* CDFs are size 16 despite the fact that we're using less than that. */
-  uint16_t        pvq_k1_cdf[4][16];
+  uint16_t            pvq_k1_cdf[12][16];
+  uint16_t            pvq_split_cdf[14*7][8];
+  int                 pvq_split_increment;
 };
 
 struct od_pvq_adapt_ctx {
@@ -116,6 +118,8 @@ struct od_pvq_adapt_ctx {
 };
 
 void od_adapt_pvq_ctx_reset(od_pvq_adapt_ctx *state, int is_keyframe);
+int od_pvq_size_ctx(int n);
+int od_pvq_k1_ctx(int n, int orig_size);
 
 int16_t od_pvq_sin(int32_t x);
 int16_t od_pvq_cos(int32_t x);

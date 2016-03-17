@@ -35,37 +35,67 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "pvq_decoder.h"
 #include "partition.h"
 
-static void od_decode_pvq_codeword(od_ec_dec *ec, od_pvq_codeword_ctx *ctx,
- od_coeff *y, int n, int k, int noref, int bs) {
-  if (k == 1 && n < 16) {
+#if OD_ACCOUNTING
+# define od_decode_pvq_split(ec, adapt, sum, ctx, str) od_decode_pvq_split_(ec, adapt, sum, ctx, str)
+#else
+# define od_decode_pvq_split(ec, adapt, sum, ctx, str) od_decode_pvq_split_(ec, adapt, sum, ctx)
+#endif
+
+static int od_decode_pvq_split_(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
+ int sum, int ctx OD_ACC_STR) {
+  int shift;
+  int a;
+  int tmp;
+  a = 0;
+  if (sum == 0) return 0;
+  shift = OD_MAXI(0, OD_ILOG(sum) - 3);
+  tmp = od_decode_cdf_adapt(ec, adapt->pvq_split_cdf[7*ctx + (sum >> shift)
+   - 1], (sum >> shift) + 1, adapt->pvq_split_increment, acc_str) << shift;
+  if (shift) a = od_ec_dec_bits(ec, shift, acc_str);
+  a += tmp;
+  if (a > sum) {
+    a = sum;
+    ec->error = 1;
+  }
+  return a;
+}
+
+static void od_decode_all_pvq_splits(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
+  od_coeff *y, int n, int k, int level) {
+  int mid;
+  int i;
+  int count;
+  if (n == 1) {
+    y[0] = k;
+    return;
+  }
+  if (k == 0) {
+    for (i = 0; i < n; i++) y[i] = 0;
+    return;
+  }
+  if (k == 1 && n <= 16) {
     int cdf_id;
     int pos;
-    cdf_id = 2*(n == 15) + !noref;
+    cdf_id = od_pvq_k1_ctx(n, level == 0);
     OD_CLEAR(y, n);
-    pos = od_decode_cdf_adapt(ec, ctx->pvq_k1_cdf[cdf_id], n - !noref,
-     ctx->pvq_k1_increment, "pvq:k1");
+    pos = od_decode_cdf_adapt(ec, adapt->pvq_k1_cdf[cdf_id], n,
+     adapt->pvq_k1_increment, "pvq:k1");
     y[pos] = 1;
-    if (od_ec_dec_bits(ec, 1, "pvq:k1")) y[pos] = -y[pos];
+    return;
   }
-  else {
-    int speed = 5;
-    int *pvq_adapt;
-    int adapt_curr[OD_NSB_ADAPT_CTXS] = { 0 };
-    pvq_adapt = ctx->pvq_adapt + 4*(2*bs + noref);
-    laplace_decode_vector(ec, y, n - !noref, k, adapt_curr,
-     pvq_adapt, "pvq:ktok");
-    if (adapt_curr[OD_ADAPT_K_Q8] > 0) {
-      pvq_adapt[OD_ADAPT_K_Q8] += (256*adapt_curr[OD_ADAPT_K_Q8]
-       - pvq_adapt[OD_ADAPT_K_Q8]) >> speed;
-      pvq_adapt[OD_ADAPT_SUM_EX_Q8] += (adapt_curr[OD_ADAPT_SUM_EX_Q8]
-       - pvq_adapt[OD_ADAPT_SUM_EX_Q8]) >> speed;
-    }
-    if (adapt_curr[OD_ADAPT_COUNT_Q8] > 0) {
-      pvq_adapt[OD_ADAPT_COUNT_Q8] += (adapt_curr[OD_ADAPT_COUNT_Q8]
-       - pvq_adapt[OD_ADAPT_COUNT_Q8]) >> speed;
-      pvq_adapt[OD_ADAPT_COUNT_EX_Q8] += (adapt_curr[OD_ADAPT_COUNT_EX_Q8]
-       - pvq_adapt[OD_ADAPT_COUNT_EX_Q8]) >> speed;
-    }
+  mid = n >> 1;
+  count = k - od_decode_pvq_split(ec, adapt, k, od_pvq_size_ctx(n),
+   "pvq:split");
+  od_decode_all_pvq_splits(ec, adapt, y, mid, count, level + 1);
+  od_decode_all_pvq_splits(ec, adapt, y + mid, n - mid, k - count, level + 1);
+}
+
+static void od_decode_pvq_codeword(od_ec_dec *ec, od_pvq_codeword_ctx *ctx,
+ od_coeff *y, int n, int k) {
+  int i;
+  od_decode_all_pvq_splits(ec, ctx, y, n, k, 0);
+  for (i = 0; i < n; i++) {
+    if (y[i] && od_ec_dec_bits(ec, 1, "pvq:sign")) y[i] = -y[i];
   }
 }
 
@@ -281,7 +311,8 @@ static void pvq_decode_partition(od_ec_dec *ec,
   k = od_pvq_compute_k(qcg, itheta, theta, *noref, n, beta, nodesync);
   if (k != 0) {
     /* when noref==0, y is actually size n-1 */
-    od_decode_pvq_codeword(ec, &adapt->pvq.pvq_codeword_ctx, y, n, k, *noref, bs);
+    od_decode_pvq_codeword(ec, &adapt->pvq.pvq_codeword_ctx, y, n - !*noref,
+     k);
   }
   else {
     OD_CLEAR(y, n);
