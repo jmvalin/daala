@@ -74,7 +74,8 @@ void od_decode_all_pvq_splits(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
     for (i = 0; i < n; i++) y[i] = 0;
     return;
   }
-  mid = (n + 1) >> 1;
+  mid = n >> 1;
+  ctx = n&1;
   count = od_decode_pvq_split(ec, adapt, k, OD_ILOG(n-1) + 8*ctx, "pvq:split");
   od_decode_all_pvq_splits(ec, adapt, y, mid, count, ctx);
   od_decode_all_pvq_splits(ec, adapt, y + mid, n - mid, k - count, ctx);
