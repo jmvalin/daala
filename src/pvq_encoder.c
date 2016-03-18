@@ -60,7 +60,7 @@ static void od_encode_all_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
   int mid;
   int i;
   int count;
-  if (n <= 1) return;
+  if (n <= 1 || k == 0) return;
   mid = n >> 1;
   count = 0;
   for (i = 0; i < mid; i++) {
