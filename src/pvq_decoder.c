@@ -45,15 +45,16 @@ static int od_decode_pvq_split_(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
  int sum, int ctx OD_ACC_STR) {
   int shift;
   int a;
+  int tmp;
   a = 0;
   if (sum == 0) return 0;
   shift = OD_MAXI(0, OD_ILOG(sum) - 4);
   if (shift) {
     a = od_ec_dec_bits(ec, shift, acc_str);
   }
-  a += od_decode_cdf_adapt(ec, adapt->pvq_split_cdf[15*ctx
-   + (sum >> shift) - 1], (sum >> shift) + 1,
-   adapt->pvq_split_increment, acc_str) << shift;
+  tmp = od_decode_cdf_adapt(ec, adapt->pvq_split_cdf[15*ctx + (sum >> shift)
+   - 1], (sum >> shift) + 1, adapt->pvq_split_increment, acc_str) << shift;
+  a += tmp;
   if (a > sum) {
     a = sum;
     ec->error = 1;
@@ -76,7 +77,8 @@ void od_decode_all_pvq_splits(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
   }
   mid = n >> 1;
   ctx = n&1;
-  count = od_decode_pvq_split(ec, adapt, k, OD_ILOG(n-1) + 8*ctx, "pvq:split");
+  count = od_decode_pvq_split(ec, adapt, k, OD_ILOG(n - 1) - 1 + 7*ctx,
+   "pvq:split");
   od_decode_all_pvq_splits(ec, adapt, y, mid, count, ctx);
   od_decode_all_pvq_splits(ec, adapt, y + mid, n - mid, k - count, ctx);
 }

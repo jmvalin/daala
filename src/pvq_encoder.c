@@ -67,7 +67,7 @@ static void od_encode_all_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
     count += abs(y[i]);
   }
   ctx = n&1;
-  od_encode_pvq_split(ec, adapt, count, k, OD_ILOG(n-1) + 8*ctx);
+  od_encode_pvq_split(ec, adapt, count, k, OD_ILOG(n - 1) - 1 + 7*ctx);
   od_encode_all_pvq_splits(ec, adapt, y, mid, count, ctx);
   od_encode_all_pvq_splits(ec, adapt, y + mid, n - mid, k - count, ctx);
 }
