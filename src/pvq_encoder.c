@@ -44,15 +44,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 static void od_encode_pvq_split(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
  int a, int sum, int ctx) {
   int shift;
+  int rest;
   if (sum == 0) return;
-  shift = OD_MAXI(0, OD_ILOG(sum) - 4);
+  shift = OD_MAXI(0, OD_ILOG(sum) - 3);
   if (shift) {
-    od_ec_enc_bits(ec, a & ((1 << shift) - 1), shift);
+    rest = a & ((1 << shift) - 1);
     a >>= shift;
     sum >>= shift;
   }
   od_encode_cdf_adapt(ec, a, adapt->pvq_split_cdf[15*ctx + sum - 1], sum + 1,
    adapt->pvq_split_increment);
+  if (shift) {
+    od_ec_enc_bits(ec, rest, shift);
+  }
 }
 
 static void od_encode_all_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
@@ -83,7 +87,7 @@ static void od_encode_all_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
     count += abs(y[i]);
   }
   ctx = n&1;
-  od_encode_pvq_split(ec, adapt, count, k, OD_ILOG(n - 1) - 1 + 7*ctx);
+  od_encode_pvq_split(ec, adapt, k-count, k, OD_ILOG(n - 1) - 1 + 7*ctx);
   od_encode_all_pvq_splits(ec, adapt, y, mid, count, ctx);
   od_encode_all_pvq_splits(ec, adapt, y + mid, n - mid, k - count, ctx);
 }
