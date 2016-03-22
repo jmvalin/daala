@@ -75,6 +75,16 @@ void od_decode_all_pvq_splits(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
     for (i = 0; i < n; i++) y[i] = 0;
     return;
   }
+  if (k == 1 && n <= 16) {
+    int cdf_id;
+    int pos;
+    cdf_id = n - 2;
+    OD_CLEAR(y, n);
+    pos = od_decode_cdf_adapt(ec, adapt->pvq_k1_cdf[cdf_id], n,
+      adapt->pvq_k1_increment, "pvq:k1");
+    y[pos] = 1;
+    return;
+  }
   mid = n >> 1;
   ctx = n&1;
   count = od_decode_pvq_split(ec, adapt, k, OD_ILOG(n - 1) - 1 + 7*ctx,
@@ -85,7 +95,7 @@ void od_decode_all_pvq_splits(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
 
 static void od_decode_pvq_codeword(od_ec_dec *ec, od_pvq_codeword_ctx *ctx,
  od_coeff *y, int n, int k, int noref, int bs) {
-  if (k == 1 && n < 16) {
+  if (0&&k == 1 && n < 16) {
     int cdf_id;
     int pos;
     cdf_id = 2*(n == 15 || n == 14) + !noref;

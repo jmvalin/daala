@@ -61,6 +61,22 @@ static void od_encode_all_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
   int i;
   int count;
   if (n <= 1 || k == 0) return;
+  if (k == 1 && n <= 16) {
+    int cdf_id;
+    int pos;
+    cdf_id = n - 2;
+    pos = 32;
+    for (i = 0; i < n; i++) {
+      if (y[i]) {
+        pos = i;
+        break;
+      }
+    }
+    OD_ASSERT(pos < n);
+    od_encode_cdf_adapt(ec, pos, adapt->pvq_k1_cdf[cdf_id], n,
+     adapt->pvq_k1_increment);
+    return;
+  }
   mid = n >> 1;
   count = 0;
   for (i = 0; i < mid; i++) {
@@ -74,7 +90,7 @@ static void od_encode_all_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
 
 static void od_encode_pvq_codeword(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
  const od_coeff *in, int n, int k, int noref, int bs) {
-  if (k == 1 && n < 16) {
+  if (0&&k == 1 && n < 16) {
     int cdf_id;
     int i;
     int pos;
