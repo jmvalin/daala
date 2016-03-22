@@ -101,7 +101,7 @@ struct od_pvq_codeword_ctx {
   int                 pvq_adapt[2*OD_NBSIZES*OD_NSB_ADAPT_CTXS];
   int                 pvq_k1_increment;
   /* CDFs are size 16 despite the fact that we're using less than that. */
-  uint16_t        pvq_k1_cdf[16][16];
+  uint16_t        pvq_k1_cdf[16 + 4][16];
   uint16_t            pvq_split_cdf[300][16];
   int                 pvq_split_increment;
 };

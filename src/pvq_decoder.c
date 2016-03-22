@@ -95,12 +95,12 @@ void od_decode_all_pvq_splits(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
 
 static void od_decode_pvq_codeword(od_ec_dec *ec, od_pvq_codeword_ctx *ctx,
  od_coeff *y, int n, int k, int noref, int bs) {
-  if (0&&k == 1 && n < 16) {
+  if (k == 1 && n < 16) {
     int cdf_id;
     int pos;
     cdf_id = 2*(n == 15 || n == 14) + !noref;
     OD_CLEAR(y, n);
-    pos = od_decode_cdf_adapt(ec, ctx->pvq_k1_cdf[cdf_id], n,
+    pos = od_decode_cdf_adapt(ec, ctx->pvq_k1_cdf[cdf_id + 16], n,
      ctx->pvq_k1_increment, "pvq:k1");
     y[pos] = 1;
     if (od_ec_dec_bits(ec, 1, "pvq:k1")) y[pos] = -y[pos];
