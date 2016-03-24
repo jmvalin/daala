@@ -34,6 +34,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "logging.h"
 #include "odintrin.h"
 
+uint16_t *(cdfs[10000]) = {NULL};
+
+
 /** Decodes a value from 0 to N-1 (with N up to 16) based on a cdf and adapts
  * the cdf accordingly.
  *
@@ -48,6 +51,8 @@ int od_decode_cdf_adapt_(od_ec_dec *ec, uint16_t *cdf, int n,
  int increment OD_ACC_STR) {
   int i;
   int val;
+  int tell;
+  tell = od_ec_dec_tell_frac(ec);
   val = od_ec_decode_cdf_unscaled(ec, cdf, n, acc_str);
   if (cdf[n-1] + increment > 32767) {
     for (i = 0; i < n; i++) {
@@ -56,6 +61,17 @@ int od_decode_cdf_adapt_(od_ec_dec *ec, uint16_t *cdf, int n,
     }
   }
   for (i = val; i < n; i++) cdf[i] += increment;
+  {
+    int j;
+    j=0;
+    while (cdfs[j]) {
+      if (cdfs[j] == cdf) break;
+      j++;
+    }
+    if (!cdfs[j]) cdfs[j] = cdf;
+    tell = od_ec_dec_tell_frac(ec) - tell;
+    printf("%s %d %d %d %f\n", acc_str, j, n, val, tell/8.);
+  }
   return val;
 }
 

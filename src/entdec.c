@@ -174,6 +174,7 @@ void od_ec_dec_init(od_ec_dec *dec,
 #if OD_ACCOUNTING
   dec->acct = NULL;
 #endif
+  printf("NEW_FRAME\n");
 }
 
 /*Decode a bit that has an fz/ft probability of being a zero.
