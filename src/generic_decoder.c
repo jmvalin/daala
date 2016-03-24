@@ -52,8 +52,10 @@ int od_decode_cdf_adapt_(od_ec_dec *ec, uint16_t *cdf, int n,
   int i;
   int val;
   int tell;
+  double entropy;
   tell = od_ec_dec_tell_frac(ec);
   val = od_ec_decode_cdf_unscaled(ec, cdf, n, acc_str);
+  entropy = -log2(cdf[val] - (val == 0 ? 0 : cdf[val-1]))+log2(cdf[n-1]);
   if (cdf[n-1] + increment > 32767) {
     for (i = 0; i < n; i++) {
       /* Second term ensures that the pdf is non-null */
@@ -70,7 +72,7 @@ int od_decode_cdf_adapt_(od_ec_dec *ec, uint16_t *cdf, int n,
     }
     if (!cdfs[j]) cdfs[j] = cdf;
     tell = od_ec_dec_tell_frac(ec) - tell;
-    printf("%s %d %d %d %f\n", acc_str, j, n, val, tell/8.);
+    printf("%s %d %d %d %f %f\n", acc_str, j, n, val, tell/8., entropy);
   }
   return val;
 }
