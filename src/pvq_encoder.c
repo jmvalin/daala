@@ -45,6 +45,7 @@ static void od_encode_pvq_split(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
  int a, int sum, int ctx) {
   int shift;
   int rest;
+  int b;
   if (sum == 0) return;
   shift = OD_MAXI(0, OD_ILOG(sum) - 3);
   if (shift) {
@@ -52,7 +53,8 @@ static void od_encode_pvq_split(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
     a >>= shift;
     sum >>= shift;
   }
-  od_encode_cdf_adapt(ec, a, adapt->pvq_split_cdf[7*ctx + sum - 1], sum + 1,
+  b = neg_interleave(a + 1, sum/2);
+  od_encode_cdf_adapt(ec, b, adapt->pvq_split_cdf[7*ctx + sum - 1], sum + 1,
    adapt->pvq_split_increment);
   if (shift) od_ec_enc_bits(ec, rest, shift);
 }
@@ -248,7 +250,7 @@ static double pvq_search_rdo_double(const int16_t *xcoeff, int n, int k,
  * @param [in]      ref    quantized gain of the reference
  * @return                 interleave-encoded quantized gain value
  */
-static int neg_interleave(int x, int ref) {
+int neg_interleave(int x, int ref) {
   if (x < ref) return -2*(x - ref) - 1;
   else if (x < 2*ref) return 2*(x - ref);
   else return x-1;

@@ -120,6 +120,7 @@ struct od_pvq_adapt_ctx {
 void od_adapt_pvq_ctx_reset(od_pvq_adapt_ctx *state, int is_keyframe);
 int od_pvq_size_ctx(int n);
 int od_pvq_k1_ctx(int n, int orig_size);
+int neg_interleave(int x, int ref);
 
 int16_t od_pvq_sin(int32_t x);
 int16_t od_pvq_cos(int32_t x);
