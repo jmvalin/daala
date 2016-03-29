@@ -539,9 +539,11 @@ void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   OD_CDFS_INIT(state->mv_ref_cdf, 128);
   state->skip_increment = 128;
   OD_CDFS_INIT(state->skip_cdf, state->skip_increment >> 2);
-  state->mv_small_increment = 128;
-  OD_CDFS_INIT_FIRST(state->mv_small_cdf, state->mv_small_increment,
-   10*state->mv_small_increment);
+  state->mv_small_increment = 1024;
+  OD_CDFS_INIT_FIRST(state->mv_small_cdf, state->mv_small_increment/2,
+   10*state->mv_small_increment/2);
+  OD_SINGLE_CDF_INIT_FIRST(state->mv_small_cdf[4], state->mv_small_increment/4,
+   30*state->mv_small_increment/4);
   state->split_flag_increment = 128;
   for (level = 0; level < OD_MC_LEVEL_MAX; level++) {
     for (i = 0; i < 9; i++) {
