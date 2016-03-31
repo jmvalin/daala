@@ -79,7 +79,7 @@ void od_decode_band_pvq_splits(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
     y[pos] = 1;
   }
   else {
-    mid = n >> 1;
+    mid = (n + 1) >> 1;
     count_left = k - od_decode_pvq_split(ec, adapt, k, od_pvq_size_ctx(n),
      "pvq:split");
     od_decode_band_pvq_splits(ec, adapt, y, mid, count_left, level + 1);
