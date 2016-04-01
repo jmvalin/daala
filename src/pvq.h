@@ -118,6 +118,7 @@ struct od_pvq_codeword_ctx {
   uint16_t            pvq_k1_cdf[12][16];
   uint16_t            pvq_split_cdf[14*7][8];
   int                 pvq_split_increment;
+  int                 split_means[14*7];
 };
 
 struct od_pvq_adapt_ctx {
@@ -131,6 +132,8 @@ struct od_pvq_adapt_ctx {
   uint16_t        pvq_skip_dir_cdf[2*(OD_NBSIZES-1)][7];
 };
 
+#define OD_MEANS_RATE (4)
+extern float split_means[];
 void od_adapt_pvq_ctx_reset(od_pvq_adapt_ctx *state, int is_keyframe);
 int od_pvq_size_ctx(int n);
 int od_pvq_k1_ctx(int n, int orig_size);

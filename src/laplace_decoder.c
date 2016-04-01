@@ -45,11 +45,18 @@ static int od_decode_pvq_split_(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
   int shift;
   int count;
   int msb;
+  int fctx;
   count = 0;
   if (sum == 0) return 0;
   shift = OD_MAXI(0, OD_ILOG(sum) - 3);
-  msb = od_decode_cdf_adapt(ec, adapt->pvq_split_cdf[7*ctx + (sum >> shift)
-   - 1], (sum >> shift) + 1, adapt->pvq_split_increment, acc_str) << shift;
+  fctx = 7*ctx + (sum >> shift) - 1;
+  msb = od_decode_cdf_adapt(ec, adapt->pvq_split_cdf[fctx], (sum >> shift) + 1, adapt->pvq_split_increment, acc_str);
+  /*printf("%d %d\n", 7*ctx + (sum >> shift) - 1, msb);*/
+  printf("%d %d %d %d\n", ((sum >> shift) - 1)*16 + ((adapt->split_means[fctx] + 2) >> (OD_MEANS_RATE-2)), msb, ((sum >> shift) - 1), ((adapt->split_means[fctx] + 2) >> (OD_MEANS_RATE-2)));
+  adapt->split_means[fctx] += msb
+   - ((adapt->split_means[fctx] + 8) >> OD_MEANS_RATE);
+  adapt->split_means[fctx] = OD_MINI(adapt->split_means[fctx], 60);
+  msb <<= shift;
   if (shift) count = od_ec_dec_bits(ec, shift, acc_str);
   count += msb;
   if (count > sum) {

@@ -34,11 +34,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "entdec.h"
 #include "logging.h"
 #include "odintrin.h"
+#include "split_cdf.h"
 
 static void od_encode_pvq_split(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
  int count, int sum, int ctx) {
   int shift;
   int rest;
+  int fctx;
+  int split_ctx;
   if (sum == 0) return;
   shift = OD_MAXI(0, OD_ILOG(sum) - 3);
   if (shift) {
@@ -46,8 +49,18 @@ static void od_encode_pvq_split(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
     count >>= shift;
     sum >>= shift;
   }
-  od_encode_cdf_adapt(ec, count, adapt->pvq_split_cdf[7*ctx + sum - 1], sum + 1,
+  fctx = 7*ctx + sum - 1;
+  split_ctx = (sum - 1)*16 + ((adapt->split_means[fctx] + 2) >> (OD_MEANS_RATE-2));
+#if 0
+  od_encode_cdf_adapt(ec, count, adapt->pvq_split_cdf[fctx], sum + 1,
    adapt->pvq_split_increment);
+#else
+  od_ec_encode_cdf_q15(ec, count, split_cdf[split_ctx], sum+1);
+#endif
+  adapt->split_means[fctx] += count
+   - ((adapt->split_means[fctx] + 8) >> OD_MEANS_RATE);
+  adapt->split_means[fctx] = OD_MINI(adapt->split_means[fctx], 60);
+
   if (shift) od_ec_enc_bits(ec, rest, shift);
 }
 
