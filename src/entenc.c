@@ -374,7 +374,7 @@ void od_ec_encode_cdf_q15(od_ec_enc *enc, int s,
   OD_ASSERT(s < nsyms);
   OD_ASSERT(cdf[nsyms - 1] == 32768U);
   for (i=0;i<nsyms;i++) {
-    cdf2[i] = ((cdf[i]*enc->rng + 65536) >> 17) + i + 1;
+    cdf2[i] = ((cdf[i]*(uint64_t)enc->rng + 65536) >> 17) + i + 1;
   }
 #if 0
   od_ec_encode_q15(enc, s > 0 ? cdf[s - 1] : 0, cdf[s]);
