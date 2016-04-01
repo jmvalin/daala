@@ -367,11 +367,20 @@ void od_ec_encode_cdf(od_ec_enc *enc, int s,
          This should be at most 16.*/
 void od_ec_encode_cdf_q15(od_ec_enc *enc, int s,
  const uint16_t *cdf, int nsyms) {
+  int i;
+  uint16_t cdf2[16];
   (void)nsyms;
   OD_ASSERT(s >= 0);
   OD_ASSERT(s < nsyms);
   OD_ASSERT(cdf[nsyms - 1] == 32768U);
+  for (i=0;i<nsyms;i++) {
+    cdf2[i] = ((cdf[i]*enc->rng + 65536) >> 17) + i + 1;
+  }
+#if 0
   od_ec_encode_q15(enc, s > 0 ? cdf[s - 1] : 0, cdf[s]);
+#else
+  od_ec_encode_unscaled(enc, s > 0 ? cdf2[s - 1] : 0, cdf2[s], cdf2[nsyms - 1]);
+#endif
 }
 
 /*Encodes a symbol given a cumulative distribution function (CDF) table.
