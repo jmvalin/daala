@@ -39,6 +39,7 @@ static void od_encode_pvq_split(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
  int count, int sum, int ctx) {
   int shift;
   int rest;
+  int fctx;
   if (sum == 0) return;
   shift = OD_MAXI(0, OD_ILOG(sum) - 3);
   if (shift) {
@@ -46,8 +47,24 @@ static void od_encode_pvq_split(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
     count >>= shift;
     sum >>= shift;
   }
-  od_encode_cdf_adapt(ec, count, adapt->pvq_split_cdf[7*ctx + sum - 1],
+  fctx = 7*ctx + sum - 1;
+#if 1
+  if (sum == 2) {
+    double p;
+    uint16_t cdf[3];
+    p = adapt->split_means[fctx]/(2.*(1<<2+OD_MEANS_RATE));
+    p = OD_CLAMPF(.0001, p, .9999);
+    cdf[0] = 32768*(1-p)*(1-p);
+    cdf[1] = 32768*(1-p*p);
+    cdf[2] = 32768;
+    od_ec_encode_cdf_q15(ec, count, cdf, 3);
+  }
+  else
+#endif
+  od_encode_cdf_adapt(ec, count, adapt->pvq_split_cdf[fctx],
    sum + 1, adapt->pvq_split_increment);
+  adapt->split_means[fctx] += (count<<2)
+   - ((adapt->split_means[fctx] + (1<<OD_MEANS_RATE>>1)) >> OD_MEANS_RATE);
   if (shift) od_ec_enc_bits(ec, rest, shift);
 }
 
