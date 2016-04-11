@@ -59,6 +59,8 @@ static int od_dir_find8(const od_dering_in *img, int stride, int32_t *var,
     int j;
     for (j = 0; j < 8; j++) {
       int x;
+      /* We subtract 128 here to reduce the maximum range of the squared
+         partial sums. */
       x = (img[i*stride + j] >> coeff_shift);
       partial[0][i + j] += x;
       partial[1][i + j/2] += x;
@@ -222,18 +224,15 @@ static const int16_t OD_THRESH_TABLE_Q8[18] = {
    to blur. */
 static void od_compute_thresh(int thresh[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS],
  int threshold, int32_t var[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS],
- int32_t sb_var, int nhb, int nvb) {
+ int nhb, int nvb) {
   int bx;
   int by;
   for (by = 0; by < nvb; by++) {
     for (bx = 0; bx < nhb; bx++) {
       int v1;
-      int v2;
       /* We use the variance of 8x8 blocks to adjust the threshold. */
       v1 = OD_MINI(32767, var[by][bx] >> 6);
-      v2 = OD_MINI(32767, sb_var/(OD_BSIZE_MAX*OD_BSIZE_MAX));
-      thresh[by][bx] = threshold*OD_THRESH_TABLE_Q8[OD_CLAMPI(0,
-       OD_ILOG(v1*v2) - 10, 17)] >> 8;
+      thresh[by][bx] = (threshold*OD_THRESH_TABLE_Q8[OD_ILOG(v1)] + 128) >> 8;
     }
   }
 }
@@ -250,7 +249,6 @@ void od_dering(const od_dering_opt_vtbl *vtbl, int16_t *y, int ystride,
   int16_t inbuf[OD_DERING_INBUF_SIZE];
   int16_t *in;
   int bsize;
-  int varsum = 0;
   int32_t var[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
   int thresh[OD_DERING_NBLOCKS][OD_DERING_NBLOCKS];
   bsize = 3 - xdec;
@@ -271,10 +269,9 @@ void od_dering(const od_dering_opt_vtbl *vtbl, int16_t *y, int ystride,
       for (bx = 0; bx < nhb; bx++) {
         dir[by][bx] = od_dir_find8(&x[8*by*xstride + 8*bx], xstride,
          &var[by][bx], coeff_shift);
-        varsum += var[by][bx];
       }
     }
-    od_compute_thresh(thresh, threshold, var, varsum, nhb, nvb);
+    od_compute_thresh(thresh, threshold, var, nhb, nvb);
   }
   else {
     for (by = 0; by < nvb; by++) {
