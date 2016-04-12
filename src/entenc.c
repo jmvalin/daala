@@ -389,7 +389,7 @@ void od_ec_encode_cdf_unscaled(od_ec_enc *enc, int s,
     int mul;
     ft = cdf[nsyms - 1];
     shift = 15 - OD_ILOG(ft);
-    rcp = 47841 - (ft << shift);
+    rcp = 46318 - (ft << shift);
     mul = rcp*enc->rng >> 16;
     /*printf("%d %d %d %d %d\n", ft, shift, rcp, enc->rng, mul);*/
     for (i = 0; i < nsyms; i++) {
