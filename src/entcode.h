@@ -81,7 +81,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
    (vs. 0.022% for the division-based partition function with r much greater
    than ft).
   It improves performance on ntt-short-1 by about 0.3%.*/
-# define OD_EC_REDUCED_OVERHEAD (1)
+# define OD_EC_REDUCED_OVERHEAD (0)
 
 /*OPT: od_ec_window must be at least 32 bits, but if you have fast arithmetic
    on a larger type, you can speed up the decoder by using it here.*/

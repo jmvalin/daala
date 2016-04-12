@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include "entenc.h"
 
 /*A range encoder.
@@ -377,9 +378,26 @@ void od_ec_encode_cdf_q15(od_ec_enc *enc, int s,
          This should be at most 16.*/
 void od_ec_encode_cdf_unscaled(od_ec_enc *enc, int s,
  const uint16_t *cdf, int nsyms) {
+  uint16_t cdf2[16];
   OD_ASSERT(s >= 0);
   OD_ASSERT(s < nsyms);
-  od_ec_encode_unscaled(enc, s > 0 ? cdf[s - 1] : 0, cdf[s], cdf[nsyms - 1]);
+  if (1) {
+    int ft;
+    int shift;
+    int rcp;
+    int i;
+    int mul;
+    ft = cdf[nsyms - 1];
+    shift = 15 - OD_ILOG(ft);
+    rcp = 47841 - (ft << shift);
+    mul = rcp*enc->rng >> 16;
+    /*printf("%d %d %d %d %d\n", ft, shift, rcp, enc->rng, mul);*/
+    for (i = 0; i < nsyms; i++) {
+      cdf2[i] = i + 1 + ((cdf[i] << shift)*mul >> 15);
+    }
+    od_ec_encode_unscaled(enc, s > 0 ? cdf2[s - 1] : 0, cdf2[s], cdf2[nsyms - 1]);
+  }
+  else od_ec_encode_unscaled(enc, s > 0 ? cdf[s - 1] : 0, cdf[s], cdf[nsyms - 1]);
 }
 
 /*Equivalent to od_ec_encode_cdf_q15() with the cdf scaled by
