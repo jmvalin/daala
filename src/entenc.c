@@ -390,10 +390,10 @@ void od_ec_encode_cdf_unscaled(od_ec_enc *enc, int s,
     ft = cdf[nsyms - 1];
     shift = 15 - OD_ILOG(ft);
     rcp = 47000 - (ft << shift);
-    mul = rcp*enc->rng >> 16;
+    mul = (rcp >> 7)*(enc->rng >> 8) >> 8;
     /*printf("%d %d %d %d %d\n", ft, shift, rcp, enc->rng, mul);*/
     for (i = 0; i < nsyms; i++) {
-      cdf2[i] = i + 1 + ((cdf[i] << shift)*mul >> 15);
+      cdf2[i] = i + 1 + ((cdf[i] << shift)*mul >> 8);
     }
     od_ec_encode_unscaled(enc, s > 0 ? cdf2[s - 1] : 0, cdf2[s], cdf2[nsyms - 1]);
   }
