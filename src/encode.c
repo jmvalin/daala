@@ -1425,7 +1425,7 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
 #if NEW_SKIP
       od_encode_cdf_adapt_q15(&enc->ec, 0,
        enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 4 + (pli == 0 && bs > 0),
-       &enc->state.adapt.skip_count[2*bs + (pli != 0)], 6);
+       &enc->state.adapt.skip_count[2*bs + (pli != 0)], 4);
 #else
       od_encode_cdf_adapt(&enc->ec, 0,
        enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 4 + (pli == 0 && bs > 0),
@@ -1764,7 +1764,7 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
 #if NEW_SKIP
       od_encode_cdf_adapt_q15(&enc->ec, 4,
        enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 5,
-       &enc->state.adapt.skip_count[2*bs + (pli != 0)], 6);
+       &enc->state.adapt.skip_count[2*bs + (pli != 0)], 4);
 #else
       od_encode_cdf_adapt(&enc->ec, 4,
        enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 5,

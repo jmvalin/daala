@@ -761,7 +761,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   /* Code as if we're not skipping. */
 #if NEW_SKIP
   od_encode_cdf_adapt_q15(&enc->ec, 2 + (out[0] != 0), skip_cdf,
-   4 + (pli == 0 && bs > 0), &enc->state.adapt.skip_count[2*bs + (pli != 0)], 6);
+   4 + (pli == 0 && bs > 0), &enc->state.adapt.skip_count[2*bs + (pli != 0)], 4);
 #else
   od_encode_cdf_adapt(&enc->ec, 2 + (out[0] != 0), skip_cdf,
    4 + (pli == 0 && bs > 0), enc->state.adapt.skip_increment);
@@ -835,7 +835,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
     od_encode_rollback(enc, &buf);
 #if NEW_SKIP
     od_encode_cdf_adapt_q15(&enc->ec, out[0] != 0, skip_cdf,
-     4 + (pli == 0 && bs > 0), &enc->state.adapt.skip_count[2*bs + (pli != 0)], 6);
+     4 + (pli == 0 && bs > 0), &enc->state.adapt.skip_count[2*bs + (pli != 0)], 4);
 #else
     od_encode_cdf_adapt(&enc->ec, out[0] != 0, skip_cdf,
      4 + (pli == 0 && bs > 0), enc->state.adapt.skip_increment);
