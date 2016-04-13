@@ -538,6 +538,8 @@ void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   generic_model_init(&state->mv_model);
   OD_CDFS_INIT(state->mv_ref_cdf, 128);
   state->skip_increment = 128;
+  state->skip_rate = 6;
+  OD_CLEAR(state->skip_count, OD_NBSIZES*2);
   OD_CDFS_INIT(state->skip_cdf, state->skip_increment >> 2);
   state->mv_small_increment = 128;
   OD_CDFS_INIT_FIRST(state->mv_small_cdf, state->mv_small_increment,

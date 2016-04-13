@@ -35,6 +35,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "odintrin.h"
 #include "pvq_encoder.h"
 
+void od_encode_cdf_adapt_q15(od_ec_enc *ec, int val, uint16_t *cdf, int n,
+ int *count, int rate) {
+  if (*count == 0) {
+    int i;
+    for (i = 0; i < n; i++) {
+      cdf[i] = (i + 1)*32768/n;
+    }
+  }
+  od_ec_encode_cdf_q15(ec, val, cdf, n);
+  od_cdf_adapt_q15(val, cdf, n, count, rate);
+}
+
 /** Encodes a value from 0 to N-1 (with N up to 16) based on a cdf and adapts
  * the cdf accordingly.
  *

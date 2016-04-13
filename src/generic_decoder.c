@@ -34,6 +34,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "logging.h"
 #include "odintrin.h"
 
+int od_decode_cdf_adapt_q15_(od_ec_dec *ec, uint16_t *cdf, int n,
+ int *count, int rate OD_ACC_STR) {
+  int val;
+  if (*count == 0) {
+    int i;
+    for (i = 0; i < n; i++) {
+      cdf[i] = (i + 1)*32768/n;
+    }
+  }
+  val = od_ec_decode_cdf_q15(ec, cdf, n, acc_str);
+  od_cdf_adapt_q15(val, cdf, n, count, rate);
+  return val;
+}
+
 /** Decodes a value from 0 to N-1 (with N up to 16) based on a cdf and adapts
  * the cdf accordingly.
  *

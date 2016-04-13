@@ -740,9 +740,16 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
      the skip value to the PVQ decoder. */
   if (ctx->use_haar_wavelet) obs = bsi;
   else if (pli == 0) {
+#if NEW_SKIP
+    skip = od_decode_cdf_adapt_q15(&dec->ec,
+     dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4 + (bsi > 0),
+     &dec->state.adapt.skip_count[2*bsi + (pli != 0)],
+     dec->state.adapt.skip_rate, "skip");
+#else
     skip = od_decode_cdf_adapt(&dec->ec,
      dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4 + (bsi > 0),
      dec->state.adapt.skip_increment, "skip");
+#endif
 #if OD_SIGNAL_Q_SCALING
     if (bsi == OD_NBSIZES - 1) {
       od_decode_quantizer_scaling(dec, bx, by, skip == 0);
@@ -777,9 +784,16 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
     }
     if (pli > 0 && !ctx->use_haar_wavelet) {
       /* Decode the skip for chroma. */
+#if NEW_SKIP
+      skip = od_decode_cdf_adapt_q15(&dec->ec,
+       dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4,
+       &dec->state.adapt.skip_count[2*bsi + (pli != 0)],
+       dec->state.adapt.skip_rate, "skip");
+#else
       skip = od_decode_cdf_adapt(&dec->ec,
        dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4,
        dec->state.adapt.skip_increment, "skip");
+#endif
     }
     od_block_decode(dec, ctx, bs, pli, bx, by, skip);
     for (i = 0; i < 1 << bs; i++) {

@@ -38,6 +38,18 @@ void od_cdf_init(uint16_t *cdf, int ncdfs, int nsyms, int val, int first) {
   }
 }
 
+void od_cdf_adapt_q15(int val, uint16_t *cdf, int n, int *count, int rate) {
+  int i;
+  int shift;
+  *count = OD_MINI(*count + 1, 1 << rate);
+  shift = OD_MAXI(1, OD_ILOG(*count*3/4)-1);
+  for (i = 0; i < n; i++) {
+    int tmp;
+    tmp = (1+i)**count + (32768-n**count)*(i>=val);
+    cdf[i] -= (cdf[i] - tmp) >> shift;
+  }
+}
+
 /** Initializes the cdfs and freq counts for a model.
  *
  * @param [out] model model being initialized
