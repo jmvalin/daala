@@ -37,24 +37,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 void od_encode_cdf_adapt_q15(od_ec_enc *ec, int val, uint16_t *cdf, int n,
  int *count, int rate) {
-  int i;
-  int alpha;
   if (*count == 0) {
+    int i;
     for (i = 0; i < n; i++) {
       cdf[i] = (i + 1)*32768/n;
     }
   }
-  /*for (i = 0; i < n; i++) printf("%d ", cdf[i]); printf("=> ");*/
   od_ec_encode_cdf_q15(ec, val, cdf, n);
-  *count = OD_MINI(1 << rate, *count + 1);
-  alpha = 4*32768/(1 + 4**count);
-  for (i = 0; i < val; i++) cdf[i] -= cdf[i]*alpha >> 15;
-  for (i = val; i < n; i++) cdf[i] -= (cdf[i] - 32768)*alpha >> 15;
-  cdf[0] = OD_MAXI(cdf[0], 1);
-  for (i = 1; i < n; i++) cdf[i] = OD_MAXI(cdf[i - 1] + 1, cdf[i]);
-  cdf[n - 1] = 32768;
-  for (i = n - 2; i >= 0; i--) cdf[i] = OD_MINI(cdf[i + 1] - 1, cdf[i]);
-  /*for (i = 0; i < n; i++) printf("%d ", cdf[i]); printf("\n");*/
+  od_cdf_adapt_q15(val, cdf, n, count, rate);
 }
 
 /** Encodes a value from 0 to N-1 (with N up to 16) based on a cdf and adapts
