@@ -743,7 +743,8 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
 #if NEW_SKIP
     skip = od_decode_cdf_adapt_q15(&dec->ec,
      dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4 + (bsi > 0),
-     &dec->state.adapt.skip_count[2*bsi + (pli != 0)], 4, "skip");
+     &dec->state.adapt.skip_count[2*bsi + (pli != 0)],
+     dec->state.adapt.skip_rate, "skip");
 #else
     skip = od_decode_cdf_adapt(&dec->ec,
      dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4 + (bsi > 0),
@@ -786,7 +787,8 @@ static void od_decode_recursive(daala_dec_ctx *dec, od_mb_dec_ctx *ctx, int pli,
 #if NEW_SKIP
       skip = od_decode_cdf_adapt_q15(&dec->ec,
        dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4,
-       &dec->state.adapt.skip_count[2*bsi + (pli != 0)], 4, "skip");
+       &dec->state.adapt.skip_count[2*bsi + (pli != 0)],
+       dec->state.adapt.skip_rate, "skip");
 #else
       skip = od_decode_cdf_adapt(&dec->ec,
        dec->state.adapt.skip_cdf[2*bsi + (pli != 0)], 4,

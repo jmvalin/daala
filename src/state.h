@@ -156,6 +156,7 @@ struct od_adapt_ctx {
   /* Joint skip flag for DC and AC */
   uint16_t skip_cdf[OD_NBSIZES*2][5];
   int skip_increment;
+  int skip_rate;
   int skip_count[OD_NBSIZES*2];
   uint16_t haar_coeff_cdf[15*3*(OD_NBSIZES + 1)][16];
   int haar_coeff_increment;
