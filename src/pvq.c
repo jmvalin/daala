@@ -285,6 +285,8 @@ void od_adapt_pvq_ctx_reset(od_pvq_adapt_ctx *state, int is_keyframe) {
   state->pvq_skip_dir_increment = 128;
   OD_CDFS_INIT(state->pvq_skip_dir_cdf, state->pvq_skip_dir_increment >> 2);
   ctx->pvq_split_increment = 128;
+  ctx->pvq_split_rate = 7;
+  OD_CLEAR(ctx->pvq_split_count, 14*7);
   OD_CDFS_INIT(ctx->pvq_split_cdf, ctx->pvq_split_increment >> 1);
 }
 
