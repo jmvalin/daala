@@ -37,13 +37,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 void od_encode_cdf_adapt_q15(od_ec_enc *ec, int val, uint16_t *cdf, int n,
  int *count, int rate) {
+  int i;
+  uint16_t safe_cdf[16];
   if (*count == 0) {
-    int i;
     for (i = 0; i < n; i++) {
-      cdf[i] = (i + 1)*32768/n;
+      cdf[i] = (i + 1)*(32768 - n)/n;
     }
   }
-  od_ec_encode_cdf_q15(ec, val, cdf, n);
+  for (i = 0; i < n; i++) safe_cdf[i] = cdf[i] + i + 1;
+  od_ec_encode_cdf_q15(ec, val, safe_cdf, n);
   od_cdf_adapt_q15(val, cdf, n, count, rate);
 }
 

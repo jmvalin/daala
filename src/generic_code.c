@@ -45,7 +45,7 @@ void od_cdf_adapt_q15(int val, uint16_t *cdf, int n, int *count, int rate) {
   shift = OD_MAXI(1, OD_ILOG(*count*3/4)-1);
   for (i = 0; i < n; i++) {
     int tmp;
-    tmp = (1+i)**count + (32768-n**count)*(i>=val);
+    tmp = (32768 - n)*(i>=val);
     cdf[i] -= (cdf[i] - tmp) >> shift;
   }
 }
