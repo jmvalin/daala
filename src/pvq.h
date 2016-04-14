@@ -119,6 +119,8 @@ struct od_pvq_codeword_ctx {
   uint16_t            pvq_k1_cdf[12][16];
   uint16_t            pvq_split_cdf[14*7][8];
   int                 pvq_split_increment;
+  int                 pvq_split_rate;
+  int                 pvq_split_count[14*7];
 };
 
 struct od_pvq_adapt_ctx {
