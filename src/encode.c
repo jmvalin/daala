@@ -1884,7 +1884,7 @@ static void od_encode_mv(daala_enc_ctx *enc, int num_refs, od_mv_grid_pt *mvg,
   /*Interleave positive and negative values.*/
   model = &enc->state.adapt.mv_model;
   id = OD_MINI(abs(oy), 3)*4 + OD_MINI(abs(ox), 3);
-#if 0
+#if 1
   od_encode_cdf_adapt_q15(&enc->ec, id, enc->state.adapt.mv_small_cdf[equal_mvs],
    16, &enc->state.adapt.mv_small_count[equal_mvs], enc->state.adapt.mv_small_rate);
 #else

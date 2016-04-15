@@ -50,7 +50,7 @@ void od_cdf_adapt_q15(int val, uint16_t *cdf, int n, int *count, int rate) {
   }
   else {
     int alpha;
-    alpha = 8*32768/(n + 8**count);
+    alpha = 4*32768/(n + 4**count);
     for (i = 0; i < n; i++) {
       int tmp;
       tmp = (32768 - n)*(i >= val);
