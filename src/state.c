@@ -542,6 +542,8 @@ void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe) {
   OD_CLEAR(state->skip_count, OD_NBSIZES*2);
   OD_CDFS_INIT(state->skip_cdf, state->skip_increment >> 2);
   state->mv_small_increment = 128;
+  state->mv_small_rate = 8;
+  OD_CLEAR(state->mv_small_count, 5);
   OD_CDFS_INIT_FIRST(state->mv_small_cdf, state->mv_small_increment,
    10*state->mv_small_increment);
   state->split_flag_increment = 128;
