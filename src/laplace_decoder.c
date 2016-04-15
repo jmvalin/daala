@@ -50,8 +50,9 @@ static int od_decode_pvq_split_(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
   if (sum == 0) return 0;
   shift = OD_MAXI(0, OD_ILOG(sum) - 3);
   fctx = 7*ctx + (sum >> shift) - 1;
-  msbs = od_decode_cdf_adapt(ec, adapt->pvq_split_cdf[fctx],
-   (sum >> shift) + 1, adapt->pvq_split_increment, acc_str);
+  msbs = od_decode_cdf_adapt_q15(ec, adapt->pvq_split_cdf[fctx],
+   (sum >> shift) + 1, &adapt->pvq_split_count[fctx], adapt->pvq_split_rate,
+   acc_str);
   if (shift) count = od_ec_dec_bits(ec, shift, acc_str);
   count += msbs << shift;
   if (count > sum) {
