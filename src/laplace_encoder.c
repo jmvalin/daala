@@ -65,8 +65,8 @@ void od_encode_band_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
     cdf_id = od_pvq_k1_ctx(n, level == 0);
     for (pos = 0; !y[pos]; pos++);
     OD_ASSERT(pos < n);
-    od_encode_cdf_adapt(ec, pos, adapt->pvq_k1_cdf[cdf_id], n,
-     adapt->pvq_k1_increment);
+    od_encode_cdf_adapt_q15(ec, pos, adapt->pvq_k1_cdf[cdf_id], n,
+     &adapt->pvq_k1_count[cdf_id], adapt->pvq_k1_rate);
   }
   else {
     mid = n >> 1;
