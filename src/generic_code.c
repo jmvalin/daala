@@ -44,7 +44,9 @@ void od_cdf_init(uint16_t *cdf, int ncdfs, int nsyms, int val, int first) {
 void od_cdf_adapt_q15(int val, uint16_t *cdf, int n, int *count, int rate) {
   int i;
   *count = OD_MINI(*count + 1, 1 << rate);
-  OD_ASSERT(cdf[n-1] == 32768 - n);
+  OD_ASSERT(cdf[n - 1] == 32768);
+  /* Remove probability floor for adaptation. */
+  for (i = 0; i < n; i++) cdf[i] -= (i + 1);
   if (*count >= 1 << rate) {
     /* Steady-state adaptation based on a simple IIR with dyadic rate. */
     for (i = 0; i < n; i++) {
@@ -65,7 +67,9 @@ void od_cdf_adapt_q15(int val, uint16_t *cdf, int n, int *count, int rate) {
       cdf[i] -= ((cdf[i] - tmp)*alpha + 16384) >> 15;
     }
   }
-  OD_ASSERT(cdf[n-1] == 32768 - n);
+  /* Add back the probability floor. */
+  for (i = 0; i < n; i++) cdf[i] += (i + 1);
+  OD_ASSERT(cdf[n - 1] == 32768);
 }
 
 /** Initializes the cdfs and freq counts for a model.

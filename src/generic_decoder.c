@@ -48,16 +48,14 @@ int od_decode_cdf_adapt_q15_(od_ec_dec *ec, uint16_t *cdf, int n,
  int *count, int rate OD_ACC_STR) {
   int val;
   int i;
-  uint16_t safe_cdf[16];
   if (*count == 0) {
     int ft;
     ft = cdf[n - 1];
     for (i = 0; i < n; i++) {
-      cdf[i] = cdf[i]*(32768 - n)/ft;
+      cdf[i] = cdf[i]*32768/ft;
     }
   }
-  for (i = 0; i < n; i++) safe_cdf[i] = cdf[i] + i + 1;
-  val = od_ec_decode_cdf_q15(ec, safe_cdf, n, acc_str);
+  val = od_ec_decode_cdf_q15(ec, cdf, n, acc_str);
   od_cdf_adapt_q15(val, cdf, n, count, rate);
   return val;
 }
