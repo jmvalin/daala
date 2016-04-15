@@ -1422,9 +1422,10 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     if (dist_skip + lambda*rate_skip < dist_noskip + lambda*rate_noskip) {
       od_encode_rollback(enc, &pre_encode_buf);
       /* Code the "skip this block" symbol (0). */
-      od_encode_cdf_adapt(&enc->ec, 0,
+      od_encode_cdf_adapt_q15(&enc->ec, 0,
        enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 4 + (pli == 0 && bs > 0),
-       enc->state.adapt.skip_increment);
+       &enc->state.adapt.skip_count[2*bs + (pli != 0)],
+       enc->state.adapt.skip_rate);
 #if OD_SIGNAL_Q_SCALING
       if (bs == (OD_NBSIZES - 1) && pli == 0) {
         od_encode_quantizer_scaling(enc, 0,
@@ -1755,9 +1756,10 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
     skip_split = 1;
     if (pli == 0) {
       /* Code the "split this block" symbol (4). */
-      od_encode_cdf_adapt(&enc->ec, 4,
+      od_encode_cdf_adapt_q15(&enc->ec, 4,
        enc->state.adapt.skip_cdf[2*bs + (pli != 0)], 5,
-       enc->state.adapt.skip_increment);
+       &enc->state.adapt.skip_count[2*bs + (pli != 0)],
+       enc->state.adapt.skip_rate);
 #if OD_SIGNAL_Q_SCALING
       if (bs == (OD_NBSIZES - 1)) {
         od_encode_quantizer_scaling(enc, ctx->q_scaling, bx, by, 0);
