@@ -40,8 +40,10 @@ int od_decode_cdf_adapt_q15_(od_ec_dec *ec, uint16_t *cdf, int n,
   int i;
   uint16_t safe_cdf[16];
   if (*count == 0) {
+    int ft;
+    ft = cdf[n - 1];
     for (i = 0; i < n; i++) {
-      cdf[i] = (i + 1)*(32768 - n)/n;
+      cdf[i] = cdf[i]*(32768 - n)/ft;
     }
   }
   for (i = 0; i < n; i++) safe_cdf[i] = cdf[i] + i + 1;
