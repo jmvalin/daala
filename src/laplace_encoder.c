@@ -48,8 +48,8 @@ static void od_encode_pvq_split(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
     sum >>= shift;
   }
   fctx = 7*ctx + sum - 1;
-  od_encode_cdf_adapt(ec, count, adapt->pvq_split_cdf[fctx],
-   sum + 1, adapt->pvq_split_increment);
+  od_encode_cdf_adapt_q15(ec, count, adapt->pvq_split_cdf[fctx],
+   sum + 1, &adapt->pvq_split_count[fctx], adapt->pvq_split_rate);
   if (shift) od_ec_enc_bits(ec, rest, shift);
 }
 
