@@ -55,19 +55,15 @@ void od_cdf_adapt_q15(int val, uint16_t *cdf, int n, int *count, int rate) {
   }
   else {
     int alpha;
-    /* Remove probability floor for adaptation. */
-    for (i = 0; i < n; i++) cdf[i] -= (i + 1);
     /* Initial adaptation for the first symbols. The adaptation rate is
        computed to be equivalent to what od_{en,de}code_cdf_adapt() does
        when the initial cdf is set to increment/4. */
     alpha = 4*32768/(n + 4**count);
     for (i = 0; i < n; i++) {
       int tmp;
-      tmp = (32768 - n)*(i >= val);
-      cdf[i] -= ((cdf[i] - tmp)*alpha + 16384) >> 15;
+      tmp = (32768 - n)*(i >= val) + i + 1;
+      cdf[i] -= ((cdf[i] - tmp)*alpha) >> 15;
     }
-    /* Add back the probability floor. */
-    for (i = 0; i < n; i++) cdf[i] += (i + 1);
   }
   OD_ASSERT(cdf[n - 1] == 32768);
 }
