@@ -52,7 +52,7 @@ void od_cdf_adapt_q15(int val, uint16_t *cdf, int n, int *count, int rate) {
   /* Adaptation based on a simple IIR with dyadic rate. */
   for (i = 0; i < n; i++) {
     int tmp;
-    tmp = 2 - (1 << rate) + i + (32766 + (1 << rate) - n)*(i >= val);
+    tmp = 2 - (1 << rate) + i + (32767 + (1 << rate) - n)*(i >= val);
     cdf[i] -= (cdf[i] - tmp) >> rate;
   }
   OD_ASSERT(cdf[n - 1] == 32768);
