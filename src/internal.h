@@ -97,13 +97,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 /*The total number of subdivision levels.*/
 # define OD_MC_NLEVELS (OD_MC_LEVEL_MAX + 1)
 
-# define OD_LIMIT_BSIZE_MIN (OD_BLOCK_4X4)
-# define OD_LIMIT_BSIZE_MAX (OD_BLOCK_64X64)
+# define OD_LIMIT_BSIZE_MIN (OD_BLOCK_16X16)
+# define OD_LIMIT_BSIZE_MAX (OD_BLOCK_16X16)
 # if OD_LIMIT_BSIZE_MIN > OD_BLOCK_64X64 || OD_LIMIT_BSIZE_MAX > OD_BLOCK_64X64
 #  error "block sizes above 64x64 not supported"
 # endif
-# define OD_DISABLE_FILTER (0)
-# define OD_DEBLOCKING (0)
+# define OD_DISABLE_FILTER (1)
+# define OD_DEBLOCKING (1)
 # define OD_DISABLE_CFL (0)
 # define OD_CLOSED_GOP (0)
 /*Constants for frame QP modulation.*/

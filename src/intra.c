@@ -46,6 +46,7 @@ void od_hv_intra_pred(od_coeff *pred, const od_coeff *d, int w, int bx, int by,
   n = 1 << (bs + OD_LOG_BSIZE0);
   top = by > 0 && OD_BLOCK_SIZE4x4(bsize, bstride, bx, by - 1) == bs;
   left = bx > 0 && OD_BLOCK_SIZE4x4(bsize, bstride, bx - 1, by) == bs;
+  top = left = 0;
   t = &d[((by << OD_LOG_BSIZE0))*w + (bx << OD_LOG_BSIZE0)];
   g1 = g2 = 0;
   if (top) for (i = 1; i < 4; i++) g1 += t[-n*w + i]*(double)t[-n*w + i];
