@@ -91,7 +91,7 @@ static void od_fill_dynamic_rqrt_table(double *table, const int table_size,
  * @return                  cosine distance between x and y (between 0 and 1)
  */
 static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
- od_coeff *ypulse, double g2, double pvq_norm_lambda, int prev_k) {
+ od_coeff *ypulse, double g2, double pvq_norm_lambda, int speed, int prev_k) {
   int i, j;
   double xy;
   double yy;
@@ -103,6 +103,7 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
   double norm_1;
   int rdo_pulses;
   double delta_rate;
+  int possible[MAXN];
   xx = xy = yy = 0;
   for (j = 0; j < n; j++) {
     x[j] = fabs((float)xcoeff[j]);
@@ -114,7 +115,16 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
   if (prev_k > 0 && prev_k <= k) {
     /* We reuse pulses from a previous search so we don't have to search them
        again. */
+    double l1_norm;
+    double l1_inv;
+    l1_norm = 0;
+    for (j = 0; j < n; j++) l1_norm += x[j];
+    l1_inv = 1./OD_MAXF(l1_norm, 1e-100);
     for (j = 0; j < n; j++) {
+      double tmp;
+      tmp = k*x[j]*l1_inv;
+      /* If possible[j]=0, we're very unlikely to have a pulse there. */
+      possible[j] = !speed || tmp >= .25 || ypulse[j];
       ypulse[j] = abs(ypulse[j]);
       xy += x[j]*ypulse[j];
       yy += ypulse[j]*ypulse[j];
@@ -130,6 +140,8 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
     for (j = 0; j < n; j++) {
       double tmp;
       tmp = k*x[j]*l1_inv;
+      /* If possible[j]=0, we're very unlikely to have a pulse there. */
+      possible[j] = !speed || tmp >= .25;
       ypulse[j] = OD_MAXI(0, (int)floor(tmp));
       xy += x[j]*ypulse[j];
       yy += ypulse[j]*ypulse[j];
@@ -156,6 +168,7 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
     for (j = 0; j < n; j++) {
       double tmp_xy;
       double tmp_yy;
+      if (!possible[j]) continue;
       tmp_xy = xy + x[j];
       tmp_yy = yy + 2*ypulse[j] + 1;
       tmp_xy *= tmp_xy;
@@ -519,7 +532,8 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
       }
       else if (k != prev_k) {
         cos_dist = pvq_search_rdo_double(xr, n - 1, k, y_tmp,
-         qcg*(double)cg*sin_prod*OD_CGAIN_SCALE_2, pvq_norm_lambda, prev_k);
+         qcg*(double)cg*sin_prod*OD_CGAIN_SCALE_2, pvq_norm_lambda, speed,
+         prev_k);
       }
       prev_k = k;
       /* See Jmspeex' Journal of Dubious Theoretical Results. */
@@ -566,7 +580,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
         if (dist > dist0 && k != 0) continue;
       }
       cos_dist = pvq_search_rdo_double(x16, n, k, y_tmp,
-       qcg*(double)cg*OD_CGAIN_SCALE_2, pvq_norm_lambda, prev_k);
+       qcg*(double)cg*OD_CGAIN_SCALE_2, pvq_norm_lambda, speed, prev_k);
       prev_k = k;
       /* See Jmspeex' Journal of Dubious Theoretical Results. */
       dist = gain_weight*(qcg - cg)*(qcg - cg)
