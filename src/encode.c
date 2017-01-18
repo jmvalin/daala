@@ -1100,11 +1100,15 @@ static int od_compute_var_4x4(od_coeff *x, int stride) {
   return (s2 - (sum*sum >> 4));
 }
 
+#define OD_DIST_LP_MID (5)
+#define OD_DIST_LP_NORM (OD_DIST_LP_MID + 2)
+
 static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
- int stride, int bs) {
+ od_coeff *e_lp, int stride, int bs) {
   od_coeff e[8*8];
   od_coeff et[8*8];
   double sum;
+  double sum2;
   int min_var;
   double mean_var;
   double var_stat;
@@ -1166,7 +1170,17 @@ static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
       sum += et[8*i + j]*(double)et[8*i + j]*mag;
     }
   }
-  return activity*activity*(sum + vardist);
+  sum2 = 0;
+  for (i = 0; i < 8; i++) {
+    for (j = 0; j < 8; j++) {
+      sum2 += e_lp[i*stride + j]*e_lp[i*stride + j];
+    }
+  }
+  sum2 /= OD_DIST_LP_NORM*OD_DIST_LP_NORM*OD_DIST_LP_NORM*OD_DIST_LP_NORM;
+  /* Rough compensation for basis magnitude. */
+  sum2 *= 0.88;
+  /*printf("%f %f\n", sum, sum2);*/
+  return activity*activity*(sum2 + vardist);
 }
 
 static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
@@ -1182,10 +1196,35 @@ static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
     }
   }
   else {
+    int j;
+    od_coeff e[OD_BSIZE_MAX*OD_BSIZE_MAX];
+    od_coeff tmp[OD_BSIZE_MAX*OD_BSIZE_MAX];
+    od_coeff e_lp[OD_BSIZE_MAX*OD_BSIZE_MAX];
+    int mid = OD_DIST_LP_MID;
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        e[i*n + j] = x[i*n + j] - y[i*n + j];
+      }
+    }
+    for (i = 0; i < n; i++) {
+      tmp[i*n] = mid*e[i*n] + 2*e[i*n + 1];
+      tmp[i*n + n - 1] = mid*e[i*n + n - 1] + 2*e[i*n + n - 2];
+      for (j = 1; j < n - 1; j++) {
+        tmp[i*n + j] = mid*e[i*n + j] + e[i*n + j - 1] + e[i*n + j + 1];
+      }
+    }
+    for (j = 0; j < n; j++) {
+      e_lp[j] = mid*tmp[j] + 2*tmp[n + j];
+      e_lp[(n - 1)*n + j] = mid*tmp[(n - 1)*n + j] + 2*tmp[(n - 2)*n + j];
+    }
+    for (i = 1; i < n - 1; i++) {
+      for (j = 0; j < n; j++) {
+        e_lp[i*n + j] = mid*tmp[i*n + j] + tmp[(i - 1)*n + j] + tmp[(i + 1)*n + j];
+      }
+    }
     for (i = 0; i < n; i += 8) {
-      int j;
       for (j = 0; j < n; j += 8) {
-        sum += od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], n, bs);
+        sum += od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], &e_lp[i*n + j], n, bs);
       }
     }
     /* Compensate for the fact that the quantization matrix lowers the
