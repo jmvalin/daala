@@ -1104,11 +1104,8 @@ static int od_compute_var_4x4(od_coeff *x, int stride) {
 #define OD_DIST_LP_NORM (OD_DIST_LP_MID + 2)
 
 static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
- od_coeff *e_lp, int stride, int bs) {
-  od_coeff e[8*8];
-  od_coeff et[8*8];
+ od_coeff *e_lp, int stride) {
   double sum;
-  double sum2;
   int min_var;
   double mean_var;
   double var_stat;
@@ -1152,39 +1149,21 @@ static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
 #else
   activity = 1;
 #endif
-  for (i = 0; i < 8; i++) {
-    for (j = 0; j < 8; j++) e[8*i + j] = x[i*stride + j] - y[i*stride + j];
-  }
-  (*enc->state.opt_vtbl.fdct_2d[OD_BLOCK_8X8])(&et[0], 8, &e[0], 8);
   sum = 0;
   for (i = 0; i < 8; i++) {
     for (j = 0; j < 8; j++) {
-      double mag;
-      mag = 16./OD_QM8_Q4_HVS[i*8 + j];
-      /* We attempt to consider the basis magnitudes here, though that's not
-         perfect for block size 16x16 and above since only some edges are
-         filtered then. */
-      mag *= OD_BASIS_MAG[0][bs][i << (bs - 1)]*
-       OD_BASIS_MAG[0][bs][j << (bs - 1)];
-      mag *= mag;
-      sum += et[8*i + j]*(double)et[8*i + j]*mag;
+      sum += e_lp[i*stride + j]*(double)e_lp[i*stride + j];
     }
   }
-  sum2 = 0;
-  for (i = 0; i < 8; i++) {
-    for (j = 0; j < 8; j++) {
-      sum2 += e_lp[i*stride + j]*(double)e_lp[i*stride + j];
-    }
-  }
-  sum2 /= OD_DIST_LP_NORM*OD_DIST_LP_NORM*OD_DIST_LP_NORM*OD_DIST_LP_NORM;
+  sum /= OD_DIST_LP_NORM*OD_DIST_LP_NORM*OD_DIST_LP_NORM*OD_DIST_LP_NORM;
   /* Rough compensation for basis magnitude. */
-  sum2 *= 0.88;
+  sum *= 0.92;
   /*printf("%f %f\n", sum, sum2);*/
-  return activity*activity*(sum2 + vardist);
+  return activity*activity*(sum + vardist);
 }
 
 static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
- int n, int bs) {
+ int n) {
   int i;
   double sum;
   sum = 0;
@@ -1224,7 +1203,7 @@ static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
     }
     for (i = 0; i < n; i += 8) {
       for (j = 0; j < n; j += 8) {
-        sum += od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], &e_lp[i*n + j], n, bs);
+        sum += od_compute_dist_8x8(enc, &x[i*n + j], &y[i*n + j], &e_lp[i*n + j], n);
       }
     }
     /* Compensate for the fact that the quantization matrix lowers the
@@ -1429,10 +1408,10 @@ static int od_block_encode(daala_enc_ctx *enc, od_mb_enc_ctx *ctx, int bs,
     for (i = 0; i < n; i++) {
       for (j = 0; j < n; j++) c_noskip[n*i + j] = c[bo + i*w + j];
     }
-    dist_noskip = od_compute_dist(enc, c_orig, c_noskip, n, bs);
+    dist_noskip = od_compute_dist(enc, c_orig, c_noskip, n);
     lambda = enc->bs_rdo_lambda;
     rate_noskip = od_ec_enc_tell_frac(&enc->ec) - tell;
-    dist_skip = od_compute_dist(enc, c_orig, mc_orig, n, bs);
+    dist_skip = od_compute_dist(enc, c_orig, mc_orig, n);
     rate_skip = (1 << OD_BITRES)*od_encode_cdf_cost(0,
      enc->state.adapt.skip_cdf[2*bs + (pli != 0)],
      4 + (pli == 0 && bs > 0));
@@ -1807,8 +1786,8 @@ static int od_encode_recursive(daala_enc_ctx *enc, od_mb_enc_ctx *ctx,
         for (j = 0; j < n; j++) split[n*i + j] = ctx->c[bo + i*w + j];
       }
       rate_split = od_ec_enc_tell_frac(&enc->ec) - tell;
-      dist_split = od_compute_dist(enc, c_orig, split, n, bs);
-      dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n, bs);
+      dist_split = od_compute_dist(enc, c_orig, split, n);
+      dist_nosplit = od_compute_dist(enc, c_orig, nosplit, n);
       lambda = enc->bs_rdo_lambda;
       if (skip_split || dist_nosplit + lambda*rate_nosplit < dist_split
        + lambda*rate_split) {
@@ -2789,7 +2768,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
               out[y*n + x] = output[y*w + x];
             }
           }
-          dist = od_compute_dist(enc, orig, out, n, 3);
+          dist = od_compute_dist(enc, orig, out, n);
           best_dist = dist + enc->dering_lambda*
            od_encode_cdf_cost(0, state->adapt.dering_cdf[c], OD_DERING_LEVELS);
           for (gi = 1; gi < OD_DERING_LEVELS; gi++) {
@@ -2808,7 +2787,7 @@ static void od_encode_coefficients(daala_enc_ctx *enc, od_mb_enc_ctx *mbctx,
                   buf32[y*n + x] = buf[y*n + x];
                 }
               }
-              dist = od_compute_dist(enc, orig, buf32, n, 3)
+              dist = od_compute_dist(enc, orig, buf32, n)
                + enc->dering_lambda*od_encode_cdf_cost(gi,
                state->adapt.dering_cdf[c], OD_DERING_LEVELS);
             }
