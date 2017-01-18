@@ -1100,7 +1100,7 @@ static int od_compute_var_4x4(od_coeff *x, int stride) {
   return (s2 - (sum*sum >> 4));
 }
 
-#define OD_DIST_LP_MID (6)
+#define OD_DIST_LP_MID (5)
 #define OD_DIST_LP_NORM (OD_DIST_LP_MID + 2)
 
 static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
@@ -1173,7 +1173,7 @@ static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
   sum2 = 0;
   for (i = 0; i < 8; i++) {
     for (j = 0; j < 8; j++) {
-      sum2 += e_lp[i*stride + j]*e_lp[i*stride + j];
+      sum2 += e_lp[i*stride + j]*(double)e_lp[i*stride + j];
     }
   }
   sum2 /= OD_DIST_LP_NORM*OD_DIST_LP_NORM*OD_DIST_LP_NORM*OD_DIST_LP_NORM;
