@@ -1100,7 +1100,7 @@ static int od_compute_var_4x4(od_coeff *x, int stride) {
   return (s2 - (sum*sum >> 4));
 }
 
-#define OD_DIST_LP_MID (5)
+#define OD_DIST_LP_MID (6)
 #define OD_DIST_LP_NORM (OD_DIST_LP_MID + 2)
 
 static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
