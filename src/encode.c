@@ -1123,15 +1123,15 @@ static double od_compute_dist_8x8(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
   int mid = OD_DIST_LP_MID;
   int n = stride;
   for (i = 0; i < 8; i++) {
-    tmp[i*n] = mid*e[i*n] + e[i*n + 1] + e[i*n + 2];
-    tmp[i*n + 8 - 1] = mid*e[i*n + 8 - 1] + e[i*n + 8 - 2] + e[i*n + 8 - 3];
+    tmp[i*n] = mid*e[i*n] + e[i*n + 1] + e[i*n + 0];
+    tmp[i*n + 8 - 1] = mid*e[i*n + 8 - 1] + e[i*n + 8 - 2] + e[i*n + 8 - 1];
     for (j = 1; j < 8 - 1; j++) {
       tmp[i*n + j] = mid*e[i*n + j] + e[i*n + j - 1] + e[i*n + j + 1];
     }
   }
   for (j = 0; j < 8; j++) {
-    e_lp[j] = mid*tmp[j] + tmp[n + j] + tmp[2*n + j];
-    e_lp[(8 - 1)*n + j] = mid*tmp[(8 - 1)*n + j] + tmp[(8 - 2)*n + j] + tmp[(8 - 3)*n + j];
+    e_lp[j] = mid*tmp[j] + tmp[n + j] + tmp[0*n + j];
+    e_lp[(8 - 1)*n + j] = mid*tmp[(8 - 1)*n + j] + tmp[(8 - 2)*n + j] + tmp[(8 - 1)*n + j];
   }
   for (i = 1; i < 8 - 1; i++) {
     for (j = 0; j < 8; j++) {
