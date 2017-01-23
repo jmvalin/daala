@@ -1190,15 +1190,15 @@ static double od_compute_dist(daala_enc_ctx *enc, od_coeff *x, od_coeff *y,
       }
     }
     for (i = 0; i < n; i++) {
-      tmp[i*n] = mid*e[i*n] + e[i*n + 1] + e[i*n + 0];
-      tmp[i*n + n - 1] = mid*e[i*n + n - 1] + e[i*n + n - 2] + e[i*n + n - 1];
+      tmp[i*n] = mid*e[i*n] + e[i*n + 1] + e[i*n + 2];
+      tmp[i*n + n - 1] = mid*e[i*n + n - 1] + e[i*n + n - 2] + e[i*n + n - 3];
       for (j = 1; j < n - 1; j++) {
         tmp[i*n + j] = mid*e[i*n + j] + e[i*n + j - 1] + e[i*n + j + 1];
       }
     }
     for (j = 0; j < n; j++) {
-      e_lp[j] = mid*tmp[j] + tmp[n + j] + tmp[0*n + j];
-      e_lp[(n - 1)*n + j] = mid*tmp[(n - 1)*n + j] + tmp[(n - 2)*n + j] + tmp[(n - 1)*n + j];
+      e_lp[j] = mid*tmp[j] + tmp[n + j] + tmp[2*n + j];
+      e_lp[(n - 1)*n + j] = mid*tmp[(n - 1)*n + j] + tmp[(n - 2)*n + j] + tmp[(n - 3)*n + j];
     }
     for (i = 1; i < n - 1; i++) {
       for (j = 0; j < n; j++) {
